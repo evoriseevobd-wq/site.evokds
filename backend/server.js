@@ -65,9 +65,9 @@ app.post("/orders", async (req, res) => {
 
     const { data: last, error: lastErr } = await supabase
       .from("orders")
-      .select("order_numb")
+      .select("order_number")
       .eq("restaurant_id", restaurant_id)
-      .order("order_numb", { ascending: false })
+      .order("order_number", { ascending: false })
       .limit(1);
 
     if (lastErr) {
@@ -76,8 +76,8 @@ app.post("/orders", async (req, res) => {
     }
 
     const nextNumber =
-      last && last.length > 0 && last[0].order_numb
-        ? Number(last[0].order_numb) + 1
+      last && last.length > 0 && last[0].order_number
+        ? Number(last[0].order_number) + 1
         : 1;
 
     const now = new Date().toISOString();
@@ -88,7 +88,7 @@ app.post("/orders", async (req, res) => {
         {
           restaurant_id,
           client_name,
-          order_numb: nextNumber,
+          order_number: nextNumber,
           itens: normalizedItems,
           notes: notes || "",
           status: "pending",
