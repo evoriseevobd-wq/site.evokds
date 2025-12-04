@@ -269,6 +269,24 @@ function closeModal() {
   document.getElementById("modal").classList.remove("open");
 }
 
+// Bloco do Google (DEVE VIR AQUI)
+google.accounts.id.initialize({
+  client_id: GOOGLE_CLIENT_ID,
+  callback: handleCredentialsResponse,
+});
+
+google.accounts.id.renderButton(
+  document.getElementById("google-login"),
+  { theme: "filled_blue", size: "large" }
+);
+
+google.accounts.id.prompt();
+
+function handleCredentialsResponse(response) {
+  const user = jwt_decode(response.credential);
+  completeLogin(user);
+}
+
 async function completeLogin(user) {
   const safeUser = {
     name: user?.name || "Usuário",
