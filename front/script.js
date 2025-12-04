@@ -2,12 +2,6 @@ const GOOGLE_CLIENT_ID =
   "872848052437-nl3lru9m1jhmfobk0imbpb2o9uk47mqi.apps.googleusercontent.com";
 const API_URL = "https://kds-backend.dahead.easypanel.host/orders";
 
-// 🔧 Forçar restaurant_id fixo para desenvolvimento
-localStorage.setItem(
-  "restaurant_id",
-  "11111111-1111-1111-1111-111111111111"
-);
-
 const columns = {
   recebido: document.getElementById("col-recebido"),
   preparo: document.getElementById("col-preparo"),
