@@ -63,12 +63,13 @@ app.post("/orders", async (req, res) => {
       return sendError(res, 404, "Restaurante não encontrado");
     }
 
-    const { data: last, error: lastErr } = await supabase
-      .from("orders")
-      .select("order_number")
-      .eq("restaurant_id", restaurant_id)
-      .order("order_number", { ascending: false })
-      .limit(1);
+const { data: last, error: lastErr } = await supabase
+  .from("orders")
+  .select("order_number")
+  .eq("restaurant_id", restaurant_id)
+  .order("order_number", { ascending: false })
+  .limit(1);
+
 
     if (lastErr) {
       console.error("Erro ao buscar último número:", lastErr);
@@ -76,9 +77,9 @@ app.post("/orders", async (req, res) => {
     }
 
     const nextNumber =
-      last && last.length > 0 && last[0].order_number
-        ? Number(last[0].order_number) + 1
-        : 1;
+    last && last.length > 0 && last[0].order_number
+    ? Number(last[0].order_number) + 1
+    : 1;
 
     const now = new Date().toISOString();
 
