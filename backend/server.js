@@ -82,22 +82,23 @@ app.post("/orders", async (req, res) => {
 
     const now = new Date().toISOString();
 
-    const { data, error } = await supabase
+  const { data, error } = await supabase
   .from("orders")
   .insert([
     {
       restaurant_id,
       client_name,
       order_number: nextNumber,
-      items: normalizedItems,
+      itens: normalizedItems,
       notes: notes || "",
       status: "pending",
       created_at: now,
-      updated_at: now,
+      update_at: now,
     },
   ])
   .select()
   .single();
+
 
 
     if (error) {
