@@ -270,11 +270,44 @@ function closeModal() {
 }
 
 function completeLogin(user) {
+async function completeLogin(user) {
   const safeUser = {
     name: user?.name || "Usuário",
     email: user?.email || "",
     picture: user?.picture || "",
   };
+
+  // Envia email para backend verificar se existe no Supabase
+  const response = await fetch(`${API_URL}/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(safeUser)
+  });
+
+  const result = await response.json();
+
+  // Se não tiver permissão → mostrar mensagem
+  if (!result.authorized) {
+    alert(
+      result.message +
+        "\n\nFale com a Everrise:\n" +
+        result.contact_link
+    );
+    return;
+  }
+
+  // Se estiver tudo OK -> continuar o login
+  localStorage.setItem("restaurant_id", result.restaurant.id);
+  localStorage.setItem("user", JSON.stringify(safeUser));
+
+  loginScreen.classList.add("hidden");
+  board.classList.remove("hidden");
+
+  userNameEl.textContent = safeUser.name;
+  userAvatar.src = safeUser.picture;
+  userChip.hidden = false;
+}
+
 
   localStorage.setItem("user", JSON.stringify(safeUser));
 
