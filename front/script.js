@@ -1,6 +1,6 @@
 const GOOGLE_CLIENT_ID =
   "872848052437-nl3lru9m1jhmfobk0imbpb2o9uk47mqi.apps.googleusercontent.com";
-const API_URL = "http://localhost:3001/orders";
+const API_URL = "https://kds-backend.dahead.easypanel.host/orders";
 
 // 🔧 Forçar restaurant_id fixo para desenvolvimento
 localStorage.setItem(
