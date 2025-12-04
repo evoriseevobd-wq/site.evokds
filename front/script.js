@@ -502,7 +502,7 @@ async function carregarPedidos() {
       console.warn("restaurant_id não definido");
       return;
     }
-    const response = await fetch(`${API_URL}/${restaurantId}`);
+    const response = await fetch(`${API_URL}/orders/${restaurantId}`);
     const data = await response.json();
     renderizarKanban(data);
   } catch (error) {
@@ -547,8 +547,8 @@ async function criarPedido(novoPedido) {
       itens: novoPedido.items,
       notes: novoPedido.notes || "",
     };
-
-    const response = await fetch(API_URL, {
+    
+    const response = await fetch(`${API_URL}/orders`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
