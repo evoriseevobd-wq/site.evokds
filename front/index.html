@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EVO KDS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <div class="login-screen" id="login-screen">
+      <div class="login-card">
+        <div class="login-badge">EVO</div>
+        <h1>Entrar no KDS</h1>
+        <p class="muted">Use sua conta Google para continuar</p>
+        <div id="googleLoginBtn" class="google-btn"></div>
+        <button class="ghost-button full" id="simulate-login">Simular login</button>
+      </div>
+    </div>
+
+  <header class="app-header">
+    <button class="icon-button menu-button" id="open-drawer" aria-label="Abrir menu">&#9776;</button>
+    <div class="brand">EVO</div>
+    <div class="header-right">
+      <button class="primary-button ghost" id="open-create">Criar Pedido</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-view="ativos" id="tab-ativos">Ativos</button>
+    <button class="tab" data-view="finalizados" id="tab-finalizados">Finalizados</button>
+    <button class="tab" data-view="cancelados" id="tab-cancelados">Cancelados</button>
+  </nav>
+
+  <main class="board hidden" id="board">
+    <section class="column" data-status="recebido">
+      <div class="column-header">
+        <h2>Pedidos Recebidos</h2>
+      </div>
+      <div class="column-body" id="col-recebido"></div>
+    </section>
+
+    <section class="column" data-status="preparo">
+      <div class="column-header">
+        <h2>Em Preparo</h2>
+      </div>
+      <div class="column-body" id="col-preparo"></div>
+    </section>
+
+    <section class="column" data-status="pronto">
+      <div class="column-header">
+        <h2>Prontos</h2>
+      </div>
+      <div class="column-body" id="col-pronto"></div>
+    </section>
+
+    <section class="column" data-status="caminho">
+      <div class="column-header">
+        <h2>A Caminho</h2>
+      </div>
+      <div class="column-body" id="col-caminho"></div>
+    </section>
+
+    <section class="column hidden" data-status="finalizado">
+      <div class="column-header">
+        <h2>Pedidos Finalizados</h2>
+      </div>
+      <div class="column-body" id="col-finalizado"></div>
+    </section>
+
+    <section class="column hidden" data-status="cancelado">
+      <div class="column-header">
+        <h2>Pedidos Cancelados</h2>
+      </div>
+      <div class="column-body" id="col-cancelado"></div>
+    </section>
+  </main>
+
+  <div class="modal-backdrop" id="modal">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <p class="modal-label">Pedido</p>
+          <h3 id="modal-id"></h3>
+        </div>
+        <button class="icon-button" id="close-modal" aria-label="Fechar modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-row">
+          <span class="muted">Cliente</span>
+          <span id="modal-customer"></span>
+        </div>
+        <div class="modal-row">
+          <span class="muted">Horário</span>
+          <span id="modal-time"></span>
+        </div>
+
+        <div class="modal-section">
+          <p class="modal-label">Itens</p>
+          <ul id="modal-items" class="item-list"></ul>
+        </div>
+
+        <div class="modal-section">
+          <p class="modal-label">Observações</p>
+          <p id="modal-notes" class="notes"></p>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="ghost-button" id="close-modal-secondary">Fechar</button>
+        <button class="ghost-button" id="modal-prev">Voltar etapa</button>
+        <button class="danger-button" id="modal-cancel">Cancelar Pedido</button>
+        <button class="primary-button" id="modal-next"></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="create-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Novo Pedido</h3>
+        <button class="icon-button" id="close-create" aria-label="Fechar criação">&times;</button>
+      </div>
+      <div class="modal-body form-body">
+        <label>Cliente
+          <input id="new-customer" required />
+        </label>
+        <label>Itens (separe por vírgula)
+          <input id="new-items" required placeholder="Burger, Batata, Refrigerante" />
+        </label>
+        <label>Observações
+          <textarea id="new-notes" placeholder="Sem cebola, bebida sem gelo"></textarea>
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="ghost-button" id="cancel-create">Cancelar</button>
+        <button class="primary-button" id="save-create">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <aside class="drawer" id="drawer">
+    <div class="drawer-header">
+      <div class="brand">EVO</div>
+      <button class="icon-button" id="close-drawer" aria-label="Fechar menu">&times;</button>
+    </div>
+    <nav class="drawer-nav"></nav>
+    <div class="drawer-footer">
+      <div class="user-chip" id="user-chip" hidden>
+        <span class="dot"></span>
+        <img id="user-avatar" alt="Avatar" />
+        <span id="user-name">Usuário</span>
+        <button class="ghost-button small" id="logout-btn">Sair</button>
+      </div>
+    </div>
+  </aside>
+  <div class="drawer-backdrop" id="drawer-backdrop"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
