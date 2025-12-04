@@ -296,6 +296,29 @@ async function completeLogin(user) {
     return;
   }
 
+  // Acesso permitido → salva dados
+  localStorage.setItem("restaurant_id", result.restaurant.id);
+  localStorage.setItem("user", JSON.stringify(safeUser));
+
+  loginScreen?.classList.add("hidden");
+  board?.classList.remove("hidden");
+
+  if (userNameEl) {
+    userNameEl.textContent = safeUser.name;
+  }
+  if (userAvatar) {
+    if (safeUser.picture) {
+      userAvatar.src = safeUser.picture;
+      userAvatar.hidden = false;
+    } else {
+      userAvatar.hidden = true;
+    }
+  }
+
+  userChip.hidden = false;
+}
+
+
   // Se estiver tudo OK -> continuar o login
   localStorage.setItem("restaurant_id", result.restaurant.id);
   localStorage.setItem("user", JSON.stringify(safeUser));
