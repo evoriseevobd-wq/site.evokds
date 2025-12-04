@@ -192,6 +192,49 @@ app.delete("/orders/:id", async (req, res) => {
   }
 });
 
+app.post("/auth/google", async (req, res) => {
+  try {
+    const { email, name } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: "Email é obrigatório" });
+    }
+
+    // Verifica se o email existe na tabela restaurants
+    const { data, error } = await supabase
+      .from("restaurants")
+      .select("*")
+      .eq("email", email)
+      .limit(1);
+
+    if (error) {
+      console.error("Erro ao buscar restaurante:", error);
+      return res.status(500).json({ error: "Erro ao buscar restaurante" });
+    }
+
+    // Se NÃO existir → retorna mensagem personalizada
+    if (!data || data.length === 0) {
+      return res.status(403).json({
+        authorized: false,
+        message:
+          "Seu acesso ainda não está liberado. Entre em contato com a Everrise para agendar sua demonstração.",
+        contact_link: "https://wa.me/5511999999999" // altere para seu WhatsApp
+      });
+    }
+
+    // Se existir → retornar o restaurante
+    return res.json({
+      authorized: true,
+      restaurant: data[0]
+    });
+
+  } catch (err) {
+    console.error("Erro inesperado:", err);
+    return res.status(500).json({ error: "Erro inesperado" });
+  }
+});
+
+
 app.listen(PORT, () => {
   console.log(`Backend rodando na porta ${PORT}`);
 });
