@@ -269,7 +269,6 @@ function closeModal() {
   document.getElementById("modal").classList.remove("open");
 }
 
-function completeLogin(user) {
 async function completeLogin(user) {
   const safeUser = {
     name: user?.name || "Usuário",
