@@ -218,7 +218,7 @@ app.post("/auth/google", async (req, res) => {
         authorized: false,
         message:
           "Seu acesso ainda não está liberado. Entre em contato com a Everrise para agendar sua demonstração.",
-        contact_link: "https://wa.me/5511999999999" // altere para seu WhatsApp
+        contact_link: "link site" // altere para seu WhatsApp
       });
     }
 
