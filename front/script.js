@@ -269,23 +269,7 @@ function closeModal() {
   document.getElementById("modal").classList.remove("open");
 }
 
-// Bloco do Google (DEVE VIR AQUI)
-google.accounts.id.initialize({
-  client_id: GOOGLE_CLIENT_ID,
-  callback: handleCredentialsResponse,
-});
-
-google.accounts.id.renderButton(
-  document.getElementById("google-login"),
-  { theme: "filled_blue", size: "large" }
-);
-
-google.accounts.id.prompt();
-
-function handleCredentialsResponse(response) {
-  const user = jwt_decode(response.credential);
-  completeLogin(user);
-}
+// ===== LOGIN COM GOOGLE =====
 
 async function completeLogin(user) {
   const safeUser = {
@@ -298,7 +282,7 @@ async function completeLogin(user) {
   const response = await fetch(`${API_URL}/auth/google`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(safeUser)
+    body: JSON.stringify(safeUser),
   });
 
   const result = await response.json();
@@ -317,12 +301,14 @@ async function completeLogin(user) {
   localStorage.setItem("restaurant_id", result.restaurant.id);
   localStorage.setItem("user", JSON.stringify(safeUser));
 
+  // Atualiza UI
   loginScreen?.classList.add("hidden");
   board?.classList.remove("hidden");
 
   if (userNameEl) {
     userNameEl.textContent = safeUser.name;
   }
+
   if (userAvatar) {
     if (safeUser.picture) {
       userAvatar.src = safeUser.picture;
@@ -332,39 +318,6 @@ async function completeLogin(user) {
     }
   }
 
-  userChip.hidden = false;
-}
-
-
-  // Se estiver tudo OK -> continuar o login
-  localStorage.setItem("restaurant_id", result.restaurant.id);
-  localStorage.setItem("user", JSON.stringify(safeUser));
-
-  loginScreen.classList.add("hidden");
-  board.classList.remove("hidden");
-
-  userNameEl.textContent = safeUser.name;
-  userAvatar.src = safeUser.picture;
-  userChip.hidden = false;
-}
-
-
-  localStorage.setItem("user", JSON.stringify(safeUser));
-
-  if (userNameEl) {
-    userNameEl.textContent = safeUser.name;
-  }
-  if (userAvatar) {
-    if (safeUser.picture) {
-      userAvatar.src = safeUser.picture;
-      userAvatar.hidden = false;
-    } else {
-      userAvatar.hidden = true;
-    }
-  }
-
-  loginScreen?.classList.add("hidden");
-  board?.classList.remove("hidden");
   if (userChip) {
     userChip.hidden = false;
   }
@@ -488,7 +441,7 @@ document.getElementById("modal").addEventListener("click", (event) => {
   }
 });
 
-document.getElementById("simulate-login").addEventListener("click", () => {
+document.getElementById("simulate-login")?.addEventListener("click", () => {
   completeLogin({
     name: "Usuário Demo",
     email: "demo@example.com",
