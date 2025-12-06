@@ -1,6 +1,8 @@
 const GOOGLE_CLIENT_ID =
   "872848052437-nl3lru9m1jhmfobk0imbpb2o9uk47mqi.apps.googleusercontent.com";
+
 const API_URL = "https://kds-backend.dahead.easypanel.host/orders";
+const AUTH_URL = "https://kds-backend.dahead.easypanel.host/auth/google";
 
 const columns = {
   recebido: document.getElementById("col-recebido"),
@@ -278,48 +280,61 @@ async function completeLogin(user) {
     picture: user?.picture || "",
   };
 
-  // Envia email para backend verificar se existe no Supabase
-  const response = await fetch(`${API_URL}/auth/google`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(safeUser),
-  });
+  console.log("safeUser que será enviado:", safeUser);
 
-  const result = await response.json();
+  try {
+    const response = await fetch(AUTH_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(safeUser),
+    });
 
-  // Se não tiver permissão → mostrar mensagem
-  if (!result.authorized) {
-    alert(
-      result.message +
-        "\n\nFale com a Everrise:\n" +
-        result.contact_link
-    );
-    return;
-  }
-
-  // Acesso permitido → salva dados
-  localStorage.setItem("restaurant_id", result.restaurant.id);
-  localStorage.setItem("user", JSON.stringify(safeUser));
-
-  // Atualiza UI
-  loginScreen?.classList.add("hidden");
-  board?.classList.remove("hidden");
-
-  if (userNameEl) {
-    userNameEl.textContent = safeUser.name;
-  }
-
-  if (userAvatar) {
-    if (safeUser.picture) {
-      userAvatar.src = safeUser.picture;
-      userAvatar.hidden = false;
-    } else {
-      userAvatar.hidden = true;
+    if (!response.ok) {
+      const text = await response.text();
+      console.error("Erro HTTP em /auth/google:", response.status, text);
+      alert("Falha ao comunicar com o servidor de login.");
+      return;
     }
-  }
 
-  if (userChip) {
-    userChip.hidden = false;
+    const result = await response.json();
+    console.log("Resposta do backend /auth/google:", result);
+
+    if (!result.authorized) {
+      alert(
+        (result.message || "Você não tem permissão para acessar este painel.") +
+          "\n\nFale com a Everrise:\n" +
+          (result.contact_link || "")
+      );
+      return;
+    }
+
+    // Acesso permitido → salva dados
+    localStorage.setItem("restaurant_id", result.restaurant.id);
+    localStorage.setItem("user", JSON.stringify(safeUser));
+
+    // Atualiza UI
+    loginScreen?.classList.add("hidden");
+    board?.classList.remove("hidden");
+
+    if (userNameEl) {
+      userNameEl.textContent = safeUser.name;
+    }
+
+    if (userAvatar) {
+      if (safeUser.picture) {
+        userAvatar.src = safeUser.picture;
+        userAvatar.hidden = false;
+      } else {
+        userAvatar.hidden = true;
+      }
+    }
+
+    if (userChip) {
+      userChip.hidden = false;
+    }
+  } catch (error) {
+    console.error("Erro na chamada /auth/google:", error);
+    alert("Erro inesperado ao tentar fazer login.");
   }
 }
 
@@ -337,11 +352,15 @@ function decodeJwt(token) {
 
 function handleCredentialResponse(response) {
   const data = decodeJwt(response.credential);
+  console.log("Payload JWT do Google:", data);
+
   const user = {
     name: data?.name || data?.given_name || "Usuário",
     email: data?.email || "",
     picture: data?.picture || "",
   };
+
+  console.log("Usuário montado pelo front:", user);
   completeLogin(user);
 }
 
