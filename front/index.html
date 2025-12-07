@@ -159,6 +159,43 @@
   </aside>
   <div class="drawer-backdrop" id="drawer-backdrop"></div>
 
+  <!-- Modal de acesso não autorizado da Evorise -->
+  <div id="unauthorized-modal" class="modal-backdrop">
+    <div class="modal unauthorized-modal">
+      <div class="modal-header">
+        <h2>Você não tem acesso a este painel</h2>
+      </div>
+
+      <div class="modal-body">
+        <p>
+          Este painel é exclusivo para estabelecimentos que utilizam a plataforma da
+          <strong>Evorise</strong>.
+        </p>
+        <p>
+          Para saber mais sobre os serviços da Evorise e como implementar esse sistema
+          no seu negócio, acesse o site oficial:
+        </p>
+
+        <p class="unauth-link-text">
+          <!-- Troque esta URL pelo domínio real depois -->
+          <a
+            href="https://__________________________"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            https://__________________________
+          </a>
+        </p>
+      </div>
+
+      <div class="modal-footer">
+        <button id="unauth-close" class="btn-secondary">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>
