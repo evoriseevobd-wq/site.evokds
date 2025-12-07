@@ -18,7 +18,7 @@ const statusFlow = ["recebido", "preparo", "pronto", "caminho"];
 const actionLabels = {
   recebido: "Aceitar",
   preparo: "Finalizar Preparo",
-  pronto: "Enviar para Entrega",
+  // pronto será dinâmico: depende se é delivery ou local
   caminho: "Concluir Pedido",
 };
 
@@ -40,6 +40,7 @@ const saveCreate = document.getElementById("save-create");
 const newCustomer = document.getElementById("new-customer");
 const newItems = document.getElementById("new-items");
 const newNotes = document.getElementById("new-notes");
+const newDelivery = document.getElementById("new-delivery");
 const drawer = document.getElementById("drawer");
 const openDrawer = document.getElementById("open-drawer");
 const closeDrawerBtn = document.getElementById("close-drawer");
@@ -49,7 +50,8 @@ const tabFinalizados = document.getElementById("tab-finalizados");
 const tabCancelados = document.getElementById("tab-cancelados");
 
 const views = {
-  ativos: ["recebido", "preparo", "pronto", "caminho"],
+  // sem "caminho" aqui → cozinha vê só Recebido / Preparo / Pronto
+  ativos: ["recebido", "preparo", "pronto"],
   finalizados: ["finalizado"],
   cancelados: ["cancelado", "cancelled", "canceled"],
 };
@@ -125,6 +127,15 @@ function formatOrderTime(order) {
   return "--:--";
 }
 
+function getActionLabel(order) {
+  if (order.status === "pronto") {
+    return order.service_type === "delivery"
+      ? "Enviar para entrega"
+      : "Finalizar pedido";
+  }
+  return actionLabels[order.status];
+}
+
 function renderBoard() {
   Object.values(columns).forEach((col) => {
     if (col) col.innerHTML = "";
@@ -172,9 +183,9 @@ function createCard(order) {
 
   const items = document.createElement("p");
   items.className = "items";
-  items.textContent = summarizeItems(order.items);
+  items.textContent = summarizeItems(order.items || []);
 
-  const actionLabel = actionLabels[order.status];
+  const actionLabel = getActionLabel(order);
   if (actionLabel) {
     const action = document.createElement("button");
     action.className = "action";
@@ -194,6 +205,7 @@ function createCard(order) {
 }
 
 function summarizeItems(list) {
+  if (!Array.isArray(list)) return "";
   if (list.length <= 2) return list.join(" • ");
   const first = list.slice(0, 2).join(" • ");
   return `${first} +${list.length - 2}`;
@@ -203,10 +215,23 @@ function advanceStatus(orderId) {
   const index = orders.findIndex((order) => getOrderId(order) === orderId);
   if (index === -1) return;
 
-  const currentStatus = orders[index].status;
-  const nextIndex = statusFlow.indexOf(currentStatus) + 1;
-  const nextStatus =
-    nextIndex >= statusFlow.length ? "finalizado" : statusFlow[nextIndex];
+  const order = orders[index];
+  const currentStatus = order.status;
+  let nextStatus;
+
+  if (currentStatus === "pronto") {
+    if (order.service_type === "delivery") {
+      // Pedido para entrega → vai para "caminho"
+      nextStatus = "caminho";
+    } else {
+      // Pedido local → finaliza direto
+      nextStatus = "finalizado";
+    }
+  } else {
+    const nextIndex = statusFlow.indexOf(currentStatus) + 1;
+    nextStatus =
+      nextIndex >= statusFlow.length ? "finalizado" : statusFlow[nextIndex];
+  }
 
   updatePedido(orderId, { status: nextStatus });
 
@@ -228,7 +253,7 @@ function openModal(orderId) {
 
   const itemsList = document.getElementById("modal-items");
   itemsList.innerHTML = "";
-  order.items.forEach((item) => {
+  (order.items || []).forEach((item) => {
     const li = document.createElement("li");
     li.textContent = item;
     itemsList.appendChild(li);
@@ -241,7 +266,7 @@ function openModal(orderId) {
   if (order.status === "finalizado" || order.status === "cancelado") {
     modalAction.classList.add("hidden");
   } else {
-    modalAction.textContent = actionLabels[order.status];
+    modalAction.textContent = getActionLabel(order);
     modalAction.disabled = false;
     modalAction.classList.remove("hidden");
   }
@@ -271,7 +296,7 @@ function closeModal() {
   document.getElementById("modal").classList.remove("open");
 }
 
-// ===== LOGIN COM GOOGLE =====
+// ========== LOGIN COM GOOGLE ==========
 
 async function completeLogin(user) {
   const safeUser = {
@@ -364,6 +389,8 @@ function handleCredentialResponse(response) {
   completeLogin(user);
 }
 
+// ========== FLUXO DE PEDIDO LOCAL / DELIVERY ==========
+
 function regressStatus(orderId) {
   const index = orders.findIndex((order) => getOrderId(order) === orderId);
   if (index === -1) return;
@@ -386,6 +413,7 @@ function closeCreateModal() {
   newCustomer.value = "";
   newItems.value = "";
   newNotes.value = "";
+  if (newDelivery) newDelivery.checked = false; // default volta pra local
 }
 
 function saveNewOrder() {
@@ -394,13 +422,17 @@ function saveNewOrder() {
     .split(",")
     .map((i) => i.trim())
     .filter(Boolean);
+
   if (!customer || items.length === 0) return;
+
+  const serviceType = newDelivery?.checked ? "delivery" : "local";
 
   const novoPedido = {
     customer,
     items,
     notes: newNotes.value.trim(),
     status: "recebido",
+    service_type: serviceType,
   };
 
   criarPedido(novoPedido);
@@ -411,6 +443,8 @@ function cancelOrder(orderId) {
   if (index === -1) return;
   updatePedido(orderId, { status: "canceled" }, closeModal);
 }
+
+// ========== GOOGLE BUTTON INIT ==========
 
 function initGoogleButton(attempt = 0) {
   if (!window.google || !google.accounts || !google.accounts.id) {
@@ -438,8 +472,11 @@ function initGoogleButton(attempt = 0) {
   }
 }
 
+// ========== EVENTOS DE UI ==========
+
 logoutBtn?.addEventListener("click", () => {
   localStorage.removeItem("user");
+  localStorage.removeItem("restaurant_id");
   window.location.href = "index.html";
 });
 
@@ -460,13 +497,16 @@ document.getElementById("modal").addEventListener("click", (event) => {
   }
 });
 
-document.getElementById("simulate-login")?.addEventListener("click", () => {
-  completeLogin({
-    name: "Usuário Demo",
-    email: "demo@example.com",
-    picture: "",
+const simulateLoginBtn = document.getElementById("simulate-login");
+if (simulateLoginBtn) {
+  simulateLoginBtn.addEventListener("click", () => {
+    completeLogin({
+      name: "Usuário Demo",
+      email: "demo@example.com",
+      picture: "",
+    });
   });
-});
+}
 
 document.getElementById("modal-prev").addEventListener("click", () => {
   if (activeOrderId !== null) {
@@ -515,6 +555,8 @@ tabAtivos?.addEventListener("click", () => changeView("ativos"));
 tabFinalizados?.addEventListener("click", () => changeView("finalizados"));
 tabCancelados?.addEventListener("click", () => changeView("cancelados"));
 
+// ========== CARREGAMENTO INICIAL ==========
+
 window.addEventListener("load", () => {
   initGoogleButton();
   carregarPedidos();
@@ -527,12 +569,16 @@ window.addEventListener("load", () => {
   if (stored) {
     try {
       const parsed = JSON.parse(stored);
+      // aqui podemos pular a validação no backend se você quiser,
+      // mas por enquanto mantemos o fluxo normal:
       completeLogin(parsed);
     } catch (_) {
       localStorage.removeItem("user");
     }
   }
 });
+
+// ========== INTEGRAÇÃO COM BACKEND ==========
 
 async function carregarPedidos() {
   try {
@@ -566,6 +612,7 @@ function renderizarKanban(lista) {
           notes: order.notes || "",
           status: toFrontStatus(order.status),
           createdAt: order.created_at || order.createdAt,
+          service_type: order.service_type || "local",
         }))
       : [];
   orders = mapped;
@@ -585,6 +632,7 @@ async function criarPedido(novoPedido) {
       client_name: novoPedido.customer,
       itens: novoPedido.items,
       notes: novoPedido.notes || "",
+      service_type: novoPedido.service_type || "local",
     };
 
     const response = await fetch(API_URL, {
