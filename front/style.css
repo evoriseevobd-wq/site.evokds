@@ -87,13 +87,15 @@ body {
 }
 
 .board {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(240px, 1fr));
-  gap: 16px;
+  display: flex;
+  justify-content: center;      /* centraliza as colunas no meio */
+  flex-wrap: wrap;              /* deixa quebrar em telas menores */
+  gap: 24px;                    /* espaço entre as colunas */
   padding: 12px 24px 40px;
   max-width: 1500px;
-  margin: 0 auto;
+  margin: 0 auto;               /* centraliza o container na página */
 }
+
 
 .column {
   background: linear-gradient(180deg, #111a2f 0%, #0c1628 100%);
@@ -171,7 +173,7 @@ body {
 }
 
 .items {
-  margin: 0 0 12px;
+  margin: 0 0 10px;
   font-size: 13px;
   color: var(--muted);
 }
