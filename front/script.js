@@ -48,6 +48,8 @@ const drawerBackdrop = document.getElementById("drawer-backdrop");
 const tabAtivos = document.getElementById("tab-ativos");
 const tabFinalizados = document.getElementById("tab-finalizados");
 const tabCancelados = document.getElementById("tab-cancelados");
+const tabEntregas = document.getElementById("tab-entregas");
+
 
 const views = {
   // sem "caminho" aqui → cozinha vê só Recebido / Preparo / Pronto
@@ -554,6 +556,8 @@ function changeView(view) {
 tabAtivos?.addEventListener("click", () => changeView("ativos"));
 tabFinalizados?.addEventListener("click", () => changeView("finalizados"));
 tabCancelados?.addEventListener("click", () => changeView("cancelados"));
+tabEntregas?.addEventListener("click", openEntregasModal);
+
 
 // ========== CARREGAMENTO INICIAL ==========
 
