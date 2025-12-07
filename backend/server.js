@@ -43,7 +43,15 @@ async function restaurantExists(restaurant_id) {
 
 app.post("/orders", async (req, res) => {
   try {
-    const { restaurant_id, client_name, items, itens, notes } = req.body || {};
+    const {
+      restaurant_id,
+      client_name,
+      items,
+      itens,
+      notes,
+      service_type,
+    } = req.body || {};
+
     const normalizedItems = Array.isArray(items)
       ? items
       : Array.isArray(itens)
@@ -81,6 +89,7 @@ app.post("/orders", async (req, res) => {
         : 1;
 
     const now = new Date().toISOString();
+    const serviceType = service_type || "local"; // ⬅️ LOCAL como padrão
 
     const { data, error } = await supabase
       .from("orders")
@@ -94,6 +103,7 @@ app.post("/orders", async (req, res) => {
           status: "pending",
           created_at: now,
           update_at: now,
+          service_type: serviceType, // ⬅️ campo novo
         },
       ])
       .select()
@@ -200,7 +210,6 @@ app.post("/auth/google", async (req, res) => {
       return res.status(400).json({ error: "Email é obrigatório" });
     }
 
-    // Verifica se o email existe na tabela restaurants
     const { data, error } = await supabase
       .from("restaurants")
       .select("*")
@@ -212,28 +221,24 @@ app.post("/auth/google", async (req, res) => {
       return res.status(500).json({ error: "Erro ao buscar restaurante" });
     }
 
-    // Se NÃO existir → retorna mensagem personalizada
     if (!data || data.length === 0) {
       return res.status(403).json({
         authorized: false,
         message:
           "Seu acesso ainda não está liberado. Entre em contato com a Everrise para agendar sua demonstração.",
-        contact_link: "link site" // altere para seu WhatsApp
+        contact_link: "link site", // altere para seu WhatsApp
       });
     }
 
-    // Se existir → retornar o restaurante
     return res.json({
       authorized: true,
-      restaurant: data[0]
+      restaurant: data[0],
     });
-
   } catch (err) {
     console.error("Erro inesperado:", err);
     return res.status(500).json({ error: "Erro inesperado" });
   }
 });
-
 
 app.listen(PORT, () => {
   console.log(`Backend rodando na porta ${PORT}`);
