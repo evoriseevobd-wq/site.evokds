@@ -18,7 +18,7 @@ const statusFlow = ["recebido", "preparo", "pronto", "caminho"];
 const actionLabels = {
   recebido: "Aceitar",
   preparo: "Finalizar Preparo",
-  // pronto será dinâmico: depende se é delivery ou local
+  // pronto é dinâmico (local/delivery)
   caminho: "Concluir Pedido",
 };
 
@@ -32,6 +32,7 @@ const userNameEl = document.getElementById("user-name");
 const userAvatar = document.getElementById("user-avatar");
 const logoutBtn = document.getElementById("logout-btn");
 const googleBtnContainer = document.getElementById("googleLoginBtn");
+
 const createModal = document.getElementById("create-modal");
 const openCreate = document.getElementById("open-create");
 const closeCreate = document.getElementById("close-create");
@@ -41,18 +42,26 @@ const newCustomer = document.getElementById("new-customer");
 const newItems = document.getElementById("new-items");
 const newNotes = document.getElementById("new-notes");
 const newDelivery = document.getElementById("new-delivery");
+
 const drawer = document.getElementById("drawer");
 const openDrawer = document.getElementById("open-drawer");
 const closeDrawerBtn = document.getElementById("close-drawer");
 const drawerBackdrop = document.getElementById("drawer-backdrop");
+
 const tabAtivos = document.getElementById("tab-ativos");
 const tabFinalizados = document.getElementById("tab-finalizados");
 const tabCancelados = document.getElementById("tab-cancelados");
 const tabEntregas = document.getElementById("tab-entregas");
 
+// elementos do modal de entregas
+const entregasModal = document.getElementById("entregas-modal");
+const entregasBody = document.getElementById("entregas-body");
+const closeEntregasBtn = document.getElementById("close-entregas");
+// se você tiver um botão no header com id="open-entregas"
+const openEntregasBtn = document.getElementById("open-entregas");
 
 const views = {
-  // sem "caminho" aqui → cozinha vê só Recebido / Preparo / Pronto
+  // sem "caminho" → cozinha só vê Recebido / Preparo / Pronto
   ativos: ["recebido", "preparo", "pronto"],
   finalizados: ["finalizado"],
   cancelados: ["cancelado", "cancelled", "canceled"],
@@ -223,11 +232,9 @@ function advanceStatus(orderId) {
 
   if (currentStatus === "pronto") {
     if (order.service_type === "delivery") {
-      // Pedido para entrega → vai para "caminho"
-      nextStatus = "caminho";
+      nextStatus = "caminho";      // delivery → vai pra Entregas
     } else {
-      // Pedido local → finaliza direto
-      nextStatus = "finalizado";
+      nextStatus = "finalizado";   // local → finaliza direto
     }
   } else {
     const nextIndex = statusFlow.indexOf(currentStatus) + 1;
@@ -298,6 +305,81 @@ function closeModal() {
   document.getElementById("modal").classList.remove("open");
 }
 
+// ========== MODAL DE ENTREGAS ==========
+
+function renderEntregasModal() {
+  if (!entregasBody) return;
+
+  const entregas = orders.filter((order) => order.status === "caminho");
+
+  if (entregas.length === 0) {
+    entregasBody.innerHTML =
+      "<p class='muted'>Nenhum pedido em entrega no momento.</p>";
+    return;
+  }
+
+  entregasBody.innerHTML = "";
+
+  entregas.forEach((order) => {
+    const orderId = getOrderId(order);
+    const displayNumber = order.display_number ?? orderId;
+
+    const card = document.createElement("article");
+    card.className = "card caminho";
+
+    const head = document.createElement("div");
+    head.className = "card-head";
+
+    const idEl = document.createElement("div");
+    idEl.className = "order-id";
+    idEl.textContent = `#${displayNumber}`;
+
+    const time = document.createElement("div");
+    time.className = "order-time";
+    time.textContent = formatOrderTime(order);
+
+    head.append(idEl, time);
+
+    const customer = document.createElement("p");
+    customer.className = "customer";
+    customer.textContent = order.customer;
+
+    const items = document.createElement("p");
+    items.className = "items";
+    items.textContent = summarizeItems(order.items || []);
+
+    const actions = document.createElement("div");
+    actions.className = "modal-actions-row";
+
+    const finishBtn = document.createElement("button");
+    finishBtn.className = "primary-button small";
+    finishBtn.textContent = "Finalizar manualmente";
+
+    finishBtn.addEventListener("click", () => {
+      updatePedido(orderId, { status: "finalizado" }, () => {
+        renderEntregasModal();
+      });
+    });
+
+    actions.appendChild(finishBtn);
+
+    card.append(head, customer, items, actions);
+
+    entregasBody.appendChild(card);
+  });
+}
+
+function openEntregasModal() {
+  if (!entregasModal) return;
+  renderEntregasModal();
+  entregasModal.classList.add("open");
+}
+
+function closeEntregasModal() {
+  if (!entregasModal) return;
+  entregasModal.classList.remove("open");
+}
+
 // ========== LOGIN COM GOOGLE ==========
 
 async function completeLogin(user) {
@@ -335,11 +417,9 @@ async function completeLogin(user) {
       return;
     }
 
-    // Acesso permitido → salva dados
     localStorage.setItem("restaurant_id", result.restaurant.id);
     localStorage.setItem("user", JSON.stringify(safeUser));
 
-    // Atualiza UI
     loginScreen?.classList.add("hidden");
     board?.classList.remove("hidden");
 
@@ -415,7 +495,7 @@ function closeCreateModal() {
   newCustomer.value = "";
   newItems.value = "";
   newNotes.value = "";
-  if (newDelivery) newDelivery.checked = false; // default volta pra local
+  if (newDelivery) newDelivery.checked = false;
 }
 
 function saveNewOrder() {
@@ -558,6 +638,13 @@ tabFinalizados?.addEventListener("click", () => changeView("finalizados"));
 tabCancelados?.addEventListener("click", () => changeView("cancelados"));
 tabEntregas?.addEventListener("click", openEntregasModal);
 
+openEntregasBtn?.addEventListener("click", openEntregasModal);
+closeEntregasBtn?.addEventListener("click", closeEntregasModal);
+entregasModal?.addEventListener("click", (e) => {
+  if (e.target.id === "entregas-modal") {
+    closeEntregasModal();
+  }
+});
 
 // ========== CARREGAMENTO INICIAL ==========
 
@@ -573,8 +660,6 @@ window.addEventListener("load", () => {
   if (stored) {
     try {
       const parsed = JSON.parse(stored);
-      // aqui podemos pular a validação no backend se você quiser,
-      // mas por enquanto mantemos o fluxo normal:
       completeLogin(parsed);
     } catch (_) {
       localStorage.removeItem("user");
