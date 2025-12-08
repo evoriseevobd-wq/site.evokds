@@ -87,13 +87,13 @@ body {
 }
 
 .board {
-  display: flex;
-  justify-content: center;      /* centraliza as colunas no meio */
-  flex-wrap: wrap;              /* deixa quebrar em telas menores */
-  gap: 24px;                    /* espaço entre as colunas */
+  display: grid;
+  grid-template-columns: repeat(3, minmax(260px, 1fr)); /* 3 colunas iguais */
+  justify-content: center;      /* grid centralizado na página */
+  gap: 24px;
   padding: 12px 24px 40px;
-  max-width: 1500px;
-  margin: 0 auto;               /* centraliza o container na página */
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 
