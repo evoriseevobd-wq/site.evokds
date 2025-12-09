@@ -11,18 +11,31 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
+  <!-- TELA DE LOGIN -->
   <div class="login-screen" id="login-screen">
     <div class="login-card">
-      <div class="login-badge">EVO</div>
+      <!-- AQUI VAI A FÊNIX -->
+      <div class="login-badge">
+        <img
+          src="fenix-logo-png.png"
+          alt="Logo Fênix"
+          class="login-logo"
+        />
+      </div>
+
       <h1>Entrar no KDS</h1>
       <p class="muted">Use sua conta Google para continuar</p>
       <div id="googleLoginBtn" class="google-btn"></div>
     </div>
   </div>
 
+  <!-- HEADER DEPOIS DO LOGIN -->
   <header class="app-header">
     <button class="icon-button menu-button" id="open-drawer" aria-label="Abrir menu">&#9776;</button>
-    <div class="brand">EVO</div>
+
+    <!-- TEXTO FLUX ON NO TOPO -->
+    <div class="brand">FLUX ON</div>
+
     <div class="header-right">
       <button class="primary-button ghost" id="open-create">Criar Pedido</button>
     </div>
@@ -135,11 +148,6 @@
         <label>Observações
           <textarea id="new-notes" placeholder="Sem cebola, bebida sem gelo"></textarea>
         </label>
-        <!-- checkbox para marcar se é delivery -->
-        <label class="checkbox-row">
-          <input type="checkbox" id="new-delivery" />
-          <span>Entrega (delivery)</span>
-        </label>
       </div>
       <div class="modal-actions">
         <button class="ghost-button" id="cancel-create">Cancelar</button>
@@ -148,22 +156,9 @@
     </div>
   </div>
 
-  <!-- Modal de Entregas -->
-  <div class="modal-backdrop" id="entregas-modal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Entregas</h3>
-        <button class="icon-button" id="close-entregas" aria-label="Fechar entregas">&times;</button>
-      </div>
-      <div class="modal-body" id="entregas-body">
-        <!-- pedidos em entrega são renderizados via JS -->
-      </div>
-    </div>
-  </div>
-
   <aside class="drawer" id="drawer">
     <div class="drawer-header">
-      <div class="brand">EVO</div>
+      <div class="brand">FLUX ON</div>
       <button class="icon-button" id="close-drawer" aria-label="Fechar menu">&times;</button>
     </div>
     <nav class="drawer-nav"></nav>
