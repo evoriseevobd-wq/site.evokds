@@ -49,43 +49,19 @@ body {
 }
 
 .brand {
-  font-size: 30px;
-  font-weight: 800;
-  letter-spacing: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* se quiser, pode deixar um pouco de espaço vertical usando padding opcional */
+  /* padding: 4px 0; */
 }
 
-.menu-button {
-  position: static;
-  justify-self: start;
+.brand-logo {
+  height: 32px;   /* ajusta esse valor até ficar do tamanho que você curtir */
+  width: auto;
+  display: block;
 }
 
-.user-chip {
-  display: inline-flex;
-  align-items: am center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: rgba(59, 16, 16, 0.9);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-weight: 600;
-}
-
-.user-chip img {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 1px solid var(--border);
-}
-
-.user-chip .dot {
-  width: 10px;
-  height: 10px;
-  background: #22c55e;
-  border-radius: 50%;
-  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.15);
-}
 
 .board {
   display: grid;
