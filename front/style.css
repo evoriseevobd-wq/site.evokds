@@ -381,6 +381,34 @@ body {
   margin-bottom: 10px;
 }
 
+/* Checkbox de Delivery no "Criar Pedido" */
+.delivery-toggle {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.delivery-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+/* Mensagem de "sem entregas" na aba Entrega */
+.empty-state {
+  padding: 14px 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--border);
+  background: #111b30;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+
 .form-body input,
 .form-body textarea {
   width: 100%;
