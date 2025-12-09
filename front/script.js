@@ -18,7 +18,7 @@ const statusFlow = ["recebido", "preparo", "pronto", "caminho"];
 const actionLabels = {
   recebido: "Aceitar",
   preparo: "Finalizar Preparo",
-  // pronto será dinâmico: depende se é delivery ou local
+  // pronto é dinâmico (local vs delivery)
   caminho: "Concluir Pedido",
 };
 
@@ -51,10 +51,12 @@ const tabCancelados = document.getElementById("tab-cancelados");
 const tabEntregas = document.getElementById("tab-entregas");
 
 const views = {
-  // sem "caminho" aqui → cozinha vê só Recebido / Preparo / Pronto
+  // Cozinha: só esses 3
   ativos: ["recebido", "preparo", "pronto"],
   finalizados: ["finalizado"],
   cancelados: ["cancelado", "cancelled", "canceled"],
+  // Entregas: só "caminho"
+  entregas: ["caminho"],
 };
 
 let currentView = "ativos";
@@ -138,12 +140,14 @@ function getActionLabel(order) {
 }
 
 function renderBoard() {
+  // limpa todas as colunas
   Object.values(columns).forEach((col) => {
     if (col) col.innerHTML = "";
   });
 
   const enabledStatuses = views[currentView];
 
+  // mostra/esconde colunas conforme a view
   document.querySelectorAll(".column").forEach((section) => {
     const status = section.dataset.status;
     if (!status) return;
@@ -151,9 +155,24 @@ function renderBoard() {
   });
 
   enabledStatuses.forEach((status) => {
+    const col = columns[status];
+    if (!col) return;
+
     const bucket = orders.filter((order) => order.status === status);
+
+    if (bucket.length === 0) {
+      // caso especial: aba Entregas sem pedidos
+      if (currentView === "entregas" && status === "caminho") {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "Nenhuma entrega em andamento no momento.";
+        col.appendChild(empty);
+      }
+      return;
+    }
+
     bucket.forEach((order) => {
-      columns[status]?.appendChild(createCard(order));
+      col.appendChild(createCard(order));
     });
   });
 }
@@ -222,10 +241,8 @@ function advanceStatus(orderId) {
 
   if (currentStatus === "pronto") {
     if (order.service_type === "delivery") {
-      // Pedido para entrega → vai para "caminho"
       nextStatus = "caminho";
     } else {
-      // Pedido local → finaliza direto
       nextStatus = "finalizado";
     }
   } else {
@@ -334,11 +351,9 @@ async function completeLogin(user) {
       return;
     }
 
-    // Acesso permitido → salva dados
     localStorage.setItem("restaurant_id", result.restaurant.id);
     localStorage.setItem("user", JSON.stringify(safeUser));
 
-    // Atualiza UI
     loginScreen?.classList.add("hidden");
     board?.classList.remove("hidden");
 
@@ -414,7 +429,7 @@ function closeCreateModal() {
   newCustomer.value = "";
   newItems.value = "";
   newNotes.value = "";
-  if (newDelivery) newDelivery.checked = false; // default volta pra local
+  if (newDelivery) newDelivery.checked = false;
 }
 
 function saveNewOrder() {
@@ -443,27 +458,6 @@ function cancelOrder(orderId) {
   const index = orders.findIndex((order) => getOrderId(order) === orderId);
   if (index === -1) return;
   updatePedido(orderId, { status: "canceled" }, closeModal);
-}
-
-/**
- * POPUP SIMPLES DE ENTREGAS
- * Mostra em alert todos os pedidos em "caminho" (delivery)
- */
-function openEntregasModal() {
-  const entregas = orders.filter(
-    (order) => order.status === "caminho" && order.service_type === "delivery"
-  );
-
-  if (!entregas.length) {
-    alert("Nenhum pedido em entrega no momento.");
-    return;
-  }
-
-  const texto = entregas
-    .map((o) => `#${o.display_number ?? getOrderId(o)} - ${o.customer}`)
-    .join("\n");
-
-  alert("Pedidos em entrega:\n\n" + texto);
 }
 
 // ========== GOOGLE BUTTON INIT ==========
@@ -576,7 +570,7 @@ function changeView(view) {
 tabAtivos?.addEventListener("click", () => changeView("ativos"));
 tabFinalizados?.addEventListener("click", () => changeView("finalizados"));
 tabCancelados?.addEventListener("click", () => changeView("cancelados"));
-tabEntregas?.addEventListener("click", openEntregasModal);
+tabEntregas?.addEventListener("click", () => changeView("entregas"));
 
 // ========== CARREGAMENTO INICIAL ==========
 
