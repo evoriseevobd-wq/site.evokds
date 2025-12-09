@@ -14,7 +14,6 @@
   <!-- TELA DE LOGIN -->
   <div class="login-screen" id="login-screen">
     <div class="login-card">
-      <!-- AQUI VAI A FÊNIX -->
       <div class="login-badge">
         <img
           src="fenix-logo-png.png"
@@ -32,10 +31,7 @@
   <!-- HEADER DEPOIS DO LOGIN -->
   <header class="app-header">
     <button class="icon-button menu-button" id="open-drawer" aria-label="Abrir menu">&#9776;</button>
-
-    <!-- TEXTO FLUX ON NO TOPO -->
-    <div class="brand">FluxON</div>
-
+    <div class="brand">FLUX ON</div>
     <div class="header-right">
       <button class="primary-button ghost" id="open-create">Criar Pedido</button>
     </div>
@@ -45,7 +41,8 @@
     <button class="tab active" data-view="ativos" id="tab-ativos">Ativos</button>
     <button class="tab" data-view="finalizados" id="tab-finalizados">Finalizados</button>
     <button class="tab" data-view="cancelados" id="tab-cancelados">Cancelados</button>
-    <button class="tab" id="tab-entregas">Entrega</button>
+    <!-- IMPORTANTE: data-view="entregas" -->
+    <button class="tab" data-view="entregas" id="tab-entregas">Entrega</button>
   </nav>
 
   <main class="board hidden" id="board">
@@ -70,6 +67,7 @@
       <div class="column-body" id="col-pronto"></div>
     </section>
 
+    <!-- Vai aparecer só na aba Entrega -->
     <section class="column" data-status="caminho">
       <div class="column-header">
         <h2>A Caminho</h2>
@@ -145,6 +143,13 @@
         <label>Itens (separe por vírgula)
           <input id="new-items" required placeholder="Burger, Batata, Refrigerante" />
         </label>
+
+        <!-- CHECKBOX DELIVERY AQUI -->
+        <label class="delivery-toggle">
+          <input id="new-delivery" type="checkbox" />
+          <span>Delivery</span>
+        </label>
+
         <label>Observações
           <textarea id="new-notes" placeholder="Sem cebola, bebida sem gelo"></textarea>
         </label>
@@ -173,7 +178,6 @@
   </aside>
   <div class="drawer-backdrop" id="drawer-backdrop"></div>
 
-  <!-- Modal de acesso não autorizado da Evorise -->
   <div id="unauthorized-modal" class="modal-backdrop">
     <div class="modal unauthorized-modal">
       <div class="modal-header">
@@ -191,7 +195,6 @@
         </p>
 
         <p class="unauth-link-text">
-          <!-- Troque esta URL pelo domínio real depois -->
           <a
             href="https://__________________________"
             target="_blank"
