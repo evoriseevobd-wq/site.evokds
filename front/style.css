@@ -381,7 +381,7 @@ body {
   margin-bottom: 10px;
 }
 
-/* Checkbox de Delivery no "Criar Pedido" */
+/* Checkbox "Delivery" */
 .delivery-toggle {
   display: flex;
   flex-direction: row;
@@ -393,8 +393,41 @@ body {
 }
 
 .delivery-toggle input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
+}
+
+/* Campo de endereço – começa escondido */
+.delivery-address {
+  display: none;
+}
+
+/* Fica visível quando o JS adiciona a classe .visible */
+.delivery-address.visible {
+  display: flex;
+}
+
+.form-body input,
+.form-body textarea {
+  width: 100%;
+  padding: 10px 6px 8px;
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  margin-top: 4px;
+  font-family: inherit;
+}
+
+.form-body textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.form-body input::placeholder,
+.form-body textarea::placeholder {
+  color: var(--muted);
 }
 
 /* Mensagem de "sem entregas" na aba Entrega */
