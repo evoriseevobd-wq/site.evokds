@@ -41,6 +41,8 @@ const newCustomer = document.getElementById("new-customer");
 const newItems = document.getElementById("new-items");
 const newNotes = document.getElementById("new-notes");
 const newDelivery = document.getElementById("new-delivery");
+const deliveryAddressLabel = document.getElementById("delivery-address");
+const newAddress = document.getElementById("new-address");
 const drawer = document.getElementById("drawer");
 const openDrawer = document.getElementById("open-drawer");
 const closeDrawerBtn = document.getElementById("close-drawer");
@@ -430,6 +432,26 @@ function closeCreateModal() {
   newItems.value = "";
   newNotes.value = "";
   if (newDelivery) newDelivery.checked = false;
+  if (deliveryAddressLabel) deliveryAddressLabel.classList.remove("visible");
+  if (newAddress) {
+    newAddress.required = false;
+    newAddress.value = "";
+  }
+}
+
+// quando marcar/desmarcar Delivery, mostra/esconde campo de endereço
+if (newDelivery && deliveryAddressLabel && newAddress) {
+  newDelivery.addEventListener("change", () => {
+    if (newDelivery.checked) {
+      deliveryAddressLabel.classList.add("visible");
+      newAddress.required = true;
+      newAddress.focus();
+    } else {
+      deliveryAddressLabel.classList.remove("visible");
+      newAddress.required = false;
+      newAddress.value = "";
+    }
+  });
 }
 
 function saveNewOrder() {
@@ -442,6 +464,14 @@ function saveNewOrder() {
   if (!customer || items.length === 0) return;
 
   const serviceType = newDelivery?.checked ? "delivery" : "local";
+  const address = newAddress ? newAddress.value.trim() : "";
+
+  // se for delivery, endereço é obrigatório
+  if (serviceType === "delivery" && !address) {
+    alert("Informe o endereço de entrega para pedidos de delivery.");
+    if (newAddress) newAddress.focus();
+    return;
+  }
 
   const novoPedido = {
     customer,
@@ -449,6 +479,7 @@ function saveNewOrder() {
     notes: newNotes.value.trim(),
     status: "recebido",
     service_type: serviceType,
+    address,
   };
 
   criarPedido(novoPedido);
@@ -628,6 +659,7 @@ function renderizarKanban(lista) {
           status: toFrontStatus(order.status),
           createdAt: order.created_at || order.createdAt,
           service_type: order.service_type || "local",
+          address: order.address || "",
         }))
       : [];
   orders = mapped;
@@ -648,6 +680,7 @@ async function criarPedido(novoPedido) {
       itens: novoPedido.items,
       notes: novoPedido.notes || "",
       service_type: novoPedido.service_type || "local",
+      address: novoPedido.address || "",
     };
 
     const response = await fetch(API_URL, {
