@@ -50,6 +50,7 @@ app.post("/orders", async (req, res) => {
       itens,
       notes,
       service_type,
+      address,
     } = req.body || {};
 
     const normalizedItems = Array.isArray(items)
@@ -71,6 +72,19 @@ app.post("/orders", async (req, res) => {
       return sendError(res, 404, "Restaurante não encontrado");
     }
 
+    // tipo de serviço: local por padrão
+    const finalServiceType =
+      service_type === "delivery" ? "delivery" : "local";
+
+    // se for delivery, endereço é obrigatório
+    if (finalServiceType === "delivery" && (!address || !address.trim())) {
+      return sendError(
+        res,
+        400,
+        "Endereço é obrigatório para pedidos de delivery"
+      );
+    }
+
     const { data: last, error: lastErr } = await supabase
       .from("orders")
       .select("order_number")
@@ -89,7 +103,6 @@ app.post("/orders", async (req, res) => {
         : 1;
 
     const now = new Date().toISOString();
-    const serviceType = service_type || "local"; // ⬅️ LOCAL como padrão
 
     const { data, error } = await supabase
       .from("orders")
@@ -101,9 +114,10 @@ app.post("/orders", async (req, res) => {
           itens: normalizedItems,
           notes: notes || "",
           status: "pending",
+          service_type: finalServiceType,
+          address: address || null,
           created_at: now,
           update_at: now,
-          service_type: serviceType, // ⬅️ campo novo
         },
       ])
       .select()
