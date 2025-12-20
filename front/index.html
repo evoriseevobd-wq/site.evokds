@@ -137,23 +137,31 @@
         <button class="icon-button" id="close-create" aria-label="Fechar criação">&times;</button>
       </div>
       <div class="modal-body form-body">
-        <label>Cliente
-          <input id="new-customer" required />
-        </label>
-        <label>Itens (separe por vírgula)
-          <input id="new-items" required placeholder="Burger, Batata, Refrigerante" />
-        </label>
+  <label>Cliente
+    <input id="new-customer" required />
+  </label>
+  <label>Itens (separe por vírgula)
+    <input id="new-items" required placeholder="Burger, Batata, Refrigerante" />
+  </label>
 
-        <!-- CHECKBOX DELIVERY AQUI -->
-        <label class="delivery-toggle">
-          <input id="new-delivery" type="checkbox" />
-          <span>Delivery</span>
-        </label>
+  <label class="delivery-toggle">
+    <input id="new-delivery" type="checkbox" />
+    <span>Delivery</span>
+  </label>
 
-        <label>Observações
-          <textarea id="new-notes" placeholder="Sem cebola, bebida sem gelo"></textarea>
-        </label>
-      </div>
+  <!-- Campo que só será obrigatório quando marcar Delivery -->
+  <label class="delivery-address" id="delivery-address">
+    Endereço para entrega
+    <input
+      id="new-address"
+      placeholder="Rua, número, bairro, referência..."
+    />
+  </label>
+
+  <label>Observações
+    <textarea id="new-notes" placeholder="Sem cebola, bebida sem gelo"></textarea>
+  </label>
+</div>
       <div class="modal-actions">
         <button class="ghost-button" id="cancel-create">Cancelar</button>
         <button class="primary-button" id="save-create">Salvar</button>
