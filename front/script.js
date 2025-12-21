@@ -1,8 +1,9 @@
 const GOOGLE_CLIENT_ID =
   "872848052437-nl3lru9m1jhmfobk0imbpb2o9uk47mqi.apps.googleusercontent.com";
 
-const API_URL = "https://kds-backend.dahead.easypanel.host/orders";
-const AUTH_URL = "https://kds-backend.dahead.easypanel.host/auth/google";
+const API_BASE = "https://kds-backend.dahead.easypanel.host";
+const API_URL = `${API_BASE}/orders`;
+const AUTH_URL = `${API_BASE}/auth/google`;
 
 const columns = {
   recebido: document.getElementById("col-recebido"),
@@ -13,57 +14,62 @@ const columns = {
   cancelado: document.getElementById("col-cancelado"),
 };
 
-const statusFlow = ["recebido", "preparo", "pronto", "caminho"];
-
-const actionLabels = {
-  recebido: "Aceitar",
-  preparo: "Finalizar Preparo",
-  // pronto é dinâmico (local vs delivery)
-  caminho: "Concluir Pedido",
-};
-
-let orders = [];
-
-let activeOrderId = null;
 const board = document.getElementById("board");
 const loginScreen = document.getElementById("login-screen");
+
+const googleBtnContainer = document.getElementById("googleLoginBtn");
+
 const userChip = document.getElementById("user-chip");
 const userNameEl = document.getElementById("user-name");
 const userAvatar = document.getElementById("user-avatar");
 const logoutBtn = document.getElementById("logout-btn");
-const googleBtnContainer = document.getElementById("googleLoginBtn");
+
+const modalBackdrop = document.getElementById("modal");
+const modalId = document.getElementById("modal-id");
+const modalCustomer = document.getElementById("modal-customer");
+const modalTime = document.getElementById("modal-time");
+const modalItems = document.getElementById("modal-items");
+const modalNotes = document.getElementById("modal-notes");
+
+const closeModalBtn = document.getElementById("close-modal");
+const closeModalSecondaryBtn = document.getElementById("close-modal-secondary");
+const modalPrevBtn = document.getElementById("modal-prev");
+const modalCancelBtn = document.getElementById("modal-cancel");
+const modalNextBtn = document.getElementById("modal-next");
+
 const createModal = document.getElementById("create-modal");
-const openCreate = document.getElementById("open-create");
-const closeCreate = document.getElementById("close-create");
-const cancelCreate = document.getElementById("cancel-create");
-const saveCreate = document.getElementById("save-create");
+const openCreateBtn = document.getElementById("open-create");
+const closeCreateBtn = document.getElementById("close-create");
+const cancelCreateBtn = document.getElementById("cancel-create");
+const saveCreateBtn = document.getElementById("save-create");
+
 const newCustomer = document.getElementById("new-customer");
 const newItems = document.getElementById("new-items");
 const newNotes = document.getElementById("new-notes");
 const newDelivery = document.getElementById("new-delivery");
+const deliveryAddressWrap = document.getElementById("delivery-address-wrap");
+const newAddress = document.getElementById("new-address");
+
 const drawer = document.getElementById("drawer");
 const openDrawer = document.getElementById("open-drawer");
 const closeDrawerBtn = document.getElementById("close-drawer");
 const drawerBackdrop = document.getElementById("drawer-backdrop");
+
 const tabAtivos = document.getElementById("tab-ativos");
 const tabFinalizados = document.getElementById("tab-finalizados");
 const tabCancelados = document.getElementById("tab-cancelados");
 const tabEntregas = document.getElementById("tab-entregas");
 
 const views = {
-  // Cozinha: só esses 3
   ativos: ["recebido", "preparo", "pronto"],
   finalizados: ["finalizado"],
-  cancelados: ["cancelado", "cancelled", "canceled"],
-  // Entregas: só "caminho"
+  cancelados: ["cancelado"],
   entregas: ["caminho"],
 };
 
 let currentView = "ativos";
-
-function getOrderId(order) {
-  return order?.order_id ?? order?.id ?? order?.orderId;
-}
+let orders = [];
+let activeOrderId = null;
 
 const STATUS_TO_BACKEND = {
   recebido: "pending",
@@ -84,84 +90,68 @@ const STATUS_FROM_BACKEND = {
   canceled: "cancelado",
 };
 
-const BACKEND_STATUS = [
-  "pending",
-  "preparing",
-  "mounting",
-  "delivering",
-  "finished",
-  "cancelled",
-  "canceled",
-];
+function toFrontStatus(back) {
+  const k = String(back || "").toLowerCase();
+  return STATUS_FROM_BACKEND[k] || "recebido";
+}
 
 function toBackendStatus(front) {
-  const key = typeof front === "string" ? front.toLowerCase() : "";
-  if (BACKEND_STATUS.includes(key)) return key;
-  return STATUS_TO_BACKEND[key] || "pending";
+  const k = String(front || "").toLowerCase();
+  return STATUS_TO_BACKEND[k] || "pending";
 }
 
-function toFrontStatus(back) {
-  const key = typeof back === "string" ? back.toLowerCase() : "";
-  if (STATUS_FROM_BACKEND[key]) return STATUS_FROM_BACKEND[key];
-  if (key.includes("cancel")) return "cancelado";
-  return "recebido";
+function getOrderId(o) {
+  return o?.id ?? o?.order_id ?? o?.orderId;
 }
 
-function formatOrderTime(order) {
-  if (order.time) return order.time;
-  if (order.createdAt) {
-    const parsed = new Date(order.createdAt);
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    }
-  }
-  if (order.created_at) {
-    const parsed = new Date(order.created_at);
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    }
-  }
-  return "--:--";
+function formatTime(iso) {
+  if (!iso) return "--:--";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "--:--";
+  return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
-function getActionLabel(order) {
+function summarizeItems(list) {
+  if (!Array.isArray(list)) return "";
+  if (list.length <= 2) return list.join(" • ");
+  return `${list.slice(0, 2).join(" • ")} +${list.length - 2}`;
+}
+
+function actionLabel(order) {
   if (order.status === "pronto") {
     return order.service_type === "delivery"
       ? "Enviar para entrega"
       : "Finalizar pedido";
   }
-  return actionLabels[order.status];
+  if (order.status === "recebido") return "Aceitar";
+  if (order.status === "preparo") return "Finalizar Preparo";
+  if (order.status === "caminho") return "Concluir Pedido";
+  return "";
 }
 
+function openBackdrop(el) { el?.classList.add("open"); }
+function closeBackdrop(el) { el?.classList.remove("open"); }
+
 function renderBoard() {
-  // limpa todas as colunas
-  Object.values(columns).forEach((col) => {
-    if (col) col.innerHTML = "";
-  });
+  // limpa colunas
+  Object.values(columns).forEach((c) => c && (c.innerHTML = ""));
 
-  const enabledStatuses = views[currentView];
-
-  // mostra/esconde colunas conforme a view
+  // mostra/esconde seções conforme view
+  const enabled = views[currentView] || [];
   document.querySelectorAll(".column").forEach((section) => {
-    const status = section.dataset.status;
-    if (!status) return;
-    section.classList.toggle("hidden", !enabledStatuses.includes(status));
+    const st = section.dataset.status;
+    if (!st) return;
+    section.classList.toggle("hidden", !enabled.includes(st));
   });
 
-  enabledStatuses.forEach((status) => {
+  // renderiza por status
+  enabled.forEach((status) => {
     const col = columns[status];
     if (!col) return;
 
-    const bucket = orders.filter((order) => order.status === status);
+    const bucket = orders.filter((o) => o.status === status);
 
     if (bucket.length === 0) {
-      // caso especial: aba Entregas sem pedidos
       if (currentView === "entregas" && status === "caminho") {
         const empty = document.createElement("div");
         empty.className = "empty-state";
@@ -171,304 +161,364 @@ function renderBoard() {
       return;
     }
 
-    bucket.forEach((order) => {
-      col.appendChild(createCard(order));
-    });
+    bucket.forEach((order) => col.appendChild(createCard(order)));
   });
 }
 
 function createCard(order) {
-  const orderId = getOrderId(order);
-  const displayNumber = order.display_number ?? orderId;
+  const id = getOrderId(order);
+
   const card = document.createElement("article");
   card.className = `card ${order.status}`;
-  card.dataset.id = orderId;
+  card.dataset.id = id;
 
   const head = document.createElement("div");
   head.className = "card-head";
 
   const idEl = document.createElement("div");
   idEl.className = "order-id";
-  idEl.textContent = `#${displayNumber}`;
+  idEl.textContent = `#${order.order_number ?? id}`;
 
-  const time = document.createElement("div");
-  time.className = "order-time";
-  time.textContent = formatOrderTime(order);
+  const timeEl = document.createElement("div");
+  timeEl.className = "order-time";
+  timeEl.textContent = formatTime(order.created_at);
 
-  head.append(idEl, time);
+  head.append(idEl, timeEl);
 
   const customer = document.createElement("p");
   customer.className = "customer";
-  customer.textContent = order.customer;
+  customer.textContent = order.client_name;
 
   const items = document.createElement("p");
   items.className = "items";
-  items.textContent = summarizeItems(order.items || []);
+  items.textContent = summarizeItems(order.itens || []);
 
-  const actionLabel = getActionLabel(order);
-  if (actionLabel) {
-    const action = document.createElement("button");
-    action.className = "action";
-    action.textContent = actionLabel;
-    action.addEventListener("click", (event) => {
-      event.stopPropagation();
-      advanceStatus(orderId);
+  const label = actionLabel(order);
+  if (label) {
+    const btn = document.createElement("button");
+    btn.className = "action";
+    btn.textContent = label;
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      advanceStatus(id);
     });
-    card.append(head, customer, items, action);
+    card.append(head, customer, items, btn);
   } else {
     card.append(head, customer, items);
   }
 
-  card.addEventListener("click", () => openModal(orderId));
-
+  card.addEventListener("click", () => openOrderModal(id));
   return card;
 }
 
-function summarizeItems(list) {
-  if (!Array.isArray(list)) return "";
-  if (list.length <= 2) return list.join(" • ");
-  const first = list.slice(0, 2).join(" • ");
-  return `${first} +${list.length - 2}`;
+function nextFrontStatus(order) {
+  const flow = ["recebido", "preparo", "pronto", "caminho"];
+  if (order.status === "pronto") {
+    return order.service_type === "delivery" ? "caminho" : "finalizado";
+  }
+  if (order.status === "caminho") return "finalizado";
+  const idx = flow.indexOf(order.status);
+  if (idx === -1) return "recebido";
+  const next = flow[idx + 1];
+  return next || "finalizado";
 }
 
-function advanceStatus(orderId) {
-  const index = orders.findIndex((order) => getOrderId(order) === orderId);
-  if (index === -1) return;
-
-  const order = orders[index];
-  const currentStatus = order.status;
-  let nextStatus;
-
-  if (currentStatus === "pronto") {
-    if (order.service_type === "delivery") {
-      nextStatus = "caminho";
-    } else {
-      nextStatus = "finalizado";
-    }
-  } else {
-    const nextIndex = statusFlow.indexOf(currentStatus) + 1;
-    nextStatus =
-      nextIndex >= statusFlow.length ? "finalizado" : statusFlow[nextIndex];
-  }
-
-  updatePedido(orderId, { status: nextStatus });
-
-  if (activeOrderId === orderId) {
-    closeModal();
-  }
+function prevFrontStatus(order) {
+  const flow = ["recebido", "preparo", "pronto", "caminho"];
+  const idx = flow.indexOf(order.status);
+  if (idx <= 0) return null;
+  return flow[idx - 1];
 }
 
-function openModal(orderId) {
-  const order = orders.find((item) => getOrderId(item) === orderId);
+async function advanceStatus(orderId) {
+  const order = orders.find((o) => getOrderId(o) === orderId);
+  if (!order) return;
+  const next = nextFrontStatus(order);
+  await patchOrderStatus(orderId, next);
+  closeBackdrop(modalBackdrop);
+}
+
+async function regressStatus(orderId) {
+  const order = orders.find((o) => getOrderId(o) === orderId);
+  if (!order) return;
+  const prev = prevFrontStatus(order);
+  if (!prev) return;
+  await patchOrderStatus(orderId, prev);
+  openOrderModal(orderId);
+}
+
+async function cancelOrder(orderId) {
+  await patchOrderStatus(orderId, "cancelado");
+  closeBackdrop(modalBackdrop);
+}
+
+function openOrderModal(orderId) {
+  const order = orders.find((o) => getOrderId(o) === orderId);
   if (!order) return;
 
   activeOrderId = orderId;
-  document.getElementById("modal-id").textContent = `#${
-    order.display_number ?? orderId
-  }`;
-  document.getElementById("modal-customer").textContent = order.customer;
-  document.getElementById("modal-time").textContent = formatOrderTime(order);
 
-  const itemsList = document.getElementById("modal-items");
-  itemsList.innerHTML = "";
-  (order.items || []).forEach((item) => {
+  modalId.textContent = `#${order.order_number ?? orderId}`;
+  modalCustomer.textContent = order.client_name;
+  modalTime.textContent = formatTime(order.created_at);
+
+  modalItems.innerHTML = "";
+  (order.itens || []).forEach((item) => {
     const li = document.createElement("li");
     li.textContent = item;
-    itemsList.appendChild(li);
+    modalItems.appendChild(li);
   });
 
-  document.getElementById("modal-notes").textContent =
-    order.notes?.trim() || "Sem observações";
+  modalNotes.textContent = (order.notes || "").trim() || "Sem observações";
 
-  const modalAction = document.getElementById("modal-next");
+  // botões
+  const label = actionLabel(order);
+  if (!label || order.status === "finalizado" || order.status === "cancelado") {
+    modalNextBtn.classList.add("hidden");
+  } else {
+    modalNextBtn.classList.remove("hidden");
+    modalNextBtn.textContent = label;
+  }
+
+  const prev = prevFrontStatus(order);
+  if (prev && order.status !== "finalizado" && order.status !== "cancelado") {
+    modalPrevBtn.classList.remove("hidden");
+  } else {
+    modalPrevBtn.classList.add("hidden");
+  }
+
   if (order.status === "finalizado" || order.status === "cancelado") {
-    modalAction.classList.add("hidden");
+    modalCancelBtn.classList.add("hidden");
   } else {
-    modalAction.textContent = getActionLabel(order);
-    modalAction.disabled = false;
-    modalAction.classList.remove("hidden");
+    modalCancelBtn.classList.remove("hidden");
   }
 
-  const modalPrev = document.getElementById("modal-prev");
-  const prevIndex = statusFlow.indexOf(order.status) - 1;
-  if (prevIndex >= 0) {
-    modalPrev.classList.remove("hidden");
-    modalPrev.disabled = false;
-  } else {
-    modalPrev.classList.add("hidden");
-    modalPrev.disabled = true;
-  }
-
-  const modalCancel = document.getElementById("modal-cancel");
-  if (order.status === "finalizado" || order.status === "cancelado") {
-    modalCancel.classList.add("hidden");
-  } else {
-    modalCancel.classList.remove("hidden");
-  }
-
-  document.getElementById("modal").classList.add("open");
+  openBackdrop(modalBackdrop);
 }
 
-function closeModal() {
+function closeOrderModal() {
   activeOrderId = null;
-  document.getElementById("modal").classList.remove("open");
+  closeBackdrop(modalBackdrop);
 }
 
-// ========== LOGIN COM GOOGLE ==========
+function changeView(view) {
+  currentView = view;
+  document.querySelectorAll(".tab").forEach((t) => {
+    t.classList.toggle("active", t.dataset.view === view);
+  });
+  renderBoard();
+}
 
-async function completeLogin(user) {
-  const safeUser = {
-    name: user?.name || "Usuário",
-    email: user?.email || "",
-    picture: user?.picture || "",
+// =================== DELIVERY ADDRESS (GARANTIDO) ===================
+function setupDeliveryAddress() {
+  if (!newDelivery || !deliveryAddressWrap || !newAddress) {
+    console.error("IDs do delivery/endereço não encontrados no DOM.");
+    return;
+  }
+
+  function apply() {
+    const isDelivery = newDelivery.checked;
+
+    // garante aparecimento (não depende de CSS)
+    deliveryAddressWrap.style.display = isDelivery ? "block" : "none";
+    newAddress.required = isDelivery;
+
+    if (!isDelivery) newAddress.value = "";
+  }
+
+  newDelivery.addEventListener("change", apply);
+  apply();
+}
+// ===================================================================
+
+function openCreateModal() {
+  openBackdrop(createModal);
+  setupDeliveryAddress(); // garante estado correto ao abrir
+  newCustomer?.focus();
+}
+
+function closeCreateModal() {
+  closeBackdrop(createModal);
+
+  if (newCustomer) newCustomer.value = "";
+  if (newItems) newItems.value = "";
+  if (newNotes) newNotes.value = "";
+  if (newDelivery) newDelivery.checked = false;
+  if (newAddress) newAddress.value = "";
+
+  // mantém escondido após reset
+  if (deliveryAddressWrap) deliveryAddressWrap.style.display = "none";
+  if (newAddress) newAddress.required = false;
+}
+
+async function saveNewOrder() {
+  const restaurantId = localStorage.getItem("restaurant_id");
+  if (!restaurantId) return alert("Você precisa estar logado.");
+
+  const customer = (newCustomer?.value || "").trim();
+  const items = (newItems?.value || "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
+
+  if (!customer) return alert("Informe o cliente.");
+  if (items.length === 0) return alert("Informe os itens.");
+
+  const serviceType = newDelivery?.checked ? "delivery" : "local";
+  const address = (newAddress?.value || "").trim();
+
+  if (serviceType === "delivery" && !address) {
+    alert("Informe o endereço de entrega para pedidos de delivery.");
+    newAddress?.focus();
+    return;
+  }
+
+  const body = {
+    restaurant_id: restaurantId,
+    client_name: customer,
+    itens: items,
+    notes: (newNotes?.value || "").trim(),
+    service_type: serviceType,
+    address: serviceType === "delivery" ? address : "",
   };
 
-  console.log("safeUser que será enviado:", safeUser);
-
   try {
-    const response = await fetch(AUTH_URL, {
+    const resp = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(safeUser),
+      body: JSON.stringify(body),
     });
 
-    if (!response.ok) {
-      const text = await response.text();
-      console.error("Erro HTTP em /auth/google:", response.status, text);
-      alert("Falha ao comunicar com o servidor de login.");
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      alert(data.error || "Erro ao criar pedido.");
       return;
     }
 
-    const result = await response.json();
-    console.log("Resposta do backend /auth/google:", result);
+    closeCreateModal();
+    await fetchOrders();
+  } catch (e) {
+    console.error(e);
+    alert("Erro de rede ao criar pedido.");
+  }
+}
 
-    if (!result.authorized) {
-      alert(
-        (result.message || "Você não tem permissão para acessar este painel.") +
-          "\n\nFale com a Everrise:\n" +
-          (result.contact_link || "")
-      );
+async function fetchOrders() {
+  const restaurantId = localStorage.getItem("restaurant_id");
+  if (!restaurantId) return;
+
+  try {
+    const resp = await fetch(`${API_URL}/${restaurantId}`);
+    const data = await resp.json();
+
+    orders = Array.isArray(data)
+      ? data.map((o) => ({
+          ...o,
+          status: toFrontStatus(o.status),
+          service_type: o.service_type || "local",
+          address: o.address || "",
+        }))
+      : [];
+
+    renderBoard();
+  } catch (e) {
+    console.error("Erro ao carregar pedidos:", e);
+  }
+}
+
+async function patchOrderStatus(orderId, frontStatus) {
+  try {
+    const resp = await fetch(`${API_URL}/${orderId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: toBackendStatus(frontStatus) }),
+    });
+
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      alert(data.error || "Erro ao atualizar status.");
       return;
     }
 
-    localStorage.setItem("restaurant_id", result.restaurant.id);
-    localStorage.setItem("user", JSON.stringify(safeUser));
+    await fetchOrders();
+  } catch (e) {
+    console.error("Erro ao atualizar:", e);
+  }
+}
+
+// =================== GOOGLE LOGIN ===================
+function decodeJwt(token) {
+  try {
+    const payload = token.split(".")[1];
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const json = decodeURIComponent(
+      atob(normalized)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+async function completeLogin(user) {
+  try {
+    const resp = await fetch(AUTH_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: user.email, name: user.name }),
+    });
+
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      alert(data.error || "Erro ao autenticar.");
+      return;
+    }
+
+    if (!data.authorized) {
+      alert(data.message || "Acesso não autorizado.");
+      return;
+    }
+
+    localStorage.setItem("restaurant_id", data.restaurant.id);
+    localStorage.setItem("user", JSON.stringify(user));
 
     loginScreen?.classList.add("hidden");
     board?.classList.remove("hidden");
 
-    if (userNameEl) {
-      userNameEl.textContent = safeUser.name;
-    }
-
+    if (userChip) userChip.hidden = false;
+    if (userNameEl) userNameEl.textContent = user.name || "Usuário";
     if (userAvatar) {
-      if (safeUser.picture) {
-        userAvatar.src = safeUser.picture;
+      if (user.picture) {
+        userAvatar.src = user.picture;
         userAvatar.hidden = false;
       } else {
         userAvatar.hidden = true;
       }
     }
 
-    if (userChip) {
-      userChip.hidden = false;
-    }
-  } catch (error) {
-    console.error("Erro na chamada /auth/google:", error);
-    alert("Erro inesperado ao tentar fazer login.");
-  }
-}
-
-function decodeJwt(token) {
-  try {
-    const payload = token.split(".")[1];
-    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const decoded = atob(normalized);
-    return JSON.parse(decoded);
-  } catch (error) {
-    console.warn("Falha ao decodificar JWT", error);
-    return null;
+    await fetchOrders();
+  } catch (e) {
+    console.error(e);
+    alert("Erro ao fazer login.");
   }
 }
 
 function handleCredentialResponse(response) {
-  const data = decodeJwt(response.credential);
-  console.log("Payload JWT do Google:", data);
-
+  const payload = decodeJwt(response.credential);
   const user = {
-    name: data?.name || data?.given_name || "Usuário",
-    email: data?.email || "",
-    picture: data?.picture || "",
+    name: payload?.name || payload?.given_name || "Usuário",
+    email: payload?.email || "",
+    picture: payload?.picture || "",
   };
-
-  console.log("Usuário montado pelo front:", user);
   completeLogin(user);
 }
 
-// ========== FLUXO DE PEDIDO LOCAL / DELIVERY ==========
-
-function regressStatus(orderId) {
-  const index = orders.findIndex((order) => getOrderId(order) === orderId);
-  if (index === -1) return;
-
-  const currentStatus = orders[index].status;
-  const prevIndex = statusFlow.indexOf(currentStatus) - 1;
-  if (prevIndex < 0) return;
-
-  const prevStatus = statusFlow[prevIndex];
-  updatePedido(orderId, { status: prevStatus }, () => openModal(orderId));
-}
-
-function openCreateModal() {
-  createModal.classList.add("open");
-  newCustomer.focus();
-}
-
-function closeCreateModal() {
-  createModal.classList.remove("open");
-  newCustomer.value = "";
-  newItems.value = "";
-  newNotes.value = "";
-  if (newDelivery) newDelivery.checked = false;
-}
-
-function saveNewOrder() {
-  const customer = newCustomer.value.trim();
-  const items = newItems.value
-    .split(",")
-    .map((i) => i.trim())
-    .filter(Boolean);
-
-  if (!customer || items.length === 0) return;
-
-  const serviceType = newDelivery?.checked ? "delivery" : "local";
-
-  const novoPedido = {
-    customer,
-    items,
-    notes: newNotes.value.trim(),
-    status: "recebido",
-    service_type: serviceType,
-  };
-
-  criarPedido(novoPedido);
-}
-
-function cancelOrder(orderId) {
-  const index = orders.findIndex((order) => getOrderId(order) === orderId);
-  if (index === -1) return;
-  updatePedido(orderId, { status: "canceled" }, closeModal);
-}
-
-// ========== GOOGLE BUTTON INIT ==========
-
 function initGoogleButton(attempt = 0) {
   if (!window.google || !google.accounts || !google.accounts.id) {
-    if (attempt < 12) {
-      setTimeout(() => initGoogleButton(attempt + 1), 250);
-    } else {
-      console.warn("Google Identity Services não carregou.");
-    }
+    if (attempt < 15) setTimeout(() => initGoogleButton(attempt + 1), 250);
     return;
   }
 
@@ -487,63 +537,50 @@ function initGoogleButton(attempt = 0) {
     });
   }
 }
+// ===================================================
 
-// ========== EVENTOS DE UI ==========
+// =================== EVENTS ===================
+closeModalBtn?.addEventListener("click", closeOrderModal);
+closeModalSecondaryBtn?.addEventListener("click", closeOrderModal);
+
+modalBackdrop?.addEventListener("click", (e) => {
+  if (e.target === modalBackdrop) closeOrderModal();
+});
+
+modalNextBtn?.addEventListener("click", () => {
+  if (activeOrderId) advanceStatus(activeOrderId);
+});
+
+modalPrevBtn?.addEventListener("click", () => {
+  if (activeOrderId) regressStatus(activeOrderId);
+});
+
+modalCancelBtn?.addEventListener("click", () => {
+  if (activeOrderId) cancelOrder(activeOrderId);
+});
+
+openCreateBtn?.addEventListener("click", openCreateModal);
+closeCreateBtn?.addEventListener("click", closeCreateModal);
+cancelCreateBtn?.addEventListener("click", closeCreateModal);
+
+createModal?.addEventListener("click", (e) => {
+  if (e.target === createModal) closeCreateModal();
+});
+
+saveCreateBtn?.addEventListener("click", saveNewOrder);
+
+tabAtivos?.addEventListener("click", () => changeView("ativos"));
+tabFinalizados?.addEventListener("click", () => changeView("finalizados"));
+tabCancelados?.addEventListener("click", () => changeView("cancelados"));
+tabEntregas?.addEventListener("click", () => changeView("entregas"));
 
 logoutBtn?.addEventListener("click", () => {
-  localStorage.removeItem("user");
   localStorage.removeItem("restaurant_id");
-  window.location.href = "index.html";
+  localStorage.removeItem("user");
+  window.location.reload();
 });
 
-document.getElementById("modal-next").addEventListener("click", () => {
-  if (activeOrderId !== null) {
-    advanceStatus(activeOrderId);
-  }
-});
-
-document.getElementById("close-modal").addEventListener("click", closeModal);
-document
-  .getElementById("close-modal-secondary")
-  .addEventListener("click", closeModal);
-
-document.getElementById("modal").addEventListener("click", (event) => {
-  if (event.target.id === "modal") {
-    closeModal();
-  }
-});
-
-const simulateLoginBtn = document.getElementById("simulate-login");
-if (simulateLoginBtn) {
-  simulateLoginBtn.addEventListener("click", () => {
-    completeLogin({
-      name: "Usuário Demo",
-      email: "demo@example.com",
-      picture: "",
-    });
-  });
-}
-
-document.getElementById("modal-prev").addEventListener("click", () => {
-  if (activeOrderId !== null) {
-    regressStatus(activeOrderId);
-  }
-});
-
-document.getElementById("modal-cancel").addEventListener("click", () => {
-  if (activeOrderId !== null) {
-    cancelOrder(activeOrderId);
-  }
-});
-
-openCreate?.addEventListener("click", openCreateModal);
-closeCreate?.addEventListener("click", closeCreateModal);
-cancelCreate?.addEventListener("click", closeCreateModal);
-createModal?.addEventListener("click", (e) => {
-  if (e.target.id === "create-modal") closeCreateModal();
-});
-saveCreate?.addEventListener("click", saveNewOrder);
-
+// drawer
 openDrawer?.addEventListener("click", () => {
   drawer?.classList.add("open");
   drawerBackdrop?.classList.add("open");
@@ -559,127 +596,19 @@ drawerBackdrop?.addEventListener("click", () => {
   drawerBackdrop?.classList.remove("open");
 });
 
-function changeView(view) {
-  currentView = view;
-  document.querySelectorAll(".tab").forEach((tab) => {
-    tab.classList.toggle("active", tab.dataset.view === view);
-  });
-  renderBoard();
-}
-
-tabAtivos?.addEventListener("click", () => changeView("ativos"));
-tabFinalizados?.addEventListener("click", () => changeView("finalizados"));
-tabCancelados?.addEventListener("click", () => changeView("cancelados"));
-tabEntregas?.addEventListener("click", () => changeView("entregas"));
-
-// ========== CARREGAMENTO INICIAL ==========
-
-window.addEventListener("load", () => {
+window.addEventListener("load", async () => {
   initGoogleButton();
-  carregarPedidos();
-  if (!window._kdsPoller) {
-    window._kdsPoller = setInterval(() => {
-      carregarPedidos();
-    }, 5000);
+  setupDeliveryAddress(); // garante estado inicial
+
+  const savedUserRaw = localStorage.getItem("user");
+  const savedUser = savedUserRaw ? JSON.parse(savedUserRaw) : null;
+
+  if (savedUser?.email) {
+    await completeLogin(savedUser);
   }
-  const stored = localStorage.getItem("user");
-  if (stored) {
-    try {
-      const parsed = JSON.parse(stored);
-      completeLogin(parsed);
-    } catch (_) {
-      localStorage.removeItem("user");
-    }
+
+  // poller
+  if (!window.__kdsPoller) {
+    window.__kdsPoller = setInterval(fetchOrders, 5000);
   }
 });
-
-// ========== INTEGRAÇÃO COM BACKEND ==========
-
-async function carregarPedidos() {
-  try {
-    const restaurantId = localStorage.getItem("restaurant_id");
-    if (!restaurantId) {
-      console.warn("restaurant_id não definido");
-      return;
-    }
-    const response = await fetch(`${API_URL}/${restaurantId}`);
-    const data = await response.json();
-    renderizarKanban(data);
-  } catch (error) {
-    console.error("Erro ao carregar pedidos:", error);
-  }
-}
-
-function renderizarKanban(lista) {
-  const mapped =
-    Array.isArray(lista) && lista.length
-      ? lista.map((order) => ({
-          ...order,
-          order_id: order.id,
-          display_number:
-            order.order_numb ??
-            order.order_number ??
-            order.order_id ??
-            order.orderId ??
-            order.id,
-          customer: order.client_name || order.customer,
-          items: order.items || order.itens || [],
-          notes: order.notes || "",
-          status: toFrontStatus(order.status),
-          createdAt: order.created_at || order.createdAt,
-          service_type: order.service_type || "local",
-        }))
-      : [];
-  orders = mapped;
-  renderBoard();
-}
-
-async function criarPedido(novoPedido) {
-  try {
-    const restaurantId = localStorage.getItem("restaurant_id");
-    if (!restaurantId) {
-      console.warn("restaurant_id não definido");
-      return;
-    }
-
-    const body = {
-      restaurant_id: restaurantId,
-      client_name: novoPedido.customer,
-      itens: novoPedido.items,
-      notes: novoPedido.notes || "",
-      service_type: novoPedido.service_type || "local",
-    };
-
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || "Erro ao criar pedido");
-    }
-    closeCreateModal();
-    await carregarPedidos();
-  } catch (error) {
-    console.error("Erro ao criar pedido:", error);
-  }
-}
-
-async function updatePedido(orderId, payload, onSuccess) {
-  try {
-    const body = { ...payload };
-    if (body.status) {
-      body.status = toBackendStatus(body.status);
-    }
-    await fetch(`${API_URL}/${orderId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (typeof onSuccess === "function") onSuccess();
-    await carregarPedidos();
-  } catch (error) {
-    console.error("Erro ao atualizar pedido:", error);
-  }
-}
