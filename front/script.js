@@ -132,19 +132,42 @@ function actionLabel(order) {
 function openBackdrop(el) { el?.classList.add("open"); }
 function closeBackdrop(el) { el?.classList.remove("open"); }
 
+/* ====================== DELIVERY UI (GARANTIDO) ====================== */
+function applyDeliveryUI() {
+  if (!newDelivery || !deliveryAddressWrap || !newAddress) return;
+
+  const on = newDelivery.checked;
+
+  // força display (vence qualquer CSS)
+  deliveryAddressWrap.style.setProperty(
+    "display",
+    on ? "block" : "none",
+    "important"
+  );
+
+  newAddress.required = on;
+
+  if (!on) newAddress.value = "";
+}
+
+function setupDeliveryUIListeners() {
+  if (!newDelivery || !deliveryAddressWrap || !newAddress) return;
+  newDelivery.addEventListener("change", applyDeliveryUI);
+  applyDeliveryUI();
+}
+/* ==================================================================== */
+
 function renderBoard() {
-  // limpa colunas
   Object.values(columns).forEach((c) => c && (c.innerHTML = ""));
 
-  // mostra/esconde seções conforme view
   const enabled = views[currentView] || [];
+
   document.querySelectorAll(".column").forEach((section) => {
     const st = section.dataset.status;
     if (!st) return;
     section.classList.toggle("hidden", !enabled.includes(st));
   });
 
-  // renderiza por status
   enabled.forEach((status) => {
     const col = columns[status];
     if (!col) return;
@@ -213,10 +236,12 @@ function createCard(order) {
 
 function nextFrontStatus(order) {
   const flow = ["recebido", "preparo", "pronto", "caminho"];
+
   if (order.status === "pronto") {
     return order.service_type === "delivery" ? "caminho" : "finalizado";
   }
   if (order.status === "caminho") return "finalizado";
+
   const idx = flow.indexOf(order.status);
   if (idx === -1) return "recebido";
   const next = flow[idx + 1];
@@ -228,6 +253,27 @@ function prevFrontStatus(order) {
   const idx = flow.indexOf(order.status);
   if (idx <= 0) return null;
   return flow[idx - 1];
+}
+
+async function patchOrderStatus(orderId, frontStatus) {
+  try {
+    const resp = await fetch(`${API_URL}/${orderId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: toBackendStatus(frontStatus) }),
+    });
+
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      alert(data.error || "Erro ao atualizar status.");
+      return;
+    }
+
+    await fetchOrders();
+  } catch (e) {
+    console.error("Erro ao atualizar:", e);
+    alert("Erro de rede ao atualizar pedido.");
+  }
 }
 
 async function advanceStatus(orderId) {
@@ -271,7 +317,6 @@ function openOrderModal(orderId) {
 
   modalNotes.textContent = (order.notes || "").trim() || "Sem observações";
 
-  // botões
   const label = actionLabel(order);
   if (!label || order.status === "finalizado" || order.status === "cancelado") {
     modalNextBtn.classList.add("hidden");
@@ -309,31 +354,9 @@ function changeView(view) {
   renderBoard();
 }
 
-// =================== DELIVERY ADDRESS (GARANTIDO) ===================
-function setupDeliveryAddress() {
-  if (!newDelivery || !deliveryAddressWrap || !newAddress) {
-    console.error("IDs do delivery/endereço não encontrados no DOM.");
-    return;
-  }
-
-  function apply() {
-    const isDelivery = newDelivery.checked;
-
-    // garante aparecimento (não depende de CSS)
-    deliveryAddressWrap.style.display = isDelivery ? "block" : "none";
-    newAddress.required = isDelivery;
-
-    if (!isDelivery) newAddress.value = "";
-  }
-
-  newDelivery.addEventListener("change", apply);
-  apply();
-}
-// ===================================================================
-
 function openCreateModal() {
   openBackdrop(createModal);
-  setupDeliveryAddress(); // garante estado correto ao abrir
+  applyDeliveryUI();
   newCustomer?.focus();
 }
 
@@ -343,17 +366,19 @@ function closeCreateModal() {
   if (newCustomer) newCustomer.value = "";
   if (newItems) newItems.value = "";
   if (newNotes) newNotes.value = "";
+
   if (newDelivery) newDelivery.checked = false;
   if (newAddress) newAddress.value = "";
 
-  // mantém escondido após reset
-  if (deliveryAddressWrap) deliveryAddressWrap.style.display = "none";
-  if (newAddress) newAddress.required = false;
+  applyDeliveryUI();
 }
 
 async function saveNewOrder() {
   const restaurantId = localStorage.getItem("restaurant_id");
-  if (!restaurantId) return alert("Você precisa estar logado.");
+  if (!restaurantId) {
+    alert("Você precisa estar logado.");
+    return;
+  }
 
   const customer = (newCustomer?.value || "").trim();
   const items = (newItems?.value || "")
@@ -390,6 +415,7 @@ async function saveNewOrder() {
     });
 
     const data = await resp.json().catch(() => ({}));
+
     if (!resp.ok) {
       alert(data.error || "Erro ao criar pedido.");
       return;
@@ -409,7 +435,7 @@ async function fetchOrders() {
 
   try {
     const resp = await fetch(`${API_URL}/${restaurantId}`);
-    const data = await resp.json();
+    const data = await resp.json().catch(() => []);
 
     orders = Array.isArray(data)
       ? data.map((o) => ({
@@ -426,27 +452,7 @@ async function fetchOrders() {
   }
 }
 
-async function patchOrderStatus(orderId, frontStatus) {
-  try {
-    const resp = await fetch(`${API_URL}/${orderId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: toBackendStatus(frontStatus) }),
-    });
-
-    const data = await resp.json().catch(() => ({}));
-    if (!resp.ok) {
-      alert(data.error || "Erro ao atualizar status.");
-      return;
-    }
-
-    await fetchOrders();
-  } catch (e) {
-    console.error("Erro ao atualizar:", e);
-  }
-}
-
-// =================== GOOGLE LOGIN ===================
+/* =================== GOOGLE LOGIN =================== */
 function decodeJwt(token) {
   try {
     const payload = token.split(".")[1];
@@ -472,6 +478,7 @@ async function completeLogin(user) {
     });
 
     const data = await resp.json().catch(() => ({}));
+
     if (!resp.ok) {
       alert(data.error || "Erro ao autenticar.");
       return;
@@ -537,9 +544,9 @@ function initGoogleButton(attempt = 0) {
     });
   }
 }
-// ===================================================
+/* =================================================== */
 
-// =================== EVENTS ===================
+/* =================== EVENTS =================== */
 closeModalBtn?.addEventListener("click", closeOrderModal);
 closeModalSecondaryBtn?.addEventListener("click", closeOrderModal);
 
@@ -562,12 +569,11 @@ modalCancelBtn?.addEventListener("click", () => {
 openCreateBtn?.addEventListener("click", openCreateModal);
 closeCreateBtn?.addEventListener("click", closeCreateModal);
 cancelCreateBtn?.addEventListener("click", closeCreateModal);
+saveCreateBtn?.addEventListener("click", saveNewOrder);
 
 createModal?.addEventListener("click", (e) => {
   if (e.target === createModal) closeCreateModal();
 });
-
-saveCreateBtn?.addEventListener("click", saveNewOrder);
 
 tabAtivos?.addEventListener("click", () => changeView("ativos"));
 tabFinalizados?.addEventListener("click", () => changeView("finalizados"));
@@ -598,7 +604,7 @@ drawerBackdrop?.addEventListener("click", () => {
 
 window.addEventListener("load", async () => {
   initGoogleButton();
-  setupDeliveryAddress(); // garante estado inicial
+  setupDeliveryUIListeners();
 
   const savedUserRaw = localStorage.getItem("user");
   const savedUser = savedUserRaw ? JSON.parse(savedUserRaw) : null;
@@ -607,7 +613,6 @@ window.addEventListener("load", async () => {
     await completeLogin(savedUser);
   }
 
-  // poller
   if (!window.__kdsPoller) {
     window.__kdsPoller = setInterval(fetchOrders, 5000);
   }
