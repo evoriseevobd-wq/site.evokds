@@ -1,27 +1,25 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EVO KDS</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap"
-    rel="stylesheet"
-  />
-
-  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
-
 <body>
   <!-- TELA DE LOGIN -->
   <div class="login-screen" id="login-screen">
     <div class="login-card">
       <div class="login-badge">
-        <img src="fenix-logo-png.png" alt="Logo Fênix" class="login-logo" />
+        <img
+          src="fenix-logo-png.png"
+          alt="Logo Fênix"
+          class="login-logo"
+        />
       </div>
 
       <h1>Entrar no KDS</h1>
@@ -30,7 +28,7 @@
     </div>
   </div>
 
-  <!-- HEADER -->
+  <!-- HEADER DEPOIS DO LOGIN -->
   <header class="app-header">
     <button class="icon-button menu-button" id="open-drawer" aria-label="Abrir menu">&#9776;</button>
     <div class="brand">FLUX ON</div>
@@ -43,43 +41,55 @@
     <button class="tab active" data-view="ativos" id="tab-ativos">Ativos</button>
     <button class="tab" data-view="finalizados" id="tab-finalizados">Finalizados</button>
     <button class="tab" data-view="cancelados" id="tab-cancelados">Cancelados</button>
+    <!-- IMPORTANTE: data-view="entregas" -->
     <button class="tab" data-view="entregas" id="tab-entregas">Entrega</button>
   </nav>
 
   <main class="board hidden" id="board">
     <section class="column" data-status="recebido">
-      <div class="column-header"><h2>Pedidos Recebidos</h2></div>
+      <div class="column-header">
+        <h2>Pedidos Recebidos</h2>
+      </div>
       <div class="column-body" id="col-recebido"></div>
     </section>
 
     <section class="column" data-status="preparo">
-      <div class="column-header"><h2>Em Preparo</h2></div>
+      <div class="column-header">
+        <h2>Em Preparo</h2>
+      </div>
       <div class="column-body" id="col-preparo"></div>
     </section>
 
     <section class="column" data-status="pronto">
-      <div class="column-header"><h2>Prontos</h2></div>
+      <div class="column-header">
+        <h2>Prontos</h2>
+      </div>
       <div class="column-body" id="col-pronto"></div>
     </section>
 
-    <!-- Só aparece na aba Entrega -->
+    <!-- Vai aparecer só na aba Entrega -->
     <section class="column" data-status="caminho">
-      <div class="column-header"><h2>A Caminho</h2></div>
+      <div class="column-header">
+        <h2>A Caminho</h2>
+      </div>
       <div class="column-body" id="col-caminho"></div>
     </section>
 
     <section class="column hidden" data-status="finalizado">
-      <div class="column-header"><h2>Pedidos Finalizados</h2></div>
+      <div class="column-header">
+        <h2>Pedidos Finalizados</h2>
+      </div>
       <div class="column-body" id="col-finalizado"></div>
     </section>
 
     <section class="column hidden" data-status="cancelado">
-      <div class="column-header"><h2>Pedidos Cancelados</h2></div>
+      <div class="column-header">
+        <h2>Pedidos Cancelados</h2>
+      </div>
       <div class="column-body" id="col-cancelado"></div>
     </section>
   </main>
 
-  <!-- MODAL DETALHES -->
   <div class="modal-backdrop" id="modal">
     <div class="modal">
       <div class="modal-header">
@@ -98,6 +108,12 @@
         <div class="modal-row">
           <span class="muted">Horário</span>
           <span id="modal-time"></span>
+        </div>
+
+        <!-- ✅ NOVO: ENDEREÇO NO POPUP (só aparece se existir) -->
+        <div class="modal-row" id="modal-address-row" style="display:none;">
+          <span class="muted">Endereço</span>
+          <span id="modal-address"></span>
         </div>
 
         <div class="modal-section">
@@ -120,37 +136,33 @@
     </div>
   </div>
 
-  <!-- MODAL CRIAR PEDIDO -->
   <div class="modal-backdrop" id="create-modal">
     <div class="modal">
       <div class="modal-header">
         <h3>Novo Pedido</h3>
         <button class="icon-button" id="close-create" aria-label="Fechar criação">&times;</button>
       </div>
-
       <div class="modal-body form-body">
         <label>Cliente
           <input id="new-customer" required />
         </label>
-
         <label>Itens (separe por vírgula)
           <input id="new-items" required placeholder="Burger, Batata, Refrigerante" />
         </label>
 
-        <!-- DELIVERY -->
+        <!-- CHECKBOX DELIVERY AQUI -->
         <label class="delivery-toggle">
           <input id="new-delivery" type="checkbox" />
           <span>Delivery</span>
         </label>
 
-        <!-- ENDEREÇO (aparece só quando marca delivery) -->
+        <!-- ✅ NOVO: CAMPO ENDEREÇO -->
         <div class="delivery-address" id="delivery-address-wrap">
           <label>Endereço para entrega
             <input
               id="new-address"
               type="text"
               placeholder="Rua, número, bairro, complemento..."
-              autocomplete="street-address"
             />
           </label>
         </div>
@@ -159,7 +171,6 @@
           <textarea id="new-notes" placeholder="Sem cebola, bebida sem gelo"></textarea>
         </label>
       </div>
-
       <div class="modal-actions">
         <button class="ghost-button" id="cancel-create">Cancelar</button>
         <button class="primary-button" id="save-create">Salvar</button>
@@ -167,15 +178,12 @@
     </div>
   </div>
 
-  <!-- DRAWER -->
   <aside class="drawer" id="drawer">
     <div class="drawer-header">
       <div class="brand">FLUX ON</div>
       <button class="icon-button" id="close-drawer" aria-label="Fechar menu">&times;</button>
     </div>
-
     <nav class="drawer-nav"></nav>
-
     <div class="drawer-footer">
       <div class="user-chip" id="user-chip" hidden>
         <span class="dot"></span>
@@ -185,7 +193,6 @@
       </div>
     </div>
   </aside>
-
   <div class="drawer-backdrop" id="drawer-backdrop"></div>
 
   <div id="unauthorized-modal" class="modal-backdrop">
@@ -199,21 +206,26 @@
           Este painel é exclusivo para estabelecimentos que utilizam a plataforma da
           <strong>Evorise</strong>.
         </p>
-
         <p>
           Para saber mais sobre os serviços da Evorise e como implementar esse sistema
           no seu negócio, acesse o site oficial:
         </p>
 
         <p class="unauth-link-text">
-          <a href="https://__________________________" target="_blank" rel="noopener noreferrer">
+          <a
+            href="https://__________________________"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             https://__________________________
           </a>
         </p>
       </div>
 
       <div class="modal-footer">
-        <button id="unauth-close" class="btn-secondary">Fechar</button>
+        <button id="unauth-close" class="btn-secondary">
+          Fechar
+        </button>
       </div>
     </div>
   </div>
