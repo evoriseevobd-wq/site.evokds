@@ -15,9 +15,7 @@
   --shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
@@ -30,9 +28,7 @@ body {
   min-height: 100vh;
 }
 
-.hidden {
-  display: none !important;
-}
+.hidden { display: none !important; }
 
 .app-header {
   display: grid;
@@ -54,10 +50,7 @@ body {
   letter-spacing: 2px;
 }
 
-.menu-button {
-  position: static;
-  justify-self: start;
-}
+.menu-button { justify-self: start; }
 
 .user-chip {
   display: inline-flex;
@@ -89,7 +82,7 @@ body {
 
 .board {
   display: grid;
-  grid-template-columns: repeat(3, minmax(260px, 1fr)); /* 3 colunas iguais */
+  grid-template-columns: repeat(3, minmax(260px, 1fr));
   justify-content: center;
   gap: 24px;
   padding: 12px 24px 40px;
@@ -156,27 +149,10 @@ body {
   margin-bottom: 4px;
 }
 
-.order-id {
-  font-weight: 800;
-  font-size: 15px;
-}
-
-.order-time {
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.customer {
-  margin: 0 0 4px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.items {
-  margin: 0 0 10px;
-  font-size: 13px;
-  color: var(--muted);
-}
+.order-id { font-weight: 800; font-size: 15px; }
+.order-time { font-size: 12px; color: var(--muted); }
+.customer { margin: 0 0 4px; font-size: 14px; font-weight: 600; }
+.items { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
 
 .card .action {
   display: inline-flex;
@@ -199,34 +175,12 @@ body {
   box-shadow: 0 8px 18px rgba(248, 113, 113, 0.25);
 }
 
-.card .action:active {
-  transform: translateY(0);
-}
-
-.card.recebido {
-  border-top: 4px solid var(--accent-recebido);
-}
-
-.card.preparo {
-  border-top: 4px solid var(--accent-preparo);
-}
-
-.card.pronto {
-  border-top: 4px solid var(--accent-pronto);
-}
-
-.card.caminho {
-  border-top: 4px solid var(--accent-caminho);
-}
-
-.card.finalizado {
-  border-top: 4px solid var(--accent-finalizado);
-}
-
-.card.cancelado {
-  border-top: 4px solid var(--accent-cancelado);
-  opacity: 0.9;
-}
+.card.recebido { border-top: 4px solid var(--accent-recebido); }
+.card.preparo { border-top: 4px solid var(--accent-preparo); }
+.card.pronto { border-top: 4px solid var(--accent-pronto); }
+.card.caminho { border-top: 4px solid var(--accent-caminho); }
+.card.finalizado { border-top: 4px solid var(--accent-finalizado); }
+.card.cancelado { border-top: 4px solid var(--accent-cancelado); opacity: 0.9; }
 
 .modal-backdrop {
   position: fixed;
@@ -239,9 +193,7 @@ body {
   z-index: 10;
 }
 
-.modal-backdrop.open {
-  display: flex;
-}
+.modal-backdrop.open { display: flex; }
 
 .modal {
   background: var(--surface);
@@ -259,10 +211,7 @@ body {
   gap: 12px;
 }
 
-.modal h3 {
-  margin: 4px 0 0;
-  font-size: 22px;
-}
+.modal h3 { margin: 4px 0 0; font-size: 22px; }
 
 .modal-label {
   margin: 0;
@@ -279,15 +228,8 @@ body {
   gap: 12px;
 }
 
-.modal-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 14px;
-}
-
-.muted {
-  color: var(--muted);
-}
+.modal-row { display: flex; justify-content: space-between; font-size: 14px; }
+.muted { color: var(--muted); }
 
 .item-list {
   list-style: none;
@@ -321,11 +263,7 @@ body {
   margin-top: 12px;
 }
 
-.primary-button,
-.ghost-button,
-.icon-button {
-  font-family: inherit;
-}
+.primary-button, .ghost-button, .icon-button { font-family: inherit; }
 
 .primary-button {
   background: linear-gradient(90deg, #b91c1c, #f97373);
@@ -346,14 +284,6 @@ body {
   box-shadow: none;
 }
 
-.primary-button:hover {
-  transform: translateY(-1px);
-}
-
-.primary-button:active {
-  transform: translateY(0);
-}
-
 .ghost-button {
   background: transparent;
   border: 1px solid var(--border);
@@ -363,13 +293,7 @@ body {
   cursor: pointer;
 }
 
-.ghost-button.full {
-  width: 100%;
-  margin-top: 8px;
-}
-
-.header-actions {
-}
+.ghost-button.small { padding: 6px 10px; font-size: 12px; }
 
 .form-body label {
   display: flex;
@@ -381,7 +305,7 @@ body {
   margin-bottom: 10px;
 }
 
-/* Checkbox de Delivery no "Criar Pedido" */
+/* Delivery */
 .delivery-toggle {
   display: flex;
   flex-direction: row;
@@ -397,17 +321,19 @@ body {
   height: 16px;
 }
 
-/* Mensagem de "sem entregas" na aba Entrega */
+/* endereço (o JS também controla display direto) */
+.delivery-address { display: none; margin-top: 10px; }
+.delivery-address.visible { display: block; }
+
 .empty-state {
   padding: 14px 12px;
   border-radius: 12px;
   border: 1px dashed var(--border);
-  background: #111b30;
+  background: #3b1010;
   text-align: center;
   font-size: 13px;
   color: var(--muted);
 }
-
 
 .form-body input,
 .form-body textarea {
@@ -422,26 +348,16 @@ body {
   font-family: inherit;
 }
 
-.form-body textarea {
-  min-height: 80px;
-  resize: vertical;
-}
+.form-body textarea { min-height: 80px; resize: vertical; }
 
 .form-body input::placeholder,
-.form-body textarea::placeholder {
-  color: var(--muted);
-}
+.form-body textarea::placeholder { color: var(--muted); }
 
 .header-right {
-  position: static;
   justify-self: end;
   display: inline-flex;
   align-items: center;
   gap: 10px;
-}
-
-.header-right .primary-button {
-  padding: 9px 14px;
 }
 
 .tabs {
@@ -492,9 +408,7 @@ body {
   flex-direction: column;
 }
 
-.drawer.open {
-  left: 0;
-}
+.drawer.open { left: 0; }
 
 .drawer-header {
   display: flex;
@@ -512,35 +426,7 @@ body {
   flex: 1;
 }
 
-.drawer-link {
-  padding: 12px 10px;
-  border-radius: 10px;
-  color: var(--text);
-  text-decoration: none;
-  border: 1px solid transparent;
-  background: #3b1010;
-  transition: border 0.12s ease, background 0.12s ease;
-}
-
-.drawer-link:hover {
-  border-color: var(--border);
-  background: #4a1515;
-}
-
-.drawer-footer {
-  padding: 14px;
-  border-top: 1px solid var(--border);
-}
-
-.drawer-footer .user-chip {
-  width: 100%;
-  justify-content: space-between;
-}
-
-.ghost-button.small {
-  padding: 6px 10px;
-  font-size: 12px;
-}
+.drawer-footer { padding: 14px; border-top: 1px solid var(--border); }
 
 .drawer-backdrop {
   position: fixed;
@@ -550,9 +436,7 @@ body {
   z-index: 19;
 }
 
-.drawer-backdrop.open {
-  display: block;
-}
+.drawer-backdrop.open { display: block; }
 
 .icon-button {
   border: 1px solid var(--border);
@@ -598,12 +482,8 @@ body {
   margin-bottom: 10px;
   border-radius: 14px;
   background: linear-gradient(135deg, #b91c1c, #f97373);
-  color: #2e0808;
-  font-weight: 800;
-  letter-spacing: 1px;
 }
 
-/* logo da fênix dentro do badge */
 .login-logo {
   max-width: 28%;
   max-height: 28%;
@@ -611,52 +491,15 @@ body {
   display: block;
 }
 
-.login-card h1 {
-  margin: 8px 0 4px;
-}
-
-.google-btn {
-  margin-top: 14px;
-  display: flex;
-  justify-content: center;
-}
-
-.login-hint {
-  font-size: 12px;
-  color: var(--muted);
-  margin-top: 10px;
-}
+.google-btn { margin-top: 14px; display: flex; justify-content: center; }
 
 @media (max-width: 1200px) {
-  .board {
-    grid-template-columns: repeat(2, minmax(240px, 1fr));
-  }
+  .board { grid-template-columns: repeat(2, minmax(240px, 1fr)); }
 }
 
 @media (max-width: 700px) {
-  .board {
-    grid-template-columns: 1fr;
-  }
-
-  .column-body {
-    max-height: none;
-  }
-
-  .app-header {
-    padding: 18px 16px;
-    grid-template-columns: auto 1fr auto;
-  }
-
-  .header-right {
-    gap: 6px;
-  }
-
-  .header-right .primary-button {
-    padding: 8px 12px;
-    font-size: 13px;
-  }
-
-  .tabs {
-    padding: 8px 12px 4px;
-  }
+  .board { grid-template-columns: 1fr; }
+  .column-body { max-height: none; }
+  .app-header { padding: 18px 16px; }
+  .tabs { padding: 8px 12px 4px; }
 }
