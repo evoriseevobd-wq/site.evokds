@@ -1,3 +1,4 @@
+// ===== CONFIG =====
 const GOOGLE_CLIENT_ID =
   "872848052437-nl3lru9m1jhmfobk0imbpb2o9uk47mqi.apps.googleusercontent.com";
 
@@ -5,72 +6,7 @@ const API_BASE = "https://kds-backend.dahead.easypanel.host";
 const API_URL = `${API_BASE}/orders`;
 const AUTH_URL = `${API_BASE}/auth/google`;
 
-const columns = {
-  recebido: document.getElementById("col-recebido"),
-  preparo: document.getElementById("col-preparo"),
-  pronto: document.getElementById("col-pronto"),
-  caminho: document.getElementById("col-caminho"),
-  finalizado: document.getElementById("col-finalizado"),
-  cancelado: document.getElementById("col-cancelado"),
-};
-
-const board = document.getElementById("board");
-const loginScreen = document.getElementById("login-screen");
-
-const googleBtnContainer = document.getElementById("googleLoginBtn");
-
-const userChip = document.getElementById("user-chip");
-const userNameEl = document.getElementById("user-name");
-const userAvatar = document.getElementById("user-avatar");
-const logoutBtn = document.getElementById("logout-btn");
-
-const modalBackdrop = document.getElementById("modal");
-const modalId = document.getElementById("modal-id");
-const modalCustomer = document.getElementById("modal-customer");
-const modalTime = document.getElementById("modal-time");
-const modalItems = document.getElementById("modal-items");
-const modalNotes = document.getElementById("modal-notes");
-
-const closeModalBtn = document.getElementById("close-modal");
-const closeModalSecondaryBtn = document.getElementById("close-modal-secondary");
-const modalPrevBtn = document.getElementById("modal-prev");
-const modalCancelBtn = document.getElementById("modal-cancel");
-const modalNextBtn = document.getElementById("modal-next");
-
-const createModal = document.getElementById("create-modal");
-const openCreateBtn = document.getElementById("open-create");
-const closeCreateBtn = document.getElementById("close-create");
-const cancelCreateBtn = document.getElementById("cancel-create");
-const saveCreateBtn = document.getElementById("save-create");
-
-const newCustomer = document.getElementById("new-customer");
-const newItems = document.getElementById("new-items");
-const newNotes = document.getElementById("new-notes");
-const newDelivery = document.getElementById("new-delivery");
-const deliveryAddressWrap = document.getElementById("delivery-address-wrap");
-const newAddress = document.getElementById("new-address");
-
-const drawer = document.getElementById("drawer");
-const openDrawer = document.getElementById("open-drawer");
-const closeDrawerBtn = document.getElementById("close-drawer");
-const drawerBackdrop = document.getElementById("drawer-backdrop");
-
-const tabAtivos = document.getElementById("tab-ativos");
-const tabFinalizados = document.getElementById("tab-finalizados");
-const tabCancelados = document.getElementById("tab-cancelados");
-const tabEntregas = document.getElementById("tab-entregas");
-
-const views = {
-  ativos: ["recebido", "preparo", "pronto"],
-  finalizados: ["finalizado"],
-  cancelados: ["cancelado"],
-  entregas: ["caminho"],
-};
-
-let currentView = "ativos";
-let orders = [];
-let activeOrderId = null;
-
+// ===== STATUS MAP =====
 const STATUS_TO_BACKEND = {
   recebido: "pending",
   preparo: "preparing",
@@ -90,6 +26,89 @@ const STATUS_FROM_BACKEND = {
   canceled: "cancelado",
 };
 
+const views = {
+  ativos: ["recebido", "preparo", "pronto"],
+  finalizados: ["finalizado"],
+  cancelados: ["cancelado"],
+  entregas: ["caminho"],
+};
+
+// ===== ELEMENTS =====
+const loginScreen = document.getElementById("login-screen");
+const board = document.getElementById("board");
+
+const columns = {
+  recebido: document.getElementById("col-recebido"),
+  preparo: document.getElementById("col-preparo"),
+  pronto: document.getElementById("col-pronto"),
+  caminho: document.getElementById("col-caminho"),
+  finalizado: document.getElementById("col-finalizado"),
+  cancelado: document.getElementById("col-cancelado"),
+};
+
+const tabAtivos = document.getElementById("tab-ativos");
+const tabFinalizados = document.getElementById("tab-finalizados");
+const tabCancelados = document.getElementById("tab-cancelados");
+const tabEntregas = document.getElementById("tab-entregas");
+
+// Drawer
+const drawer = document.getElementById("drawer");
+const openDrawerBtn = document.getElementById("open-drawer");
+const closeDrawerBtn = document.getElementById("close-drawer");
+const drawerBackdrop = document.getElementById("drawer-backdrop");
+
+// User chip
+const userChip = document.getElementById("user-chip");
+const userNameEl = document.getElementById("user-name");
+const userAvatar = document.getElementById("user-avatar");
+const logoutBtn = document.getElementById("logout-btn");
+
+// Unauthorized modal
+const unauthorizedModal = document.getElementById("unauthorized-modal");
+const unauthClose = document.getElementById("unauth-close");
+
+// Order modal
+const modalBackdrop = document.getElementById("modal");
+const modalId = document.getElementById("modal-id");
+const modalCustomer = document.getElementById("modal-customer");
+const modalTime = document.getElementById("modal-time");
+const modalItems = document.getElementById("modal-items");
+const modalNotes = document.getElementById("modal-notes");
+
+const modalAddressRow = document.getElementById("modal-address-row");
+const modalAddress = document.getElementById("modal-address");
+
+const closeModalBtn = document.getElementById("close-modal");
+const closeModalSecondaryBtn = document.getElementById("close-modal-secondary");
+const modalPrevBtn = document.getElementById("modal-prev");
+const modalCancelBtn = document.getElementById("modal-cancel");
+const modalNextBtn = document.getElementById("modal-next");
+
+// Create modal
+const createModal = document.getElementById("create-modal");
+const openCreateBtn = document.getElementById("open-create");
+const closeCreateBtn = document.getElementById("close-create");
+const cancelCreateBtn = document.getElementById("cancel-create");
+const saveCreateBtn = document.getElementById("save-create");
+
+const newCustomer = document.getElementById("new-customer");
+const newItems = document.getElementById("new-items");
+const newNotes = document.getElementById("new-notes");
+
+// Delivery + address
+const newDelivery = document.getElementById("new-delivery");
+const deliveryAddressWrap = document.getElementById("delivery-address-wrap");
+const newAddress = document.getElementById("new-address");
+
+// Google button
+const googleBtnContainer = document.getElementById("googleLoginBtn");
+
+// ===== STATE =====
+let currentView = "ativos";
+let orders = [];
+let activeOrderId = null;
+
+// ===== HELPERS =====
 function toFrontStatus(back) {
   const k = String(back || "").toLowerCase();
   return STATUS_FROM_BACKEND[k] || "recebido";
@@ -117,46 +136,28 @@ function summarizeItems(list) {
   return `${list.slice(0, 2).join(" • ")} +${list.length - 2}`;
 }
 
-function actionLabel(order) {
-  if (order.status === "pronto") {
-    return order.service_type === "delivery"
-      ? "Enviar para entrega"
-      : "Finalizar pedido";
-  }
-  if (order.status === "recebido") return "Aceitar";
-  if (order.status === "preparo") return "Finalizar Preparo";
-  if (order.status === "caminho") return "Concluir Pedido";
-  return "";
-}
-
 function openBackdrop(el) { el?.classList.add("open"); }
 function closeBackdrop(el) { el?.classList.remove("open"); }
 
-/* ====================== DELIVERY UI (GARANTIDO) ====================== */
+// ===== DELIVERY UI (MOSTRAR/ESCONDER ENDEREÇO) =====
 function applyDeliveryUI() {
   if (!newDelivery || !deliveryAddressWrap || !newAddress) return;
 
   const on = newDelivery.checked;
 
-  // força display (vence qualquer CSS)
-  deliveryAddressWrap.style.setProperty(
-    "display",
-    on ? "block" : "none",
-    "important"
-  );
-
+  deliveryAddressWrap.classList.toggle("visible", on);
   newAddress.required = on;
 
   if (!on) newAddress.value = "";
 }
 
-function setupDeliveryUIListeners() {
-  if (!newDelivery || !deliveryAddressWrap || !newAddress) return;
+function setupDeliveryUI() {
+  if (!newDelivery) return;
   newDelivery.addEventListener("change", applyDeliveryUI);
   applyDeliveryUI();
 }
-/* ==================================================================== */
 
+// ===== BOARD RENDER =====
 function renderBoard() {
   Object.values(columns).forEach((c) => c && (c.innerHTML = ""));
 
@@ -188,6 +189,18 @@ function renderBoard() {
   });
 }
 
+function actionLabel(order) {
+  if (order.status === "pronto") {
+    return order.service_type === "delivery"
+      ? "Enviar para entrega"
+      : "Finalizar pedido";
+  }
+  if (order.status === "recebido") return "Aceitar";
+  if (order.status === "preparo") return "Finalizar Preparo";
+  if (order.status === "caminho") return "Concluir Pedido";
+  return "";
+}
+
 function createCard(order) {
   const id = getOrderId(order);
 
@@ -217,6 +230,7 @@ function createCard(order) {
   items.textContent = summarizeItems(order.itens || []);
 
   const label = actionLabel(order);
+
   if (label) {
     const btn = document.createElement("button");
     btn.className = "action";
@@ -234,6 +248,7 @@ function createCard(order) {
   return card;
 }
 
+// ===== STATUS FLOW =====
 function nextFrontStatus(order) {
   const flow = ["recebido", "preparo", "pronto", "caminho"];
 
@@ -298,6 +313,7 @@ async function cancelOrder(orderId) {
   closeBackdrop(modalBackdrop);
 }
 
+// ===== MODAL =====
 function openOrderModal(orderId) {
   const order = orders.find((o) => getOrderId(o) === orderId);
   if (!order) return;
@@ -307,6 +323,16 @@ function openOrderModal(orderId) {
   modalId.textContent = `#${order.order_number ?? orderId}`;
   modalCustomer.textContent = order.client_name;
   modalTime.textContent = formatTime(order.created_at);
+
+  // ✅ endereço sempre no popup quando existir
+  const addr = (order.address || "").trim();
+  if (addr) {
+    modalAddressRow.style.display = "";
+    modalAddress.textContent = addr;
+  } else {
+    modalAddressRow.style.display = "none";
+    modalAddress.textContent = "";
+  }
 
   modalItems.innerHTML = "";
   (order.itens || []).forEach((item) => {
@@ -318,25 +344,16 @@ function openOrderModal(orderId) {
   modalNotes.textContent = (order.notes || "").trim() || "Sem observações";
 
   const label = actionLabel(order);
-  if (!label || order.status === "finalizado" || order.status === "cancelado") {
-    modalNextBtn.classList.add("hidden");
-  } else {
-    modalNextBtn.classList.remove("hidden");
-    modalNextBtn.textContent = label;
-  }
+  modalNextBtn.textContent = label || "";
+  modalNextBtn.classList.toggle("hidden", !label);
 
   const prev = prevFrontStatus(order);
-  if (prev && order.status !== "finalizado" && order.status !== "cancelado") {
-    modalPrevBtn.classList.remove("hidden");
-  } else {
-    modalPrevBtn.classList.add("hidden");
-  }
+  modalPrevBtn.classList.toggle("hidden", !prev);
 
-  if (order.status === "finalizado" || order.status === "cancelado") {
-    modalCancelBtn.classList.add("hidden");
-  } else {
-    modalCancelBtn.classList.remove("hidden");
-  }
+  modalCancelBtn.classList.toggle(
+    "hidden",
+    order.status === "finalizado" || order.status === "cancelado"
+  );
 
   openBackdrop(modalBackdrop);
 }
@@ -346,6 +363,7 @@ function closeOrderModal() {
   closeBackdrop(modalBackdrop);
 }
 
+// ===== VIEW =====
 function changeView(view) {
   currentView = view;
   document.querySelectorAll(".tab").forEach((t) => {
@@ -354,6 +372,7 @@ function changeView(view) {
   renderBoard();
 }
 
+// ===== CREATE MODAL =====
 function openCreateModal() {
   openBackdrop(createModal);
   applyDeliveryUI();
@@ -362,14 +381,11 @@ function openCreateModal() {
 
 function closeCreateModal() {
   closeBackdrop(createModal);
-
   if (newCustomer) newCustomer.value = "";
   if (newItems) newItems.value = "";
   if (newNotes) newNotes.value = "";
-
   if (newDelivery) newDelivery.checked = false;
   if (newAddress) newAddress.value = "";
-
   applyDeliveryUI();
 }
 
@@ -403,6 +419,7 @@ async function saveNewOrder() {
     client_name: customer,
     itens: items,
     notes: (newNotes?.value || "").trim(),
+    status: "recebido",
     service_type: serviceType,
     address: serviceType === "delivery" ? address : "",
   };
@@ -415,7 +432,6 @@ async function saveNewOrder() {
     });
 
     const data = await resp.json().catch(() => ({}));
-
     if (!resp.ok) {
       alert(data.error || "Erro ao criar pedido.");
       return;
@@ -429,6 +445,7 @@ async function saveNewOrder() {
   }
 }
 
+// ===== FETCH =====
 async function fetchOrders() {
   const restaurantId = localStorage.getItem("restaurant_id");
   if (!restaurantId) return;
@@ -452,7 +469,7 @@ async function fetchOrders() {
   }
 }
 
-/* =================== GOOGLE LOGIN =================== */
+// ===== GOOGLE LOGIN =====
 function decodeJwt(token) {
   try {
     const payload = token.split(".")[1];
@@ -478,14 +495,13 @@ async function completeLogin(user) {
     });
 
     const data = await resp.json().catch(() => ({}));
-
     if (!resp.ok) {
       alert(data.error || "Erro ao autenticar.");
       return;
     }
 
     if (!data.authorized) {
-      alert(data.message || "Acesso não autorizado.");
+      if (unauthorizedModal) openBackdrop(unauthorizedModal);
       return;
     }
 
@@ -544,36 +560,22 @@ function initGoogleButton(attempt = 0) {
     });
   }
 }
-/* =================================================== */
 
-/* =================== EVENTS =================== */
+// ===== EVENTS =====
 closeModalBtn?.addEventListener("click", closeOrderModal);
 closeModalSecondaryBtn?.addEventListener("click", closeOrderModal);
+modalBackdrop?.addEventListener("click", (e) => { if (e.target === modalBackdrop) closeOrderModal(); });
 
-modalBackdrop?.addEventListener("click", (e) => {
-  if (e.target === modalBackdrop) closeOrderModal();
-});
-
-modalNextBtn?.addEventListener("click", () => {
-  if (activeOrderId) advanceStatus(activeOrderId);
-});
-
-modalPrevBtn?.addEventListener("click", () => {
-  if (activeOrderId) regressStatus(activeOrderId);
-});
-
-modalCancelBtn?.addEventListener("click", () => {
-  if (activeOrderId) cancelOrder(activeOrderId);
-});
+modalNextBtn?.addEventListener("click", () => { if (activeOrderId) advanceStatus(activeOrderId); });
+modalPrevBtn?.addEventListener("click", () => { if (activeOrderId) regressStatus(activeOrderId); });
+modalCancelBtn?.addEventListener("click", () => { if (activeOrderId) cancelOrder(activeOrderId); });
 
 openCreateBtn?.addEventListener("click", openCreateModal);
 closeCreateBtn?.addEventListener("click", closeCreateModal);
 cancelCreateBtn?.addEventListener("click", closeCreateModal);
 saveCreateBtn?.addEventListener("click", saveNewOrder);
 
-createModal?.addEventListener("click", (e) => {
-  if (e.target === createModal) closeCreateModal();
-});
+createModal?.addEventListener("click", (e) => { if (e.target === createModal) closeCreateModal(); });
 
 tabAtivos?.addEventListener("click", () => changeView("ativos"));
 tabFinalizados?.addEventListener("click", () => changeView("finalizados"));
@@ -586,34 +588,32 @@ logoutBtn?.addEventListener("click", () => {
   window.location.reload();
 });
 
-// drawer
-openDrawer?.addEventListener("click", () => {
+// Drawer
+openDrawerBtn?.addEventListener("click", () => {
   drawer?.classList.add("open");
   drawerBackdrop?.classList.add("open");
 });
-
 closeDrawerBtn?.addEventListener("click", () => {
   drawer?.classList.remove("open");
   drawerBackdrop?.classList.remove("open");
 });
-
 drawerBackdrop?.addEventListener("click", () => {
   drawer?.classList.remove("open");
   drawerBackdrop?.classList.remove("open");
 });
 
+// Unauthorized
+unauthClose?.addEventListener("click", () => closeBackdrop(unauthorizedModal));
+
 window.addEventListener("load", async () => {
   initGoogleButton();
-  setupDeliveryUIListeners();
+  setupDeliveryUI();
 
   const savedUserRaw = localStorage.getItem("user");
   const savedUser = savedUserRaw ? JSON.parse(savedUserRaw) : null;
 
+  // Se já tiver user salvo, tenta autenticar direto
   if (savedUser?.email) {
     await completeLogin(savedUser);
-  }
-
-  if (!window.__kdsPoller) {
-    window.__kdsPoller = setInterval(fetchOrders, 5000);
   }
 });
