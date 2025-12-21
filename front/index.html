@@ -1,17 +1,21 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EVO KDS</title>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
 
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
+
 <body>
   <!-- TELA DE LOGIN -->
   <div class="login-screen" id="login-screen">
@@ -26,7 +30,7 @@
     </div>
   </div>
 
-  <!-- HEADER DEPOIS DO LOGIN -->
+  <!-- HEADER -->
   <header class="app-header">
     <button class="icon-button menu-button" id="open-drawer" aria-label="Abrir menu">&#9776;</button>
     <div class="brand">FLUX ON</div>
@@ -58,7 +62,7 @@
       <div class="column-body" id="col-pronto"></div>
     </section>
 
-    <!-- Vai aparecer só na aba Entrega -->
+    <!-- Só aparece na aba Entrega -->
     <section class="column" data-status="caminho">
       <div class="column-header"><h2>A Caminho</h2></div>
       <div class="column-body" id="col-caminho"></div>
@@ -133,13 +137,13 @@
           <input id="new-items" required placeholder="Burger, Batata, Refrigerante" />
         </label>
 
-        <!-- CHECKBOX DELIVERY -->
+        <!-- DELIVERY -->
         <label class="delivery-toggle">
           <input id="new-delivery" type="checkbox" />
           <span>Delivery</span>
         </label>
 
-        <!-- ENDEREÇO (APARECE SÓ SE MARCAR DELIVERY) -->
+        <!-- ENDEREÇO (aparece só quando marca delivery) -->
         <div class="delivery-address" id="delivery-address-wrap">
           <label>Endereço para entrega
             <input
@@ -169,7 +173,9 @@
       <div class="brand">FLUX ON</div>
       <button class="icon-button" id="close-drawer" aria-label="Fechar menu">&times;</button>
     </div>
+
     <nav class="drawer-nav"></nav>
+
     <div class="drawer-footer">
       <div class="user-chip" id="user-chip" hidden>
         <span class="dot"></span>
@@ -179,9 +185,9 @@
       </div>
     </div>
   </aside>
+
   <div class="drawer-backdrop" id="drawer-backdrop"></div>
 
-  <!-- UNAUTHORIZED -->
   <div id="unauthorized-modal" class="modal-backdrop">
     <div class="modal unauthorized-modal">
       <div class="modal-header">
@@ -193,6 +199,7 @@
           Este painel é exclusivo para estabelecimentos que utilizam a plataforma da
           <strong>Evorise</strong>.
         </p>
+
         <p>
           Para saber mais sobre os serviços da Evorise e como implementar esse sistema
           no seu negócio, acesse o site oficial:
