@@ -110,10 +110,16 @@
           <span id="modal-time"></span>
         </div>
 
-        <!-- ✅ NOVO: ENDEREÇO NO POPUP (só aparece se existir) -->
+        <!-- ✅ ENDEREÇO (só aparece se existir) -->
         <div class="modal-row" id="modal-address-row" style="display:none;">
           <span class="muted">Endereço</span>
           <span id="modal-address"></span>
+        </div>
+
+        <!-- ✅ NOVO: FORMA DE PAGAMENTO (só aparece se existir) -->
+        <div class="modal-row" id="modal-payment-row" style="display:none;">
+          <span class="muted">Pagamento</span>
+          <span id="modal-payment"></span>
         </div>
 
         <div class="modal-section">
@@ -156,7 +162,7 @@
           <span>Delivery</span>
         </label>
 
-        <!-- ✅ NOVO: CAMPO ENDEREÇO -->
+        <!-- ✅ ENDEREÇO -->
         <div class="delivery-address" id="delivery-address-wrap">
           <label>Endereço para entrega
             <input
@@ -164,6 +170,19 @@
               type="text"
               placeholder="Rua, número, bairro, complemento..."
             />
+          </label>
+        </div>
+
+        <!-- ✅ NOVO: FORMA DE PAGAMENTO (mesmo processo do endereço) -->
+        <div class="payment-wrap" id="payment-wrap">
+          <label>Forma de pagamento
+            <select id="new-payment">
+              <option value="">Selecione...</option>
+              <option value="pix">PIX</option>
+              <option value="credito">Cartão de crédito</option>
+              <option value="debito">Cartão de débito</option>
+              <option value="dinheiro">Dinheiro</option>
+            </select>
           </label>
         </div>
 
