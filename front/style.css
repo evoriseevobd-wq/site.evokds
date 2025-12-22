@@ -544,6 +544,20 @@ body {
   .tabs { overflow-x: auto; }
 }
 
-/* ✅ Delivery: endereço (ADICIONADO, sem mexer no resto) */
+/* ✅ Delivery: endereço (baseline que já funcionava) */
 .delivery-address { display: none; }
 .delivery-address.visible { display: block; }
+
+/* ✅ NOVO: Forma de pagamento (mesmo processo do endereço) */
+.payment-wrap { display: none; margin-top: 10px; }
+.payment-wrap.visible { display: block; }
+
+.payment-wrap select {
+  width: 100%;
+  padding: 10px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(91, 28, 28, 0.85);
+  background: rgba(46, 8, 8, 0.45);
+  color: rgba(252, 228, 228, 1);
+  outline: none;
+}
