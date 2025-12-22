@@ -561,3 +561,57 @@ body {
   color: rgba(252, 228, 228, 1);
   outline: none;
 }
+/* ===== Select premium (Forma de pagamento) ===== */
+.payment-wrap select{
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  padding: 12px 44px 12px 14px; /* espaço pra seta */
+  border-radius: 14px;
+  border: 1px solid rgba(91, 28, 28, 0.85);
+  background:
+    linear-gradient(180deg, rgba(46, 8, 8, 0.55), rgba(46, 8, 8, 0.35)),
+    radial-gradient(circle at 20% 20%, rgba(249, 115, 115, 0.10), transparent 35%);
+  color: rgba(252, 228, 228, 1);
+  outline: none;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.25);
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+  cursor: pointer;
+
+  /* seta custom */
+  background-image:
+    linear-gradient(180deg, rgba(46, 8, 8, 0.55), rgba(46, 8, 8, 0.35)),
+    radial-gradient(circle at 20% 20%, rgba(249, 115, 115, 0.10), transparent 35%),
+    linear-gradient(45deg, transparent 50%, rgba(252,228,228,.85) 50%),
+    linear-gradient(135deg, rgba(252,228,228,.85) 50%, transparent 50%);
+  background-position:
+    0 0,
+    0 0,
+    calc(100% - 18px) 50%,
+    calc(100% - 12px) 50%;
+  background-size:
+    auto,
+    auto,
+    6px 6px,
+    6px 6px;
+  background-repeat: no-repeat;
+}
+
+.payment-wrap select:hover{
+  border-color: rgba(249, 115, 115, 0.75);
+  transform: translateY(-1px);
+}
+
+.payment-wrap select:focus{
+  border-color: rgba(249, 115, 115, 0.95);
+  box-shadow: 0 0 0 4px rgba(249, 115, 115, 0.12), 0 14px 34px rgba(0,0,0,0.35);
+}
+
+/* opções (ajuda em alguns navegadores) */
+.payment-wrap select option{
+  background: rgba(46, 8, 8, 1);
+  color: rgba(252, 228, 228, 1);
+}
+
+/* remove seta no IE antigo (se alguém usar) */
+.payment-wrap select::-ms-expand{ display: none; }
