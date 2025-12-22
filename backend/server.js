@@ -34,7 +34,10 @@ async function restaurantExists(restaurant_id) {
     .eq("id", restaurant_id)
     .limit(1);
 
-  if (error) throw new Error("Erro ao validar restaurante");
+  if (error) {
+    throw new Error("Erro ao validar restaurante");
+  }
+
   return data && data.length > 0;
 }
 
@@ -48,6 +51,7 @@ app.post("/orders", async (req, res) => {
       notes,
       service_type,
       address,
+      payment_method, // ✅ NOVO
     } = req.body || {};
 
     const normalizedItems = Array.isArray(items)
@@ -65,16 +69,33 @@ app.post("/orders", async (req, res) => {
     }
 
     const exists = await restaurantExists(restaurant_id);
-    if (!exists) return sendError(res, 404, "Restaurante não encontrado");
+    if (!exists) {
+      return sendError(res, 404, "Restaurante não encontrado");
+    }
 
+    // tipo de serviço: local por padrão
     const finalServiceType =
       service_type === "delivery" ? "delivery" : "local";
 
-    const finalAddress =
-      finalServiceType === "delivery" ? (address || "").trim() : "";
+    // se for delivery, endereço é obrigatório
+    if (finalServiceType === "delivery" && (!address || !address.trim())) {
+      return sendError(
+        res,
+        400,
+        "Endereço é obrigatório para pedidos de delivery"
+      );
+    }
 
-    if (finalServiceType === "delivery" && !finalAddress) {
-      return sendError(res, 400, "Endereço é obrigatório para pedidos de delivery");
+    // ✅ NOVO: se for delivery, forma de pagamento é obrigatória
+    if (
+      finalServiceType === "delivery" &&
+      (!payment_method || !payment_method.trim())
+    ) {
+      return sendError(
+        res,
+        400,
+        "Forma de pagamento é obrigatória para pedidos de delivery"
+      );
     }
 
     const { data: last, error: lastErr } = await supabase
@@ -107,7 +128,11 @@ app.post("/orders", async (req, res) => {
           notes: notes || "",
           status: "pending",
           service_type: finalServiceType,
-          address: finalServiceType === "delivery" ? finalAddress : null,
+          address: address || null,
+
+          // ✅ NOVO: salva payment_method
+          payment_method: payment_method ? payment_method.trim() : null,
+
           created_at: now,
           update_at: now,
         },
@@ -130,7 +155,9 @@ app.post("/orders", async (req, res) => {
 app.get("/orders/:restaurant_id", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
-    if (!restaurant_id) return sendError(res, 400, "restaurant_id é obrigatório");
+    if (!restaurant_id) {
+      return sendError(res, 400, "restaurant_id é obrigatório");
+    }
 
     const { data, error } = await supabase
       .from("orders")
@@ -154,8 +181,12 @@ app.patch("/orders/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body || {};
-    if (!id || !status) return sendError(res, 400, "id e status são obrigatórios");
-    if (!ALLOWED_STATUS.includes(status)) return sendError(res, 400, "status inválido");
+    if (!id || !status) {
+      return sendError(res, 400, "id e status são obrigatórios");
+    }
+    if (!ALLOWED_STATUS.includes(status)) {
+      return sendError(res, 400, "status inválido");
+    }
 
     const now = new Date().toISOString();
 
@@ -170,7 +201,9 @@ app.patch("/orders/:id", async (req, res) => {
       console.error("Erro ao atualizar pedido:", error);
       return sendError(res, 500, "Erro ao atualizar pedido");
     }
-    if (!data) return sendError(res, 404, "Pedido não encontrado");
+    if (!data) {
+      return sendError(res, 404, "Pedido não encontrado");
+    }
 
     return res.json(data);
   } catch (err) {
@@ -182,7 +215,9 @@ app.patch("/orders/:id", async (req, res) => {
 app.delete("/orders/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    if (!id) return sendError(res, 400, "id é obrigatório");
+    if (!id) {
+      return sendError(res, 400, "id é obrigatório");
+    }
 
     const { error } = await supabase.from("orders").delete().eq("id", id);
 
@@ -200,8 +235,11 @@ app.delete("/orders/:id", async (req, res) => {
 
 app.post("/auth/google", async (req, res) => {
   try {
-    const { email } = req.body || {};
-    if (!email) return res.status(400).json({ error: "Email é obrigatório" });
+    const { email, name } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: "Email é obrigatório" });
+    }
 
     const { data, error } = await supabase
       .from("restaurants")
@@ -223,7 +261,10 @@ app.post("/auth/google", async (req, res) => {
       });
     }
 
-    return res.json({ authorized: true, restaurant: data[0] });
+    return res.json({
+      authorized: true,
+      restaurant: data[0],
+    });
   } catch (err) {
     console.error("Erro inesperado:", err);
     return res.status(500).json({ error: "Erro inesperado" });
