@@ -78,6 +78,10 @@ const modalNotes = document.getElementById("modal-notes");
 const modalAddressRow = document.getElementById("modal-address-row");
 const modalAddress = document.getElementById("modal-address");
 
+// ✅ NOVO: pagamento no popup
+const modalPaymentRow = document.getElementById("modal-payment-row");
+const modalPayment = document.getElementById("modal-payment");
+
 const closeModalBtn = document.getElementById("close-modal");
 const closeModalSecondaryBtn = document.getElementById("close-modal-secondary");
 const modalPrevBtn = document.getElementById("modal-prev");
@@ -99,6 +103,10 @@ const newNotes = document.getElementById("new-notes");
 const newDelivery = document.getElementById("new-delivery");
 const deliveryAddressWrap = document.getElementById("delivery-address-wrap");
 const newAddress = document.getElementById("new-address");
+
+// ✅ NOVO: payment
+const paymentWrap = document.getElementById("payment-wrap");
+const newPayment = document.getElementById("new-payment");
 
 // Google button
 const googleBtnContainer = document.getElementById("googleLoginBtn");
@@ -139,16 +147,23 @@ function summarizeItems(list) {
 function openBackdrop(el) { el?.classList.add("open"); }
 function closeBackdrop(el) { el?.classList.remove("open"); }
 
-// ===== DELIVERY UI (MOSTRAR/ESCONDER ENDEREÇO) =====
+// ===== DELIVERY UI (MOSTRAR/ESCONDER ENDEREÇO + PAGAMENTO) =====
 function applyDeliveryUI() {
   if (!newDelivery || !deliveryAddressWrap || !newAddress) return;
 
   const on = newDelivery.checked;
 
+  // endereço
   deliveryAddressWrap.classList.toggle("visible", on);
   newAddress.required = on;
-
   if (!on) newAddress.value = "";
+
+  // ✅ NOVO: pagamento (mesmo processo do endereço)
+  if (paymentWrap && newPayment) {
+    paymentWrap.classList.toggle("visible", on);
+    newPayment.required = on;
+    if (!on) newPayment.value = "";
+  }
 }
 
 function setupDeliveryUI() {
@@ -314,6 +329,15 @@ async function cancelOrder(orderId) {
 }
 
 // ===== MODAL =====
+function prettyPaymentLabel(v) {
+  const x = String(v || "").toLowerCase();
+  if (x === "pix") return "PIX";
+  if (x === "credito") return "Cartão de crédito";
+  if (x === "debito") return "Cartão de débito";
+  if (x === "dinheiro") return "Dinheiro";
+  return v || "";
+}
+
 function openOrderModal(orderId) {
   const order = orders.find((o) => getOrderId(o) === orderId);
   if (!order) return;
@@ -324,7 +348,7 @@ function openOrderModal(orderId) {
   modalCustomer.textContent = order.client_name;
   modalTime.textContent = formatTime(order.created_at);
 
-  // ✅ endereço sempre no popup quando existir
+  // endereço
   const addr = (order.address || "").trim();
   if (addr) {
     modalAddressRow.style.display = "";
@@ -332,6 +356,16 @@ function openOrderModal(orderId) {
   } else {
     modalAddressRow.style.display = "none";
     modalAddress.textContent = "";
+  }
+
+  // ✅ NOVO: pagamento (só aparece se existir)
+  const pay = (order.payment_method || "").trim();
+  if (pay) {
+    modalPaymentRow.style.display = "";
+    modalPayment.textContent = prettyPaymentLabel(pay);
+  } else {
+    modalPaymentRow.style.display = "none";
+    modalPayment.textContent = "";
   }
 
   modalItems.innerHTML = "";
@@ -386,6 +420,11 @@ function closeCreateModal() {
   if (newNotes) newNotes.value = "";
   if (newDelivery) newDelivery.checked = false;
   if (newAddress) newAddress.value = "";
+
+  // ✅ NOVO: limpar pagamento também
+  if (newPayment) newPayment.value = "";
+  if (paymentWrap) paymentWrap.classList.remove("visible");
+
   applyDeliveryUI();
 }
 
@@ -408,10 +447,20 @@ async function saveNewOrder() {
   const serviceType = newDelivery?.checked ? "delivery" : "local";
   const address = (newAddress?.value || "").trim();
 
-  if (serviceType === "delivery" && !address) {
-    alert("Informe o endereço de entrega para pedidos de delivery.");
-    newAddress?.focus();
-    return;
+  // ✅ NOVO: payment_method
+  const payment_method = (newPayment?.value || "").trim();
+
+  if (serviceType === "delivery") {
+    if (!address) {
+      alert("Informe o endereço de entrega para pedidos de delivery.");
+      newAddress?.focus();
+      return;
+    }
+    if (!payment_method) {
+      alert("Informe a forma de pagamento para pedidos de delivery.");
+      newPayment?.focus();
+      return;
+    }
   }
 
   const body = {
@@ -422,6 +471,7 @@ async function saveNewOrder() {
     status: "recebido",
     service_type: serviceType,
     address: serviceType === "delivery" ? address : "",
+    payment_method: serviceType === "delivery" ? payment_method : "",
   };
 
   try {
@@ -460,6 +510,8 @@ async function fetchOrders() {
           status: toFrontStatus(o.status),
           service_type: o.service_type || "local",
           address: o.address || "",
+          // ✅ NOVO: payment_method vindo do backend
+          payment_method: o.payment_method || "",
         }))
       : [];
 
