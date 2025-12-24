@@ -90,6 +90,58 @@
     </section>
   </main>
 
+  <!-- 🔹 CRM VIEW (NOVO) -->
+  <main class="crm-view hidden" id="crm-view">
+    <div class="crm-header">
+      <div class="crm-title">CRM de Clientes</div>
+      <button class="ghost-button" type="button" id="crm-back-btn">Voltar</button>
+    </div>
+
+    <div class="crm-content">
+      <!-- O script.js vai renderizar a tabela aqui -->
+    </div>
+  </main>
+  <!-- 🔹 /CRM VIEW (NOVO) -->
+
+  <!-- ✅ RESULTADOS VIEW (NOVO) -->
+  <main class="results-view hidden" id="results-view">
+    <div class="results-header">
+      <div class="results-title">Resultados</div>
+      <button class="ghost-button" type="button" id="results-back-btn">Voltar</button>
+    </div>
+
+    <div class="results-content">
+      <!-- cards principais -->
+      <div class="results-grid">
+        <div class="result-card">
+          <div class="result-label">Total de pedidos</div>
+          <div class="result-value" id="result-total-orders">0</div>
+        </div>
+
+        <div class="result-card">
+          <div class="result-label">Clientes únicos</div>
+          <div class="result-value" id="result-unique-clients">0</div>
+        </div>
+
+        <div class="result-card">
+          <div class="result-label">Pedidos delivery</div>
+          <div class="result-value" id="result-delivery-orders">0</div>
+        </div>
+
+        <div class="result-card">
+          <div class="result-label">Pedidos balcão</div>
+          <div class="result-value" id="result-local-orders">0</div>
+        </div>
+      </div>
+
+      <!-- espaço para evoluir depois (sem PDV ainda) -->
+      <div class="results-note muted">
+        * Financeiro / ticket médio pode entrar depois via integração (PDV/Delivery). Por enquanto, o painel mostra volume e comportamento.
+      </div>
+    </div>
+  </main>
+  <!-- ✅ /RESULTADOS VIEW (NOVO) -->
+
   <div class="modal-backdrop" id="modal">
     <div class="modal">
       <div class="modal-header">
@@ -202,7 +254,24 @@
       <div class="brand">FLUX ON</div>
       <button class="icon-button" id="close-drawer" aria-label="Fechar menu">&times;</button>
     </div>
-    <nav class="drawer-nav"></nav>
+
+    <!-- 🔹 MENU DO DRAWER (NOVO, mínimo necessário pro JS) -->
+    <nav class="drawer-nav">
+      <button type="button" class="drawer-item" id="drawer-orders">
+        Gestão de pedidos
+      </button>
+
+      <button type="button" class="drawer-item" id="drawer-crm">
+        CRM de clientes
+      </button>
+
+      <!-- ✅ NOVO: RESULTADOS -->
+      <button type="button" class="drawer-item" id="drawer-results">
+        Resultados
+      </button>
+    </nav>
+    <!-- 🔹 /MENU DO DRAWER (NOVO) -->
+
     <div class="drawer-footer">
       <div class="user-chip" id="user-chip" hidden>
         <span class="dot"></span>
