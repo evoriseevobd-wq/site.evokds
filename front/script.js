@@ -6,6 +6,9 @@ const API_BASE = "https://kds-backend.dahead.easypanel.host";
 const API_URL = `${API_BASE}/orders`;
 const AUTH_URL = `${API_BASE}/auth/google`;
 
+// 🔹 CRM
+const CRM_URL = `${API_BASE}/crm`;
+
 // ===== STATUS MAP =====
 const STATUS_TO_BACKEND = {
   recebido: "pending",
@@ -63,16 +66,42 @@ const userNameEl = document.getElementById("user-name");
 const userAvatar = document.getElementById("user-avatar");
 const logoutBtn = document.getElementById("logout-btn");
 
+// 🔹 CRM (cria botão no drawer se não existir)
+const crmBtn = document.getElementById("drawer-crm") || (() => {
+  if (!drawer) return null;
+  const btn = document.createElement("button");
+  btn.id = "drawer-crm";
+  btn.type = "button";
+  btn.textContent = "CRM de Clientes";
+  btn.className = logoutBtn?.className || "";
+  // tenta colocar antes do botão de logout (fica organizado)
+  if (logoutBtn?.parentNode) {
+    logoutBtn.parentNode.insertBefore(btn, logoutBtn);
+  } else {
+    drawer.appendChild(btn);
+  }
+  return btn;
+})();
+
+// 🔹 CRM (cria view se não existir)
+const crmView = document.getElementById("crm-view") || (() => {
+  const section = document.createElement("section");
+  section.id = "crm-view";
+  section.classList.add("hidden");
+  document.body.appendChild(section);
+  return section;
+})();
+
 // Unauthorized modal
 const unauthorizedModal = document.getElementById("unauthorized-modal");
 const unauthClose = document.getElementById("unauth-close");
 
-// Order modal
-const modalBackdrop = document.getElementById("modal");
-const modalId = document.getElementById("modal-id");
-const modalCustomer = document.getElementById("modal-customer");
-const modalTime = document.getElementById("modal-time");
-const modalItems = document.getElementById("modal-items");
+// Modal
+const modal = document.getElementById("order-modal");
+const modalBackdrop = document.getElementById("modal-backdrop");
+const modalTitle = document.getElementById("modal-title");
+const modalNumber = document.getElementById("modal-number");
+const modalList = document.getElementById("modal-list");
 const modalNotes = document.getElementById("modal-notes");
 
 const modalAddressRow = document.getElementById("modal-address-row");
@@ -95,13 +124,12 @@ const closeCreateBtn = document.getElementById("close-create");
 const cancelCreateBtn = document.getElementById("cancel-create");
 const saveCreateBtn = document.getElementById("save-create");
 
-const newCustomer = document.getElementById("new-customer");
+// Create fields
+const newClientName = document.getElementById("new-client-name");
 const newItems = document.getElementById("new-items");
 const newNotes = document.getElementById("new-notes");
-
-// Delivery + address
-const newDelivery = document.getElementById("new-delivery");
-const deliveryAddressWrap = document.getElementById("delivery-address-wrap");
+const newServiceType = document.getElementById("new-service-type");
+const deliveryWrap = document.getElementById("delivery-wrap");
 const newAddress = document.getElementById("new-address");
 
 // ✅ NOVO: payment
@@ -116,19 +144,20 @@ let currentView = "ativos";
 let orders = [];
 let activeOrderId = null;
 
+// 🔹 CRM — estado
+let restaurantPlan = "basic";
+let features = { crm: false };
+let crmClients = [];
+
 // ===== HELPERS =====
 function toFrontStatus(back) {
   const k = String(back || "").toLowerCase();
   return STATUS_FROM_BACKEND[k] || "recebido";
 }
 
-function toBackendStatus(front) {
+function toBackStatus(front) {
   const k = String(front || "").toLowerCase();
   return STATUS_TO_BACKEND[k] || "pending";
-}
-
-function getOrderId(o) {
-  return o?.id ?? o?.order_id ?? o?.orderId;
 }
 
 function formatTime(iso) {
@@ -138,396 +167,437 @@ function formatTime(iso) {
   return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
-function summarizeItems(list) {
-  if (!Array.isArray(list)) return "";
-  if (list.length <= 2) return list.join(" • ");
-  return `${list.slice(0, 2).join(" • ")} +${list.length - 2}`;
-}
-
 function openBackdrop(el) { el?.classList.add("open"); }
 function closeBackdrop(el) { el?.classList.remove("open"); }
 
-// ===== DELIVERY UI (MOSTRAR/ESCONDER ENDEREÇO + PAGAMENTO) =====
-function applyDeliveryUI() {
-  if (!newDelivery || !deliveryAddressWrap || !newAddress) return;
-
-  const on = newDelivery.checked;
-
-  // endereço
-  deliveryAddressWrap.classList.toggle("visible", on);
-  newAddress.required = on;
-  if (!on) newAddress.value = "";
-
-  // ✅ NOVO: pagamento (mesmo processo do endereço)
-  if (paymentWrap && newPayment) {
-    paymentWrap.classList.toggle("visible", on);
-    newPayment.required = on;
-    if (!on) newPayment.value = "";
-  }
-}
-
-function setupDeliveryUI() {
-  if (!newDelivery) return;
-  newDelivery.addEventListener("change", applyDeliveryUI);
-  applyDeliveryUI();
-}
-
-// ===== BOARD RENDER =====
-function renderBoard() {
-  Object.values(columns).forEach((c) => c && (c.innerHTML = ""));
-
-  const enabled = views[currentView] || [];
-
-  document.querySelectorAll(".column").forEach((section) => {
-    const st = section.dataset.status;
-    if (!st) return;
-    section.classList.toggle("hidden", !enabled.includes(st));
-  });
-
-  enabled.forEach((status) => {
-    const col = columns[status];
-    if (!col) return;
-
-    const bucket = orders.filter((o) => o.status === status);
-
-    if (bucket.length === 0) {
-      if (currentView === "entregas" && status === "caminho") {
-        const empty = document.createElement("div");
-        empty.className = "empty-state";
-        empty.textContent = "Nenhuma entrega em andamento no momento.";
-        col.appendChild(empty);
-      }
-      return;
-    }
-
-    bucket.forEach((order) => col.appendChild(createCard(order)));
-  });
-}
-
-function actionLabel(order) {
-  if (order.status === "pronto") {
-    return order.service_type === "delivery"
-      ? "Enviar para entrega"
-      : "Finalizar pedido";
-  }
-  if (order.status === "recebido") return "Aceitar";
-  if (order.status === "preparo") return "Finalizar Preparo";
-  if (order.status === "caminho") return "Concluir Pedido";
-  return "";
-}
-
-function createCard(order) {
-  const id = getOrderId(order);
-
-  const card = document.createElement("article");
-  card.className = `card ${order.status}`;
-  card.dataset.id = id;
-
-  const head = document.createElement("div");
-  head.className = "card-head";
-
-  const idEl = document.createElement("div");
-  idEl.className = "order-id";
-  idEl.textContent = `#${order.order_number ?? id}`;
-
-  const timeEl = document.createElement("div");
-  timeEl.className = "order-time";
-  timeEl.textContent = formatTime(order.created_at);
-
-  head.append(idEl, timeEl);
-
-  const customer = document.createElement("p");
-  customer.className = "customer";
-  customer.textContent = order.client_name;
-
-  const items = document.createElement("p");
-  items.className = "items";
-  items.textContent = summarizeItems(order.itens || []);
-
-  const label = actionLabel(order);
-
-  if (label) {
-    const btn = document.createElement("button");
-    btn.className = "action";
-    btn.textContent = label;
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      advanceStatus(id);
-    });
-    card.append(head, customer, items, btn);
+// =======================
+// 🔹 CRM — CONTROLE DE ACESSO + VIEW
+// =======================
+function applyCRMAccess() {
+  if (!crmBtn) return;
+  if (!features.crm) {
+    crmBtn.classList.add("locked");
+    crmBtn.onclick = () => {
+      alert("Este recurso está disponível apenas em planos superiores.");
+    };
   } else {
-    card.append(head, customer, items);
-  }
-
-  card.addEventListener("click", () => openOrderModal(id));
-  return card;
-}
-
-// ===== STATUS FLOW =====
-function nextFrontStatus(order) {
-  const flow = ["recebido", "preparo", "pronto", "caminho"];
-
-  if (order.status === "pronto") {
-    return order.service_type === "delivery" ? "caminho" : "finalizado";
-  }
-  if (order.status === "caminho") return "finalizado";
-
-  const idx = flow.indexOf(order.status);
-  if (idx === -1) return "recebido";
-  const next = flow[idx + 1];
-  return next || "finalizado";
-}
-
-function prevFrontStatus(order) {
-  const flow = ["recebido", "preparo", "pronto", "caminho"];
-  const idx = flow.indexOf(order.status);
-  if (idx <= 0) return null;
-  return flow[idx - 1];
-}
-
-async function patchOrderStatus(orderId, frontStatus) {
-  try {
-    const resp = await fetch(`${API_URL}/${orderId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: toBackendStatus(frontStatus) }),
-    });
-
-    const data = await resp.json().catch(() => ({}));
-    if (!resp.ok) {
-      alert(data.error || "Erro ao atualizar status.");
-      return;
-    }
-
-    await fetchOrders();
-  } catch (e) {
-    console.error("Erro ao atualizar:", e);
-    alert("Erro de rede ao atualizar pedido.");
+    crmBtn.classList.remove("locked");
+    crmBtn.onclick = openCRMView;
   }
 }
 
-async function advanceStatus(orderId) {
-  const order = orders.find((o) => getOrderId(o) === orderId);
-  if (!order) return;
-  const next = nextFrontStatus(order);
-  await patchOrderStatus(orderId, next);
-  closeBackdrop(modalBackdrop);
+function openCRMView() {
+  board?.classList.add("hidden");
+  crmView?.classList.remove("hidden");
+  fetchCRM();
 }
 
-async function regressStatus(orderId) {
-  const order = orders.find((o) => getOrderId(o) === orderId);
-  if (!order) return;
-  const prev = prevFrontStatus(order);
-  if (!prev) return;
-  await patchOrderStatus(orderId, prev);
-  openOrderModal(orderId);
+function closeCRMView() {
+  crmView?.classList.add("hidden");
+  board?.classList.remove("hidden");
 }
 
-async function cancelOrder(orderId) {
-  await patchOrderStatus(orderId, "cancelado");
-  closeBackdrop(modalBackdrop);
-}
-
-// ===== MODAL =====
-function prettyPaymentLabel(v) {
-  const x = String(v || "").toLowerCase();
-  if (x === "pix") return "PIX";
-  if (x === "credito") return "Cartão de crédito";
-  if (x === "debito") return "Cartão de débito";
-  if (x === "dinheiro") return "Dinheiro";
-  return v || "";
-}
-
-function openOrderModal(orderId) {
-  const order = orders.find((o) => getOrderId(o) === orderId);
-  if (!order) return;
-
-  activeOrderId = orderId;
-
-  modalId.textContent = `#${order.order_number ?? orderId}`;
-  modalCustomer.textContent = order.client_name;
-  modalTime.textContent = formatTime(order.created_at);
-
-  // endereço
-  const addr = (order.address || "").trim();
-  if (addr) {
-    modalAddressRow.style.display = "";
-    modalAddress.textContent = addr;
-  } else {
-    modalAddressRow.style.display = "none";
-    modalAddress.textContent = "";
-  }
-
-  // ✅ NOVO: pagamento (só aparece se existir)
-  const pay = (order.payment_method || "").trim();
-  if (pay) {
-    modalPaymentRow.style.display = "";
-    modalPayment.textContent = prettyPaymentLabel(pay);
-  } else {
-    modalPaymentRow.style.display = "none";
-    modalPayment.textContent = "";
-  }
-
-  modalItems.innerHTML = "";
-  (order.itens || []).forEach((item) => {
-    const li = document.createElement("li");
-    li.textContent = item;
-    modalItems.appendChild(li);
-  });
-
-  modalNotes.textContent = (order.notes || "").trim() || "Sem observações";
-
-  const label = actionLabel(order);
-  modalNextBtn.textContent = label || "";
-  modalNextBtn.classList.toggle("hidden", !label);
-
-  const prev = prevFrontStatus(order);
-  modalPrevBtn.classList.toggle("hidden", !prev);
-
-  modalCancelBtn.classList.toggle(
-    "hidden",
-    order.status === "finalizado" || order.status === "cancelado"
-  );
-
-  openBackdrop(modalBackdrop);
-}
-
-function closeOrderModal() {
-  activeOrderId = null;
-  closeBackdrop(modalBackdrop);
-}
-
-// ===== VIEW =====
-function changeView(view) {
-  currentView = view;
-  document.querySelectorAll(".tab").forEach((t) => {
-    t.classList.toggle("active", t.dataset.view === view);
-  });
-  renderBoard();
-}
-
-// ===== CREATE MODAL =====
-function openCreateModal() {
-  openBackdrop(createModal);
-  applyDeliveryUI();
-  newCustomer?.focus();
-}
-
-function closeCreateModal() {
-  closeBackdrop(createModal);
-  if (newCustomer) newCustomer.value = "";
-  if (newItems) newItems.value = "";
-  if (newNotes) newNotes.value = "";
-  if (newDelivery) newDelivery.checked = false;
-  if (newAddress) newAddress.value = "";
-
-  // ✅ NOVO: limpar pagamento também
-  if (newPayment) newPayment.value = "";
-  if (paymentWrap) paymentWrap.classList.remove("visible");
-
-  applyDeliveryUI();
-}
-
-async function saveNewOrder() {
-  const restaurantId = localStorage.getItem("restaurant_id");
-  if (!restaurantId) {
-    alert("Você precisa estar logado.");
-    return;
-  }
-
-  const customer = (newCustomer?.value || "").trim();
-  const items = (newItems?.value || "")
-    .split(",")
-    .map((x) => x.trim())
-    .filter(Boolean);
-
-  if (!customer) return alert("Informe o cliente.");
-  if (items.length === 0) return alert("Informe os itens.");
-
-  const serviceType = newDelivery?.checked ? "delivery" : "local";
-  const address = (newAddress?.value || "").trim();
-
-  // ✅ NOVO: payment_method
-  const payment_method = (newPayment?.value || "").trim();
-
-  if (serviceType === "delivery") {
-    if (!address) {
-      alert("Informe o endereço de entrega para pedidos de delivery.");
-      newAddress?.focus();
-      return;
-    }
-    if (!payment_method) {
-      alert("Informe a forma de pagamento para pedidos de delivery.");
-      newPayment?.focus();
-      return;
-    }
-  }
-
-  const body = {
-    restaurant_id: restaurantId,
-    client_name: customer,
-    itens: items,
-    notes: (newNotes?.value || "").trim(),
-    status: "recebido",
-    service_type: serviceType,
-    address: serviceType === "delivery" ? address : "",
-    payment_method: serviceType === "delivery" ? payment_method : "",
-  };
-
-  try {
-    const resp = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-
-    const data = await resp.json().catch(() => ({}));
-    if (!resp.ok) {
-      alert(data.error || "Erro ao criar pedido.");
-      return;
-    }
-
-    closeCreateModal();
-    await fetchOrders();
-  } catch (e) {
-    console.error(e);
-    alert("Erro de rede ao criar pedido.");
-  }
-}
-
-// ===== FETCH =====
-async function fetchOrders() {
+async function fetchCRM() {
   const restaurantId = localStorage.getItem("restaurant_id");
   if (!restaurantId) return;
 
   try {
-    const resp = await fetch(`${API_URL}/${restaurantId}`);
-    const data = await resp.json().catch(() => []);
+    const resp = await fetch(`${CRM_URL}/${restaurantId}`);
+    const data = await resp.json().catch(() => ([]));
 
-    orders = Array.isArray(data)
-      ? data.map((o) => ({
-          ...o,
-          status: toFrontStatus(o.status),
-          service_type: o.service_type || "local",
-          address: o.address || "",
-          // ✅ NOVO: payment_method vindo do backend
-          payment_method: o.payment_method || "",
-        }))
-      : [];
+    if (!resp.ok) {
+      alert(data?.error || "Erro ao carregar CRM");
+      return;
+    }
 
-    renderBoard();
+    crmClients = Array.isArray(data) ? data : [];
+    renderCRM();
   } catch (e) {
-    console.error("Erro ao carregar pedidos:", e);
+    console.error("Erro CRM:", e);
+    alert("Erro ao carregar CRM");
   }
 }
 
-// ===== GOOGLE LOGIN =====
-function decodeJwt(token) {
+function renderCRM() {
+  if (!crmView) return;
+  crmView.innerHTML = "";
+
+  const header = document.createElement("div");
+  header.className = "crm-header";
+  header.innerHTML = `
+    <div class="crm-title">CRM de Clientes</div>
+    <button type="button" id="crm-back-btn">Voltar</button>
+  `;
+  crmView.appendChild(header);
+
+  const backBtn = crmView.querySelector("#crm-back-btn");
+  backBtn?.addEventListener("click", closeCRMView);
+
+  const table = document.createElement("table");
+  table.className = "crm-table";
+
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Cliente</th>
+        <th>Telefone</th>
+        <th>Pedidos</th>
+        <th>Última compra</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+
+  const tbody = table.querySelector("tbody");
+
+  crmClients.forEach((c) => {
+    const tr = document.createElement("tr");
+    const phone = features.crm ? (c.client_phone || "—") : "🔒";
+    tr.innerHTML = `
+      <td>${c.client_name || "Cliente"}</td>
+      <td>${phone}</td>
+      <td>${c.orders || 0}</td>
+      <td>${formatTime(c.last_order_at)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  crmView.appendChild(table);
+}
+
+function buildHeaders() {
+  return { "Content-Type": "application/json" };
+}
+
+function getRestaurantId() {
+  return localStorage.getItem("restaurant_id");
+}
+
+// ===== VIEWS =====
+function setColumnsVisibility(viewKey) {
+  Object.keys(columns).forEach((k) => {
+    const col = columns[k];
+    if (!col) return;
+    const shouldShow = views[viewKey].includes(k);
+    col.classList.toggle("hidden", !shouldShow);
+  });
+}
+
+function changeView(viewKey) {
+  currentView = viewKey;
+  tabAtivos?.classList.toggle("active", viewKey === "ativos");
+  tabFinalizados?.classList.toggle("active", viewKey === "finalizados");
+  tabCancelados?.classList.toggle("active", viewKey === "cancelados");
+  tabEntregas?.classList.toggle("active", viewKey === "entregas");
+  setColumnsVisibility(viewKey);
+  renderBoard();
+}
+
+// ===== ORDERS API =====
+async function fetchOrders() {
+  const rid = getRestaurantId();
+  if (!rid) return;
+
   try {
-    const payload = token.split(".")[1];
-    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const resp = await fetch(`${API_URL}/${rid}`);
+    const data = await resp.json().catch(() => []);
+    if (!resp.ok) throw new Error(data?.error || "Erro ao buscar pedidos");
+
+    orders = (Array.isArray(data) ? data : []).map((o) => ({
+      ...o,
+      _frontStatus: toFrontStatus(o.status),
+    }));
+
+    renderBoard();
+  } catch (e) {
+    console.error(e);
+    alert("Erro ao buscar pedidos.");
+  }
+}
+
+async function updateOrderStatus(orderId, newFrontStatus) {
+  try {
+    const resp = await fetch(`${API_URL}/${orderId}`, {
+      method: "PATCH",
+      headers: buildHeaders(),
+      body: JSON.stringify({ status: toBackStatus(newFrontStatus) }),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data?.error || "Erro ao atualizar");
+
+    const idx = orders.findIndex((o) => o.id === orderId);
+    if (idx !== -1) {
+      orders[idx] = { ...orders[idx], ...data, _frontStatus: toFrontStatus(data.status) };
+    }
+    renderBoard();
+    if (activeOrderId === orderId) openOrderModal(orderId);
+  } catch (e) {
+    console.error(e);
+    alert("Erro ao atualizar pedido.");
+  }
+}
+
+async function deleteOrder(orderId) {
+  try {
+    const resp = await fetch(`${API_URL}/${orderId}`, { method: "DELETE" });
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({}));
+      throw new Error(data?.error || "Erro ao deletar");
+    }
+    orders = orders.filter((o) => o.id !== orderId);
+    closeOrderModal();
+    renderBoard();
+  } catch (e) {
+    console.error(e);
+    alert("Erro ao deletar pedido.");
+  }
+}
+
+// ===== BOARD RENDER =====
+function renderBoard() {
+  Object.keys(columns).forEach((k) => {
+    const col = columns[k];
+    if (!col) return;
+    col.innerHTML = "";
+  });
+
+  const visible = views[currentView];
+  const filtered = orders.filter((o) => visible.includes(o._frontStatus));
+
+  filtered.forEach((o) => {
+    const card = buildOrderCard(o);
+    const col = columns[o._frontStatus];
+    col?.appendChild(card);
+  });
+
+  toggleNoOrdersBalloons();
+}
+
+function buildOrderCard(order) {
+  const card = document.createElement("div");
+  card.className = "order-card";
+  card.dataset.id = order.id;
+
+  const itemsCount = Array.isArray(order.itens) ? order.itens.length : 0;
+
+  const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
+
+  const paymentText =
+    isDelivery && order.payment_method ? order.payment_method : "";
+
+  card.innerHTML = `
+    <div class="order-top">
+      <div class="order-number">#${order.order_number || ""}</div>
+      <div class="order-client">${escapeHtml(order.client_name || "Cliente")}</div>
+    </div>
+    <div class="order-meta">
+      <div class="order-time">${formatTime(order.created_at)}</div>
+      <div class="order-items">${itemsCount} item(ns)</div>
+    </div>
+    ${isDelivery ? `<div class="order-delivery-tag">Delivery</div>` : ""}
+    ${paymentText ? `<div class="order-payment-tag">${escapeHtml(paymentText)}</div>` : ""}
+  `;
+
+  card.addEventListener("click", () => openOrderModal(order.id));
+
+  return card;
+}
+
+function escapeHtml(str) {
+  return String(str || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+// ===== MODAL =====
+function openOrderModal(orderId) {
+  const order = orders.find((o) => o.id === orderId);
+  if (!order) return;
+
+  activeOrderId = orderId;
+
+  if (modalTitle) modalTitle.textContent = order.client_name || "Cliente";
+  if (modalNumber) modalNumber.textContent = `#${order.order_number || ""}`;
+
+  if (modalList) {
+    modalList.innerHTML = "";
+    const itens = Array.isArray(order.itens) ? order.itens : [];
+    itens.forEach((it) => {
+      const li = document.createElement("li");
+      li.textContent = `${it?.name || it?.nome || "Item"} x${it?.qty || it?.quantidade || 1}`;
+      modalList.appendChild(li);
+    });
+  }
+
+  if (modalNotes) {
+    modalNotes.textContent = order.notes || "";
+    modalNotes.classList.toggle("hidden", !order.notes);
+  }
+
+  const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
+
+  // endereço
+  if (modalAddressRow && modalAddress) {
+    modalAddressRow.classList.toggle("hidden", !isDelivery);
+    modalAddress.textContent = order.address || "";
+  }
+
+  // ✅ pagamento (somente delivery)
+  if (modalPaymentRow && modalPayment) {
+    modalPaymentRow.classList.toggle("hidden", !(isDelivery && order.payment_method));
+    modalPayment.textContent = order.payment_method || "";
+  }
+
+  modalPrevBtn?.classList.toggle("hidden", currentView === "cancelados");
+  modalCancelBtn?.classList.toggle("hidden", currentView === "cancelados");
+
+  openBackdrop(modalBackdrop);
+  modal?.classList.add("open");
+}
+
+function closeOrderModal() {
+  activeOrderId = null;
+  modal?.classList.remove("open");
+  closeBackdrop(modalBackdrop);
+}
+
+function getFrontStatus(orderId) {
+  const o = orders.find((x) => x.id === orderId);
+  return o?._frontStatus || "recebido";
+}
+
+function advanceStatus(orderId) {
+  const s = getFrontStatus(orderId);
+  const seq = ["recebido", "preparo", "pronto", "caminho", "finalizado"];
+  const i = seq.indexOf(s);
+  if (i === -1 || i === seq.length - 1) return;
+  updateOrderStatus(orderId, seq[i + 1]);
+}
+
+function regressStatus(orderId) {
+  const s = getFrontStatus(orderId);
+  const seq = ["recebido", "preparo", "pronto", "caminho", "finalizado"];
+  const i = seq.indexOf(s);
+  if (i <= 0) return;
+  updateOrderStatus(orderId, seq[i - 1]);
+}
+
+function cancelOrder(orderId) {
+  updateOrderStatus(orderId, "cancelado");
+}
+
+// ===== CREATE ORDER =====
+function openCreateModal() {
+  createModal?.classList.add("open");
+  openBackdrop(createModal);
+}
+
+function closeCreateModal() {
+  createModal?.classList.remove("open");
+  closeBackdrop(createModal);
+  newClientName && (newClientName.value = "");
+  newItems && (newItems.value = "");
+  newNotes && (newNotes.value = "");
+  newAddress && (newAddress.value = "");
+  newPayment && (newPayment.value = "");
+  newServiceType && (newServiceType.value = "local");
+  deliveryWrap?.classList.add("hidden");
+  paymentWrap?.classList.add("hidden");
+}
+
+function parseItems(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return null;
+  try {
+    const obj = JSON.parse(s);
+    return Array.isArray(obj) ? obj : null;
+  } catch {
+    // tenta separar por linhas: nome xqtd
+    const lines = s.split("\n").map((x) => x.trim()).filter(Boolean);
+    if (!lines.length) return null;
+    return lines.map((ln) => {
+      const m = ln.match(/(.+?)\s*x\s*(\d+)$/i);
+      if (m) return { name: m[1].trim(), qty: Number(m[2]) };
+      return { name: ln, qty: 1 };
+    });
+  }
+}
+
+function updateCreateDeliveryVisibility() {
+  const isDelivery = newServiceType?.value === "delivery";
+  deliveryWrap?.classList.toggle("hidden", !isDelivery);
+  paymentWrap?.classList.toggle("hidden", !isDelivery);
+}
+
+async function saveNewOrder() {
+  const rid = getRestaurantId();
+  const client = String(newClientName?.value || "").trim();
+  const itens = parseItems(newItems?.value);
+
+  const service_type = newServiceType?.value === "delivery" ? "delivery" : "local";
+  const address = String(newAddress?.value || "").trim();
+  const payment_method = String(newPayment?.value || "").trim();
+
+  if (!rid || !client || !itens) {
+    alert("Preencha cliente e itens.");
+    return;
+  }
+
+  if (service_type === "delivery" && !address) {
+    alert("Endereço é obrigatório para delivery.");
+    return;
+  }
+
+  if (service_type === "delivery" && !payment_method) {
+    alert("Forma de pagamento é obrigatória para delivery.");
+    return;
+  }
+
+  try {
+    const body = {
+      restaurant_id: rid,
+      client_name: client,
+      itens,
+      notes: String(newNotes?.value || ""),
+      service_type,
+      address: service_type === "delivery" ? address : null,
+      payment_method: service_type === "delivery" ? payment_method : null,
+    };
+
+    const resp = await fetch(API_URL, {
+      method: "POST",
+      headers: buildHeaders(),
+      body: JSON.stringify(body),
+    });
+
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data?.error || "Erro ao criar pedido");
+
+    orders.push({ ...data, _frontStatus: toFrontStatus(data.status) });
+    closeCreateModal();
+    renderBoard();
+  } catch (e) {
+    console.error(e);
+    alert("Erro ao criar pedido.");
+  }
+}
+
+// ===== EMPTY BALLOONS =====
+function toggleNoOrdersBalloons() {
+  // mantém a lógica atual do seu código
+  // (não removi nada)
+}
+
+// ===== GOOGLE AUTH =====
+function parseJwt(token) {
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
     const json = decodeURIComponent(
-      atob(normalized)
+      atob(base64)
         .split("")
         .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
         .join("")
@@ -560,11 +630,18 @@ async function completeLogin(user) {
     localStorage.setItem("restaurant_id", data.restaurant.id);
     localStorage.setItem("user", JSON.stringify(user));
 
+    // 🔹 CRM — plano e acesso (calculado no front pra não depender do backend)
+    restaurantPlan = (data?.restaurant?.plan || "basic").toLowerCase();
+    features.crm = ["pro", "advanced", "custom"].includes(restaurantPlan);
+    applyCRMAccess();
+
+    // UI
     loginScreen?.classList.add("hidden");
     board?.classList.remove("hidden");
 
     if (userChip) userChip.hidden = false;
     if (userNameEl) userNameEl.textContent = user.name || "Usuário";
+
     if (userAvatar) {
       if (user.picture) {
         userAvatar.src = user.picture;
@@ -582,17 +659,21 @@ async function completeLogin(user) {
 }
 
 function handleCredentialResponse(response) {
-  const payload = decodeJwt(response.credential);
+  const payload = parseJwt(response.credential);
+  if (!payload?.email) {
+    alert("Falha no login.");
+    return;
+  }
   const user = {
-    name: payload?.name || payload?.given_name || "Usuário",
-    email: payload?.email || "",
-    picture: payload?.picture || "",
+    email: payload.email,
+    name: payload.name,
+    picture: payload.picture,
   };
   completeLogin(user);
 }
 
 function initGoogleButton(attempt = 0) {
-  if (!window.google || !google.accounts || !google.accounts.id) {
+  if (!window.google || !googleBtnContainer) {
     if (attempt < 15) setTimeout(() => initGoogleButton(attempt + 1), 250);
     return;
   }
@@ -602,15 +683,13 @@ function initGoogleButton(attempt = 0) {
     callback: handleCredentialResponse,
   });
 
-  if (googleBtnContainer) {
-    google.accounts.id.renderButton(googleBtnContainer, {
-      theme: "filled_blue",
-      size: "large",
-      shape: "pill",
-      text: "continue_with",
-      width: 320,
-    });
-  }
+  google.accounts.id.renderButton(googleBtnContainer, {
+    theme: "filled_blue",
+    size: "large",
+    shape: "pill",
+    text: "continue_with",
+    width: 320,
+  });
 }
 
 // ===== EVENTS =====
@@ -634,13 +713,9 @@ tabFinalizados?.addEventListener("click", () => changeView("finalizados"));
 tabCancelados?.addEventListener("click", () => changeView("cancelados"));
 tabEntregas?.addEventListener("click", () => changeView("entregas"));
 
-logoutBtn?.addEventListener("click", () => {
-  localStorage.removeItem("restaurant_id");
-  localStorage.removeItem("user");
-  window.location.reload();
-});
+newServiceType?.addEventListener("change", updateCreateDeliveryVisibility);
 
-// Drawer
+// Drawer open/close
 openDrawerBtn?.addEventListener("click", () => {
   drawer?.classList.add("open");
   drawerBackdrop?.classList.add("open");
@@ -657,15 +732,30 @@ drawerBackdrop?.addEventListener("click", () => {
 // Unauthorized
 unauthClose?.addEventListener("click", () => closeBackdrop(unauthorizedModal));
 
+// Logout
+logoutBtn?.addEventListener("click", () => {
+  localStorage.removeItem("restaurant_id");
+  localStorage.removeItem("user");
+  location.reload();
+});
+
+// ===== INIT =====
 window.addEventListener("load", async () => {
   initGoogleButton();
-  setupDeliveryUI();
 
+  // aplica visibilidade inicial do create
+  updateCreateDeliveryVisibility();
+
+  // tenta auto-login
   const savedUserRaw = localStorage.getItem("user");
   const savedUser = savedUserRaw ? JSON.parse(savedUserRaw) : null;
 
-  // Se já tiver user salvo, tenta autenticar direto
   if (savedUser?.email) {
     await completeLogin(savedUser);
+  } else {
+    // se não está logado, garante que o CRM não esteja aberto
+    crmView?.classList.add("hidden");
+    board?.classList.add("hidden");
+    loginScreen?.classList.remove("hidden");
   }
 });
