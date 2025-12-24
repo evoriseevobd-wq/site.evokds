@@ -41,17 +41,37 @@ async function restaurantExists(restaurant_id) {
   return data && data.length > 0;
 }
 
+/* 🔹 NOVO — plano e permissão de CRM */
+async function getRestaurantPlan(restaurant_id) {
+  const { data } = await supabase
+    .from("restaurants")
+    .select("plan")
+    .eq("id", restaurant_id)
+    .single();
+
+  return (data?.plan || "basic").toLowerCase();
+}
+
+function canUseCRM(plan) {
+  return ["pro", "advanced", "custom"].includes(plan);
+}
+
+/* =========================
+   ORDERS
+========================= */
+
 app.post("/orders", async (req, res) => {
   try {
     const {
       restaurant_id,
       client_name,
+      client_phone, // 🔹 NOVO (opcional)
       items,
       itens,
       notes,
       service_type,
       address,
-      payment_method, // ✅ NOVO
+      payment_method,
     } = req.body || {};
 
     const normalizedItems = Array.isArray(items)
@@ -73,11 +93,9 @@ app.post("/orders", async (req, res) => {
       return sendError(res, 404, "Restaurante não encontrado");
     }
 
-    // tipo de serviço: local por padrão
     const finalServiceType =
       service_type === "delivery" ? "delivery" : "local";
 
-    // se for delivery, endereço é obrigatório
     if (finalServiceType === "delivery" && (!address || !address.trim())) {
       return sendError(
         res,
@@ -86,7 +104,6 @@ app.post("/orders", async (req, res) => {
       );
     }
 
-    // ✅ NOVO: se for delivery, forma de pagamento é obrigatória
     if (
       finalServiceType === "delivery" &&
       (!payment_method || !payment_method.trim())
@@ -106,7 +123,6 @@ app.post("/orders", async (req, res) => {
       .limit(1);
 
     if (lastErr) {
-      console.error("Erro ao buscar último número:", lastErr);
       return sendError(res, 500, "Erro ao buscar último número");
     }
 
@@ -123,16 +139,14 @@ app.post("/orders", async (req, res) => {
         {
           restaurant_id,
           client_name,
+          client_phone: client_phone || null, // 🔹 NOVO
           order_number: nextNumber,
           itens: normalizedItems,
           notes: notes || "",
           status: "pending",
           service_type: finalServiceType,
           address: address || null,
-
-          // ✅ NOVO: salva payment_method
-          payment_method: payment_method ? payment_method.trim() : null,
-
+          payment_method: payment_method || null,
           created_at: now,
           update_at: now,
         },
@@ -141,13 +155,11 @@ app.post("/orders", async (req, res) => {
       .single();
 
     if (error) {
-      console.error("Erro ao criar pedido:", error);
       return sendError(res, 500, "Erro ao criar pedido");
     }
 
     return res.status(201).json(data);
   } catch (err) {
-    console.error("Erro inesperado ao criar pedido:", err);
     return sendError(res, 500, "Erro ao criar pedido");
   }
 });
@@ -155,9 +167,6 @@ app.post("/orders", async (req, res) => {
 app.get("/orders/:restaurant_id", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
-    if (!restaurant_id) {
-      return sendError(res, 400, "restaurant_id é obrigatório");
-    }
 
     const { data, error } = await supabase
       .from("orders")
@@ -166,13 +175,11 @@ app.get("/orders/:restaurant_id", async (req, res) => {
       .order("created_at", { ascending: true });
 
     if (error) {
-      console.error("Erro ao listar pedidos:", error);
       return sendError(res, 500, "Erro ao listar pedidos");
     }
 
     return res.json(data);
   } catch (err) {
-    console.error("Erro inesperado ao listar pedidos:", err);
     return sendError(res, 500, "Erro ao listar pedidos");
   }
 });
@@ -181,9 +188,7 @@ app.patch("/orders/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body || {};
-    if (!id || !status) {
-      return sendError(res, 400, "id e status são obrigatórios");
-    }
+
     if (!ALLOWED_STATUS.includes(status)) {
       return sendError(res, 400, "status inválido");
     }
@@ -197,17 +202,12 @@ app.patch("/orders/:id", async (req, res) => {
       .select()
       .single();
 
-    if (error) {
-      console.error("Erro ao atualizar pedido:", error);
+    if (error || !data) {
       return sendError(res, 500, "Erro ao atualizar pedido");
-    }
-    if (!data) {
-      return sendError(res, 404, "Pedido não encontrado");
     }
 
     return res.json(data);
   } catch (err) {
-    console.error("Erro inesperado ao atualizar pedido:", err);
     return sendError(res, 500, "Erro ao atualizar pedido");
   }
 });
@@ -215,31 +215,65 @@ app.patch("/orders/:id", async (req, res) => {
 app.delete("/orders/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    if (!id) {
-      return sendError(res, 400, "id é obrigatório");
-    }
 
     const { error } = await supabase.from("orders").delete().eq("id", id);
 
     if (error) {
-      console.error("Erro ao deletar pedido:", error);
       return sendError(res, 500, "Erro ao deletar pedido");
     }
 
     return res.status(204).send();
   } catch (err) {
-    console.error("Erro inesperado ao deletar pedido:", err);
     return sendError(res, 500, "Erro ao deletar pedido");
+  }
+});
+
+/* 🔹 NOVO — CRM simples (sem financeiro) */
+app.get("/crm/:restaurant_id", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+
+    const plan = await getRestaurantPlan(restaurant_id);
+    if (!canUseCRM(plan)) {
+      return sendError(res, 403, "Plano não permite acesso ao CRM");
+    }
+
+    const { data, error } = await supabase
+      .from("orders")
+      .select("client_id, client_name, client_phone, created_at")
+      .eq("restaurant_id", restaurant_id)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      return sendError(res, 500, "Erro ao buscar CRM");
+    }
+
+    const clients = {};
+
+    data.forEach((o) => {
+      if (!clients[o.client_id]) {
+        clients[o.client_id] = {
+          client_id: o.client_id,
+          client_name: o.client_name,
+          client_phone: o.client_phone,
+          orders: 0,
+          last_order_at: o.created_at,
+        };
+      }
+
+      clients[o.client_id].orders += 1;
+      clients[o.client_id].last_order_at = o.created_at;
+    });
+
+    return res.json(Object.values(clients));
+  } catch (err) {
+    return sendError(res, 500, "Erro ao buscar CRM");
   }
 });
 
 app.post("/auth/google", async (req, res) => {
   try {
-    const { email, name } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ error: "Email é obrigatório" });
-    }
+    const { email } = req.body;
 
     const { data, error } = await supabase
       .from("restaurants")
@@ -247,18 +281,8 @@ app.post("/auth/google", async (req, res) => {
       .eq("email", email)
       .limit(1);
 
-    if (error) {
-      console.error("Erro ao buscar restaurante:", error);
-      return res.status(500).json({ error: "Erro ao buscar restaurante" });
-    }
-
-    if (!data || data.length === 0) {
-      return res.status(403).json({
-        authorized: false,
-        message:
-          "Seu acesso ainda não está liberado. Entre em contato com a Everrise para agendar sua demonstração.",
-        contact_link: "link site",
-      });
+    if (error || !data || data.length === 0) {
+      return res.status(403).json({ authorized: false });
     }
 
     return res.json({
@@ -266,7 +290,6 @@ app.post("/auth/google", async (req, res) => {
       restaurant: data[0],
     });
   } catch (err) {
-    console.error("Erro inesperado:", err);
     return res.status(500).json({ error: "Erro inesperado" });
   }
 });
