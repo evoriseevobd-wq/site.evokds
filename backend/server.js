@@ -24,6 +24,27 @@ const ALLOWED_STATUS = [
   "canceled",
 ];
 
+/**
+ * Normaliza telefone:
+ * - remove tudo que não for número
+ * - se tiver 11 dígitos (DDD + celular) e não começar com 55, prefixa 55
+ * - se ficar vazio, retorna null
+ */
+function normalizePhone(input) {
+  if (input === null || input === undefined) return null;
+
+  const digits = String(input).replace(/\D/g, "").trim();
+  if (!digits) return null;
+
+  // padrão BR: 55 + DDD(2) + número(9) = 13 dígitos
+  // se veio "11999999999" (11 dígitos), vira "5511999999999"
+  if (digits.length === 11 && !digits.startsWith("55")) {
+    return `55${digits}`;
+  }
+
+  return digits;
+}
+
 const sendError = (res, status, message) =>
   res.status(status).json({ error: message });
 
@@ -43,11 +64,14 @@ async function restaurantExists(restaurant_id) {
 
 /* 🔹 NOVO — plano e permissão de CRM */
 async function getRestaurantPlan(restaurant_id) {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("restaurants")
     .select("plan")
     .eq("id", restaurant_id)
     .single();
+
+  // se der erro, assume basic para não vazar CRM
+  if (error) return "basic";
 
   return (data?.plan || "basic").toLowerCase();
 }
@@ -65,7 +89,7 @@ app.post("/orders", async (req, res) => {
     const {
       restaurant_id,
       client_name,
-      client_phone, // 🔹 NOVO (opcional)
+      client_phone, // 🔹 opcional (WhatsApp preenche; balcão pode não)
       items,
       itens,
       notes,
@@ -115,6 +139,9 @@ app.post("/orders", async (req, res) => {
       );
     }
 
+    // 🔹 telefone opcional, mas quando vier, normaliza para evitar duplicidade no CRM
+    const normalizedPhone = normalizePhone(client_phone);
+
     const { data: last, error: lastErr } = await supabase
       .from("orders")
       .select("order_number")
@@ -139,7 +166,7 @@ app.post("/orders", async (req, res) => {
         {
           restaurant_id,
           client_name,
-          client_phone: client_phone || null, // 🔹 NOVO
+          client_phone: normalizedPhone, // 🔹 opcional + normalizado
           order_number: nextNumber,
           itens: normalizedItems,
           notes: notes || "",
@@ -228,19 +255,34 @@ app.delete("/orders/:id", async (req, res) => {
   }
 });
 
-/* 🔹 NOVO — CRM simples (sem financeiro) */
+/* 🔹 CRM simples (sem financeiro) — usando somente a tabela orders
+   - client_phone = ID do cliente
+   - pedidos sem telefone NÃO entram no CRM (viram só estatística)
+*/
 app.get("/crm/:restaurant_id", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
 
+    if (!restaurant_id) {
+      return sendError(res, 400, "restaurant_id é obrigatório");
+    }
+
+    // mantém seu controle de plano
     const plan = await getRestaurantPlan(restaurant_id);
     if (!canUseCRM(plan)) {
       return sendError(res, 403, "Plano não permite acesso ao CRM");
     }
 
+    // (opcional) validar restaurante
+    const exists = await restaurantExists(restaurant_id);
+    if (!exists) {
+      return sendError(res, 404, "Restaurante não encontrado");
+    }
+
+    // Busca só o necessário
     const { data, error } = await supabase
       .from("orders")
-      .select("client_id, client_name, client_phone, created_at")
+      .select("client_name, client_phone, created_at, service_type")
       .eq("restaurant_id", restaurant_id)
       .order("created_at", { ascending: true });
 
@@ -248,24 +290,45 @@ app.get("/crm/:restaurant_id", async (req, res) => {
       return sendError(res, 500, "Erro ao buscar CRM");
     }
 
-    const clients = {};
+    // Agrupa por client_phone (ID)
+    const clients = Object.create(null);
 
-    data.forEach((o) => {
-      if (!clients[o.client_id]) {
-        clients[o.client_id] = {
-          client_id: o.client_id,
-          client_name: o.client_name,
-          client_phone: o.client_phone,
+    for (const o of data || []) {
+      const phoneKey = normalizePhone(o.client_phone);
+
+      // Sem telefone? não entra no CRM
+      if (!phoneKey) continue;
+
+      if (!clients[phoneKey]) {
+        clients[phoneKey] = {
+          client_id: phoneKey, // 🔹 ID = telefone normalizado
+          client_name: o.client_name || "",
+          client_phone: phoneKey,
           orders: 0,
-          last_order_at: o.created_at,
+          last_order_at: o.created_at || null,
+          last_service_type: o.service_type || null,
         };
       }
 
-      clients[o.client_id].orders += 1;
-      clients[o.client_id].last_order_at = o.created_at;
+      // Atualiza nome se vier melhor preenchido
+      if (!clients[phoneKey].client_name && o.client_name) {
+        clients[phoneKey].client_name = o.client_name;
+      }
+
+      clients[phoneKey].orders += 1;
+      clients[phoneKey].last_order_at = o.created_at || clients[phoneKey].last_order_at;
+      clients[phoneKey].last_service_type =
+        o.service_type || clients[phoneKey].last_service_type;
+    }
+
+    // Ordena por última compra (mais recente primeiro)
+    const result = Object.values(clients).sort((a, b) => {
+      const ta = a.last_order_at ? new Date(a.last_order_at).getTime() : 0;
+      const tb = b.last_order_at ? new Date(b.last_order_at).getTime() : 0;
+      return tb - ta;
     });
 
-    return res.json(Object.values(clients));
+    return res.json(result);
   } catch (err) {
     return sendError(res, 500, "Erro ao buscar CRM");
   }
