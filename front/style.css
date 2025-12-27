@@ -652,24 +652,30 @@ body {
   box-shadow: var(--shadow);
 }
 
+/* Mais espaçamento no CRM */
 .crm-table {
-  width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;     /* <- permite espaçamento */
+  border-spacing: 0 10px;        /* <- espaço entre as linhas */
 }
 
-.crm-table th,
-.crm-table td {
-  padding: 12px 10px;
-  border-bottom: 1px solid rgba(91, 28, 28, 0.55);
-  text-align: left;
-  font-size: 14px;
+.crm-table tbody tr {
+  background: rgba(46, 8, 8, 0.40);
+  border: 1px solid rgba(91, 28, 28, 0.55);
 }
 
-.crm-table th {
-  color: rgba(252, 228, 228, 0.85);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
+.crm-table tbody td {
+  padding: 16px 14px;            /* <- mais espaço interno */
+  border-bottom: none;           /* <- tira linha grudada */
+}
+
+/* arredonda a linha inteira */
+.crm-table tbody tr td:first-child {
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+.crm-table tbody tr td:last-child {
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
 }
 
 /* =======================
