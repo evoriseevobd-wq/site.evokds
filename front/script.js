@@ -61,7 +61,7 @@ const resultsBackBtn = document.getElementById("results-back-btn");
 // CRM content
 const crmContent = crmView?.querySelector(".crm-content") || null;
 
-// Results IDs
+// Results IDs (mantidos para compatibilidade com seu HTML atual)
 const resultTotalOrdersEl = document.getElementById("result-total-orders");
 const resultUniqueClientsEl = document.getElementById("result-unique-clients");
 const resultDeliveryOrdersEl = document.getElementById("result-delivery-orders");
@@ -151,6 +151,13 @@ let features = { crm: false, results: false };
 // CRM state
 let crmClients = [];
 
+// Results state (Executive)
+const resultsState = {
+  period: "7d", // hoje | 3d | 7d | 30d | tudo
+  type: "all", // all | delivery | local
+  uiReady: false,
+};
+
 // ===== HELPERS =====
 function toFrontStatus(back) {
   const k = String(back || "").toLowerCase();
@@ -218,11 +225,43 @@ function closeDrawer() {
   drawerBackdrop?.classList.remove("open");
 }
 
+// ===== TABS VISIBILITY (Ativos/Finalizados/Cancelados/Entrega) =====
+function findTabsContainer() {
+  const a = tabAtivos;
+  if (!a) return null;
+
+  let el = a.parentElement;
+  while (el && el !== document.body) {
+    const hasAll =
+      (!tabFinalizados || el.contains(tabFinalizados)) &&
+      (!tabCancelados || el.contains(tabCancelados)) &&
+      (!tabEntregas || el.contains(tabEntregas));
+    if (hasAll) return el;
+    el = el.parentElement;
+  }
+
+  return a.closest(".tabs") || document.querySelector(".tabs");
+}
+
+const tabsContainer = findTabsContainer();
+
+function showTabsBar() {
+  tabsContainer?.classList.remove("hidden");
+}
+
+function hideTabsBar() {
+  tabsContainer?.classList.add("hidden");
+}
+
 // ===== NAV (Board/CRM/Results) =====
 function showBoard() {
   crmView?.classList.add("hidden");
   resultsView?.classList.add("hidden");
   board?.classList.remove("hidden");
+
+  // ✅ Tabs só no board
+  showTabsBar();
+
   closeDrawer();
 }
 
@@ -231,6 +270,10 @@ function showCRM() {
     alert("Este recurso está disponível apenas em planos superiores.");
     return;
   }
+
+  // ✅ some tabs no CRM
+  hideTabsBar();
+
   board?.classList.add("hidden");
   resultsView?.classList.add("hidden");
   crmView?.classList.remove("hidden");
@@ -243,20 +286,22 @@ function showResults() {
     alert("Este recurso está disponível apenas em planos superiores.");
     return;
   }
+
+  // ✅ some tabs nos Resultados
+  hideTabsBar();
+
   board?.classList.add("hidden");
   crmView?.classList.add("hidden");
   resultsView?.classList.remove("hidden");
   closeDrawer();
-  renderResults();
+
+  ensureResultsExecutiveUI();
+  renderResultsExecutive();
 }
 
 function applyAccessUI() {
-  if (drawerCrmBtn) {
-    drawerCrmBtn.classList.toggle("locked", !features.crm);
-  }
-  if (drawerResultsBtn) {
-    drawerResultsBtn.classList.toggle("locked", !features.results);
-  }
+  if (drawerCrmBtn) drawerCrmBtn.classList.toggle("locked", !features.crm);
+  if (drawerResultsBtn) drawerResultsBtn.classList.toggle("locked", !features.results);
 }
 
 // ===== VIEWS (Kanban Tabs) =====
@@ -424,9 +469,7 @@ function openOrderModal(orderId) {
   }
 
   // observações
-  if (modalNotes) {
-    modalNotes.textContent = order.notes || "";
-  }
+  if (modalNotes) modalNotes.textContent = order.notes || "";
 
   const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
 
@@ -451,12 +494,18 @@ function openOrderModal(orderId) {
   // texto do botão "próximo"
   if (modalNextBtn) {
     const s = getFrontStatus(orderId);
-    const nextLabel =
-      s === "recebido" ? "Ir para Preparo" :
-      s === "preparo" ? "Ir para Pronto" :
-      s === "pronto" ? "Ir para A Caminho" :
-      s === "caminho" ? "Finalizar" :
-      "OK";
+const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
+
+const nextLabel =
+  s === "recebido"
+    ? "Ir para Preparo"
+    : s === "preparo"
+    ? "Ir para Pronto"
+    : s === "pronto"
+    ? (isDelivery ? "Enviar para entrega" : "Finalizar pedido")
+    : s === "caminho"
+    ? "Finalizar"
+    : "OK";
     modalNextBtn.textContent = nextLabel;
     modalNextBtn.classList.toggle("hidden", s === "finalizado" || s === "cancelado");
   }
@@ -529,16 +578,14 @@ function parseItems(raw) {
     const obj = JSON.parse(s);
     return Array.isArray(obj) ? obj : null;
   } catch {
-    // 2) tenta por vírgula (mais comum no seu input)
+    // 2) tenta por vírgula
     if (s.includes(",")) {
       const parts = s
         .split(",")
         .map((x) => x.trim())
         .filter(Boolean);
 
-      if (parts.length) {
-        return parts.map((name) => ({ name, qty: 1 }));
-      }
+      if (parts.length) return parts.map((name) => ({ name, qty: 1 }));
     }
 
     // 3) fallback por linhas, aceitando "nome x2"
@@ -622,7 +669,7 @@ async function fetchCRM() {
 
   try {
     const resp = await fetch(`${CRM_URL}/${restaurantId}`);
-    const data = await resp.json().catch(() => ([]));
+    const data = await resp.json().catch(() => []);
 
     if (!resp.ok) {
       alert(data?.error || "Erro ao carregar CRM");
@@ -674,29 +721,538 @@ function renderCRM() {
   crmContent.appendChild(table);
 }
 
-// ===== RESULTS =====
-function renderResults() {
-  // métricas usando o array orders já carregado
-  const total = orders.length;
+// ===== RESULTS (Executive) =====
+function getLocalDayStartMs(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
 
-  const delivery = orders.filter(
-    (o) => String(o.service_type || "").toLowerCase() === "delivery"
-  ).length;
+function getPeriodRange(periodKey) {
+  const now = new Date();
+  const nowMs = now.getTime();
+  const dayMs = 24 * 60 * 60 * 1000;
 
-  const local = total - delivery;
-
-  // clientes únicos: usa telefone se tiver; senão usa nome
-  const uniqueKeys = new Set();
-  for (const o of orders) {
-    const phone = normalizePhone(o.client_phone);
-    if (phone) uniqueKeys.add(`p:${phone}`);
-    else uniqueKeys.add(`n:${String(o.client_name || "").trim().toLowerCase()}`);
+  if (periodKey === "hoje") {
+    return {
+      bucket: "hour",
+      startMs: getLocalDayStartMs(now),
+      endMs: nowMs,
+      label: "Hoje",
+      days: 1,
+    };
   }
 
-  if (resultTotalOrdersEl) resultTotalOrdersEl.textContent = String(total);
-  if (resultUniqueClientsEl) resultUniqueClientsEl.textContent = String(uniqueKeys.size);
-  if (resultDeliveryOrdersEl) resultDeliveryOrdersEl.textContent = String(delivery);
-  if (resultLocalOrdersEl) resultLocalOrdersEl.textContent = String(local);
+  const n =
+    periodKey === "3d" ? 3 : periodKey === "7d" ? 7 : periodKey === "30d" ? 30 : null;
+
+  if (n) {
+    const start = new Date(nowMs - (n - 1) * dayMs);
+    return {
+      bucket: "day",
+      startMs: getLocalDayStartMs(start),
+      endMs: nowMs,
+      label: `${n} dias`,
+      days: n,
+    };
+  }
+
+  // tudo
+  let min = nowMs;
+  for (const o of orders) {
+    const t = new Date(o.created_at).getTime();
+    if (!Number.isNaN(t) && t < min) min = t;
+  }
+  return {
+    bucket: "day",
+    startMs: Number.isFinite(min) ? min : nowMs,
+    endMs: nowMs,
+    label: "Tudo",
+    days: Math.max(1, Math.ceil((nowMs - min) / dayMs)),
+  };
+}
+
+function filterOrdersForResults(range, typeKey) {
+  const filtered = orders.filter((o) => {
+    const t = new Date(o.created_at).getTime();
+    if (Number.isNaN(t)) return false;
+    if (t < range.startMs || t > range.endMs) return false;
+
+    const st = String(o.service_type || "").toLowerCase();
+    if (typeKey === "delivery") return st === "delivery";
+    if (typeKey === "local") return st !== "delivery";
+    return true;
+  });
+
+  return filtered;
+}
+
+function uniqueClientsCount(list) {
+  // Regra: telefone identifica cliente; sem telefone = anônimo por pedido
+  const set = new Set();
+  for (const o of list) {
+    const phone = normalizePhone(o.client_phone);
+    if (phone) set.add(`p:${phone}`);
+    else set.add(`anon:${o.id}`); // cada pedido sem telefone conta como 1 cliente único anônimo
+  }
+  return set.size;
+}
+
+function computeSummary(list) {
+  const total = list.length;
+  const delivery = list.filter((o) => String(o.service_type || "").toLowerCase() === "delivery").length;
+  const local = total - delivery;
+  const unique = uniqueClientsCount(list);
+
+  const cancelled = list.filter((o) => {
+    const s = o._frontStatus || toFrontStatus(o.status);
+    return s === "cancelado";
+  }).length;
+
+  return { total, delivery, local, unique, cancelled };
+}
+
+function pctChange(curr, prev) {
+  const c = Number(curr) || 0;
+  const p = Number(prev) || 0;
+  if (p === 0 && c === 0) return 0;
+  if (p === 0) return 100;
+  return ((c - p) / p) * 100;
+}
+
+function formatPct(x) {
+  const n = Number(x);
+  if (!Number.isFinite(n)) return "0%";
+  const sign = n > 0 ? "+" : "";
+  return `${sign}${Math.round(n)}%`;
+}
+
+function bucketKeyDay(d) {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function buildSeries(range, list) {
+  const map = new Map(); // key -> { total, delivery, local }
+
+  // init buckets
+  if (range.bucket === "hour") {
+    for (let h = 0; h < 24; h++) map.set(String(h), { total: 0, delivery: 0, local: 0 });
+  } else {
+    const start = new Date(range.startMs);
+    const end = new Date(range.endMs);
+    const cur = new Date(getLocalDayStartMs(start));
+    const endDay = new Date(getLocalDayStartMs(end));
+
+    while (cur.getTime() <= endDay.getTime()) {
+      map.set(bucketKeyDay(cur), { total: 0, delivery: 0, local: 0 });
+      cur.setDate(cur.getDate() + 1);
+    }
+  }
+
+  for (const o of list) {
+    const t = new Date(o.created_at);
+    const st = String(o.service_type || "").toLowerCase();
+    const isDelivery = st === "delivery";
+
+    const key =
+      range.bucket === "hour" ? String(t.getHours()) : bucketKeyDay(t);
+
+    if (!map.has(key)) map.set(key, { total: 0, delivery: 0, local: 0 });
+
+    const b = map.get(key);
+    b.total += 1;
+    if (isDelivery) b.delivery += 1;
+    else b.local += 1;
+  }
+
+  const labels = Array.from(map.keys());
+  const total = labels.map((k) => map.get(k).total);
+  const delivery = labels.map((k) => map.get(k).delivery);
+  const local = labels.map((k) => map.get(k).local);
+
+  return { labels, total, delivery, local };
+}
+
+function niceStep(maxVal) {
+  const max = Math.max(1, Number(maxVal) || 1);
+  const pow = Math.pow(10, Math.floor(Math.log10(max)));
+  const n = max / pow;
+
+  let step = 1;
+  if (n <= 2) step = 0.5;
+  else if (n <= 5) step = 1;
+  else step = 2;
+
+  return step * pow;
+}
+
+function ensureResultsExecutiveUI() {
+  if (!resultsView) return;
+
+  // prefer container interno, se existir
+  let container = resultsView.querySelector(".results-content");
+  if (!container) {
+    container = document.createElement("div");
+    container.className = "results-content";
+    resultsView.appendChild(container);
+  }
+
+  let root = container.querySelector(".results-exec-root");
+  if (root) {
+    resultsState.uiReady = true;
+    return;
+  }
+
+  root = document.createElement("div");
+  root.className = "results-exec-root";
+
+  root.innerHTML = `
+    <div class="results-exec-head">
+      <div class="results-exec-title">Resultados</div>
+      <div class="results-exec-filters">
+        <select class="results-pill" id="results-period">
+          <option value="hoje">Hoje</option>
+          <option value="3d">Últimos 3 dias</option>
+          <option value="7d" selected>Últimos 7 dias</option>
+          <option value="30d">Últimos 30 dias</option>
+          <option value="tudo">Tudo</option>
+        </select>
+        <select class="results-pill" id="results-type">
+          <option value="all" selected>Todos</option>
+          <option value="delivery">Somente delivery</option>
+          <option value="local">Somente balcão</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="results-exec-chart">
+      <svg id="results-chart-svg" viewBox="0 0 1000 320" preserveAspectRatio="none" aria-label="Gráfico de pedidos"></svg>
+      <div class="results-exec-legend">
+        <span class="legend-item"><i class="legend-dot legend-total"></i>Total (barras)</span>
+        <span class="legend-item"><i class="legend-dot legend-delivery"></i>Delivery (linha)</span>
+        <span class="legend-item"><i class="legend-dot legend-local"></i>Balcão (linha)</span>
+      </div>
+    </div>
+
+    <div class="results-exec-cards">
+      <div class="metric-card">
+        <div class="metric-label">Total de pedidos</div>
+        <div class="metric-value" data-metric="total">0</div>
+        <div class="metric-sub" data-sub="total"></div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">Clientes únicos</div>
+        <div class="metric-value" data-metric="unique">0</div>
+        <div class="metric-sub" data-sub="unique"></div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">Pedidos de delivery</div>
+        <div class="metric-value" data-metric="delivery">0</div>
+        <div class="metric-sub" data-sub="delivery"></div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">Pedidos de balcão</div>
+        <div class="metric-value" data-metric="local">0</div>
+        <div class="metric-sub" data-sub="local"></div>
+      </div>
+    </div>
+
+    <div class="results-exec-insights">
+      <div class="insights-head">
+        <div class="insights-title">Insights</div>
+        <div class="insights-subtitle">Comparado ao período anterior</div>
+      </div>
+
+      <div class="insights-grid">
+        <div class="insight-card">
+          <div class="insight-label">Variação de pedidos</div>
+          <div class="insight-value" data-insight="deltaTotal">0%</div>
+          <div class="insight-note" data-insight-note="deltaTotal"></div>
+        </div>
+
+        <div class="insight-card">
+          <div class="insight-label">Picos de horário</div>
+          <div class="insight-value" data-insight="peaks">—</div>
+          <div class="insight-note" data-insight-note="peaks"></div>
+        </div>
+
+        <div class="insight-card">
+          <div class="insight-label">Top itens</div>
+          <div class="insight-value" data-insight="topItems">—</div>
+          <div class="insight-note" data-insight-note="topItems"></div>
+        </div>
+
+        <div class="insight-card">
+          <div class="insight-label">Cancelamentos</div>
+          <div class="insight-value" data-insight="cancelRate">0%</div>
+          <div class="insight-note" data-insight-note="cancelRate"></div>
+        </div>
+      </div>
+
+      <div class="insights-locked">
+        <div class="locked-title">Recursos avançados (Custom)</div>
+        <div class="locked-list">
+          <div class="locked-item">🔒 Dashboard personalizado por meta e KPIs</div>
+          <div class="locked-item">🔒 Alertas automáticos e playbooks</div>
+          <div class="locked-item">🔒 Relatórios por unidade / multiunidade</div>
+          <div class="locked-item">🔒 Integrações sob demanda</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  container.appendChild(root);
+
+  const periodSel = root.querySelector("#results-period");
+  const typeSel = root.querySelector("#results-type");
+
+  if (periodSel) {
+    periodSel.value = resultsState.period;
+    periodSel.addEventListener("change", () => {
+      resultsState.period = periodSel.value;
+      renderResultsExecutive();
+    });
+  }
+
+  if (typeSel) {
+    typeSel.value = resultsState.type;
+    typeSel.addEventListener("change", () => {
+      resultsState.type = typeSel.value;
+      renderResultsExecutive();
+    });
+  }
+
+  resultsState.uiReady = true;
+}
+
+function renderChartSVG(svg, range, series) {
+  if (!svg) return;
+
+  const W = 1000;
+  const H = 320;
+  const padL = 64;
+  const padR = 18;
+  const padT = 18;
+  const padB = 56;
+
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+
+  const maxTotal = Math.max(1, ...series.total);
+  const step = niceStep(maxTotal);
+  const maxY = Math.ceil(maxTotal / step) * step;
+
+  const y = (val) => padT + (1 - val / maxY) * plotH;
+  const x = (i, n) => padL + (n <= 1 ? plotW / 2 : (i * plotW) / (n - 1));
+
+  const n = series.labels.length || 1;
+
+  // build svg
+  const parts = [];
+
+  // background grid & y labels
+  const ticks = 5;
+  for (let i = 0; i <= ticks; i++) {
+    const val = (maxY * i) / ticks;
+    const yy = y(val);
+    parts.push(`<line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="rgba(255,255,255,0.08)" />`);
+    parts.push(
+      `<text x="${padL - 10}" y="${yy + 4}" text-anchor="end" font-size="12" fill="rgba(255,255,255,0.6)">${Math.round(val)}</text>`
+    );
+  }
+
+  // bars (total)
+  const barW = Math.max(6, Math.min(26, plotW / Math.max(10, n)));
+  for (let i = 0; i < n; i++) {
+    const cx = x(i, n);
+    const v = series.total[i] || 0;
+    const yy = y(v);
+    const hh = padT + plotH - yy;
+    const bx = cx - barW / 2;
+    parts.push(
+      `<rect x="${bx}" y="${yy}" width="${barW}" height="${hh}" rx="6" ry="6" fill="rgba(139,92,246,0.35)" />`
+    );
+  }
+
+  // line path helper
+  function buildPath(values) {
+    let d = "";
+    for (let i = 0; i < n; i++) {
+      const cx = x(i, n);
+      const yy = y(values[i] || 0);
+      d += i === 0 ? `M ${cx} ${yy}` : ` L ${cx} ${yy}`;
+    }
+    return d;
+  }
+
+  // delivery line
+  parts.push(
+    `<path d="${buildPath(series.delivery)}" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="3" />`
+  );
+
+  // local line
+  parts.push(
+    `<path d="${buildPath(series.local)}" fill="none" stroke="rgba(34,197,94,0.85)" stroke-width="3" />`
+  );
+
+  // x labels (sparse)
+  const labelEvery = range.bucket === "hour" ? 4 : Math.ceil(n / 7);
+  for (let i = 0; i < n; i++) {
+    if (i % Math.max(1, labelEvery) !== 0 && i !== n - 1) continue;
+    const cx = x(i, n);
+    const raw = series.labels[i];
+    const text =
+      range.bucket === "hour"
+        ? `${raw}h`
+        : (() => {
+            const [yyyy, mm, dd] = String(raw).split("-");
+            if (!dd) return raw;
+            return `${dd}/${mm}`;
+          })();
+    parts.push(
+      `<text x="${cx}" y="${H - 18}" text-anchor="middle" font-size="12" fill="rgba(255,255,255,0.6)">${text}</text>`
+    );
+  }
+
+  svg.innerHTML = parts.join("");
+}
+
+function computePeaks(list) {
+  const counts = new Array(24).fill(0);
+  for (const o of list) {
+    const d = new Date(o.created_at);
+    const h = d.getHours();
+    counts[h] = (counts[h] || 0) + 1;
+  }
+  const ranked = counts
+    .map((v, h) => ({ h, v }))
+    .sort((a, b) => b.v - a.v)
+    .filter((x) => x.v > 0)
+    .slice(0, 3);
+
+  if (!ranked.length) return { text: "—", note: "Sem dados no período." };
+
+  const text = ranked.map((x) => `${String(x.h).padStart(2, "0")}h`).join(" • ");
+  const note = ranked.map((x) => `${String(x.h).padStart(2, "0")}h: ${x.v}`).join(" | ");
+  return { text, note };
+}
+
+function computeTopItems(list) {
+  const map = new Map();
+  for (const o of list) {
+    const itens = Array.isArray(o.itens) ? o.itens : [];
+    for (const it of itens) {
+      const name = String(it?.name || it?.nome || "").trim();
+      if (!name) continue;
+      const qty = Number(it?.qty || it?.quantidade || 1) || 1;
+      map.set(name, (map.get(name) || 0) + qty);
+    }
+  }
+  const top = Array.from(map.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  if (!top.length) return { text: "—", note: "Sem itens no período." };
+
+  const text = top.map(([n]) => n).slice(0, 2).join(" • ") + (top.length > 2 ? " • ..." : "");
+  const note = top.map(([n, q]) => `${n} (${q})`).join(" | ");
+  return { text, note };
+}
+
+function renderResultsExecutive() {
+  // garante UI
+  ensureResultsExecutiveUI();
+
+  // range atual
+  const range = getPeriodRange(resultsState.period);
+  const list = filterOrdersForResults(range, resultsState.type);
+
+  // resumo atual
+  const curr = computeSummary(list);
+
+  // range anterior (mesma duração)
+  const span = Math.max(1, range.endMs - range.startMs);
+  const prevRange = {
+    ...range,
+    startMs: range.startMs - span,
+    endMs: range.startMs - 1,
+  };
+  const prevList = filterOrdersForResults(prevRange, resultsState.type);
+  const prev = computeSummary(prevList);
+
+  // atualiza IDs antigos (compatibilidade)
+  if (resultTotalOrdersEl) resultTotalOrdersEl.textContent = String(curr.total);
+  if (resultUniqueClientsEl) resultUniqueClientsEl.textContent = String(curr.unique);
+  if (resultDeliveryOrdersEl) resultDeliveryOrdersEl.textContent = String(curr.delivery);
+  if (resultLocalOrdersEl) resultLocalOrdersEl.textContent = String(curr.local);
+
+  // atualiza cards novos
+  const root = resultsView?.querySelector(".results-exec-root");
+  if (root) {
+    const setMetric = (key, val) => {
+      const el = root.querySelector(`[data-metric="${key}"]`);
+      if (el) el.textContent = String(val);
+    };
+
+    setMetric("total", curr.total);
+    setMetric("unique", curr.unique);
+    setMetric("delivery", curr.delivery);
+    setMetric("local", curr.local);
+
+    const subs = {
+      total: formatPct(pctChange(curr.total, prev.total)),
+      unique: formatPct(pctChange(curr.unique, prev.unique)),
+      delivery: formatPct(pctChange(curr.delivery, prev.delivery)),
+      local: formatPct(pctChange(curr.local, prev.local)),
+    };
+
+    Object.keys(subs).forEach((k) => {
+      const el = root.querySelector(`[data-sub="${k}"]`);
+      if (el) el.textContent = `Comparado ao período anterior: ${subs[k]}`;
+    });
+
+    // gráfico
+    const series = buildSeries(range, list);
+    const svg = root.querySelector("#results-chart-svg");
+    renderChartSVG(svg, range, series);
+
+    // insights
+    const deltaTotal = formatPct(pctChange(curr.total, prev.total));
+    const deltaTotalEl = root.querySelector(`[data-insight="deltaTotal"]`);
+    const deltaTotalNote = root.querySelector(`[data-insight-note="deltaTotal"]`);
+    if (deltaTotalEl) deltaTotalEl.textContent = deltaTotal;
+    if (deltaTotalNote) deltaTotalNote.textContent = `Total no período: ${curr.total} | Anterior: ${prev.total}`;
+
+    const peaks = computePeaks(list);
+    const peaksEl = root.querySelector(`[data-insight="peaks"]`);
+    const peaksNote = root.querySelector(`[data-insight-note="peaks"]`);
+    if (peaksEl) peaksEl.textContent = peaks.text;
+    if (peaksNote) peaksNote.textContent = peaks.note;
+
+    const topItems = computeTopItems(list);
+    const topItemsEl = root.querySelector(`[data-insight="topItems"]`);
+    const topItemsNote = root.querySelector(`[data-insight-note="topItems"]`);
+    if (topItemsEl) topItemsEl.textContent = topItems.text;
+    if (topItemsNote) topItemsNote.textContent = topItems.note;
+
+    const cancelRate = curr.total > 0 ? (curr.cancelled / curr.total) * 100 : 0;
+    const prevCancelRate = prev.total > 0 ? (prev.cancelled / prev.total) * 100 : 0;
+
+    const cancelEl = root.querySelector(`[data-insight="cancelRate"]`);
+    const cancelNote = root.querySelector(`[data-insight-note="cancelRate"]`);
+    if (cancelEl) cancelEl.textContent = `${Math.round(cancelRate)}%`;
+    if (cancelNote)
+      cancelNote.textContent = `Cancelados: ${curr.cancelled} (${formatPct(cancelRate - prevCancelRate)} em relação ao período anterior)`;
+  }
+}
+
+// Mantém função antiga (caso você ainda chame em algum lugar)
+function renderResults() {
+  renderResultsExecutive();
 }
 
 function toggleNoOrdersBalloons() {
@@ -720,7 +1276,6 @@ function toggleNoOrdersBalloons() {
 
   col.appendChild(balloon);
 }
-
 
 // ===== GOOGLE AUTH =====
 function parseJwt(token) {
