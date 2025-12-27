@@ -40,6 +40,40 @@ const views = {
 const loginScreen = document.getElementById("login-screen");
 const board = document.getElementById("board");
 
+// Views
+const crmView = document.getElementById("crm-view");
+const resultsView = document.getElementById("results-view");
+
+// Drawer
+const drawer = document.getElementById("drawer");
+const openDrawerBtn = document.getElementById("open-drawer");
+const closeDrawerBtn = document.getElementById("close-drawer");
+const drawerBackdrop = document.getElementById("drawer-backdrop");
+
+const drawerOrdersBtn = document.getElementById("drawer-orders");
+const drawerCrmBtn = document.getElementById("drawer-crm");
+const drawerResultsBtn = document.getElementById("drawer-results");
+
+// Back buttons
+const crmBackBtn = document.getElementById("crm-back-btn");
+const resultsBackBtn = document.getElementById("results-back-btn");
+
+// CRM content
+const crmContent = crmView?.querySelector(".crm-content") || null;
+
+// Results IDs
+const resultTotalOrdersEl = document.getElementById("result-total-orders");
+const resultUniqueClientsEl = document.getElementById("result-unique-clients");
+const resultDeliveryOrdersEl = document.getElementById("result-delivery-orders");
+const resultLocalOrdersEl = document.getElementById("result-local-orders");
+
+// Tabs
+const tabAtivos = document.getElementById("tab-ativos");
+const tabFinalizados = document.getElementById("tab-finalizados");
+const tabCancelados = document.getElementById("tab-cancelados");
+const tabEntregas = document.getElementById("tab-entregas");
+
+// Columns (column-body)
 const columns = {
   recebido: document.getElementById("col-recebido"),
   preparo: document.getElementById("col-preparo"),
@@ -49,75 +83,42 @@ const columns = {
   cancelado: document.getElementById("col-cancelado"),
 };
 
-const tabAtivos = document.getElementById("tab-ativos");
-const tabFinalizados = document.getElementById("tab-finalizados");
-const tabCancelados = document.getElementById("tab-cancelados");
-const tabEntregas = document.getElementById("tab-entregas");
-
-// Drawer
-const drawer = document.getElementById("drawer");
-const openDrawerBtn = document.getElementById("open-drawer");
-const closeDrawerBtn = document.getElementById("close-drawer");
-const drawerBackdrop = document.getElementById("drawer-backdrop");
-
 // User chip
 const userChip = document.getElementById("user-chip");
 const userNameEl = document.getElementById("user-name");
 const userAvatar = document.getElementById("user-avatar");
 const logoutBtn = document.getElementById("logout-btn");
 
-// 🔹 CRM (cria botão no drawer se não existir)
-const crmBtn = document.getElementById("drawer-crm") || (() => {
-  if (!drawer) return null;
-  const btn = document.createElement("button");
-  btn.id = "drawer-crm";
-  btn.type = "button";
-  btn.textContent = "CRM de Clientes";
-  btn.className = logoutBtn?.className || "";
-  // tenta colocar antes do botão de logout (fica organizado)
-  if (logoutBtn?.parentNode) {
-    logoutBtn.parentNode.insertBefore(btn, logoutBtn);
-  } else {
-    drawer.appendChild(btn);
-  }
-  return btn;
-})();
-
-// 🔹 CRM (cria view se não existir)
-const crmView = document.getElementById("crm-view") || (() => {
-  const section = document.createElement("section");
-  section.id = "crm-view";
-  section.classList.add("hidden");
-  document.body.appendChild(section);
-  return section;
-})();
-
 // Unauthorized modal
 const unauthorizedModal = document.getElementById("unauthorized-modal");
 const unauthClose = document.getElementById("unauth-close");
 
-// Modal
-const modal = document.getElementById("order-modal");
-const modalBackdrop = document.getElementById("modal-backdrop");
-const modalTitle = document.getElementById("modal-title");
-const modalNumber = document.getElementById("modal-number");
-const modalList = document.getElementById("modal-list");
-const modalNotes = document.getElementById("modal-notes");
+// ===== ORDER MODAL (IDs do seu index.html) =====
+const modalBackdrop = document.getElementById("modal"); // backdrop inteiro
+const closeModalBtn = document.getElementById("close-modal");
+const closeModalSecondaryBtn = document.getElementById("close-modal-secondary");
+
+const modalId = document.getElementById("modal-id");
+const modalCustomer = document.getElementById("modal-customer");
+const modalTime = document.getElementById("modal-time");
+
+const modalPhoneRow = document.getElementById("modal-phone-row");
+const modalPhone = document.getElementById("modal-phone");
 
 const modalAddressRow = document.getElementById("modal-address-row");
 const modalAddress = document.getElementById("modal-address");
 
-// ✅ NOVO: pagamento no popup
 const modalPaymentRow = document.getElementById("modal-payment-row");
 const modalPayment = document.getElementById("modal-payment");
 
-const closeModalBtn = document.getElementById("close-modal");
-const closeModalSecondaryBtn = document.getElementById("close-modal-secondary");
+const modalItems = document.getElementById("modal-items");
+const modalNotes = document.getElementById("modal-notes");
+
 const modalPrevBtn = document.getElementById("modal-prev");
 const modalCancelBtn = document.getElementById("modal-cancel");
 const modalNextBtn = document.getElementById("modal-next");
 
-// Create modal
+// ===== CREATE MODAL (IDs do seu index.html) =====
 const createModal = document.getElementById("create-modal");
 const openCreateBtn = document.getElementById("open-create");
 const closeCreateBtn = document.getElementById("close-create");
@@ -125,16 +126,15 @@ const cancelCreateBtn = document.getElementById("cancel-create");
 const saveCreateBtn = document.getElementById("save-create");
 
 // Create fields
-const newClientName = document.getElementById("new-client-name");
+const newCustomer = document.getElementById("new-customer");
+const newPhone = document.getElementById("new-phone"); // opcional
 const newItems = document.getElementById("new-items");
-const newNotes = document.getElementById("new-notes");
-const newServiceType = document.getElementById("new-service-type");
-const deliveryWrap = document.getElementById("delivery-wrap");
+const newDelivery = document.getElementById("new-delivery"); // checkbox
+const deliveryAddressWrap = document.getElementById("delivery-address-wrap");
 const newAddress = document.getElementById("new-address");
-
-// ✅ NOVO: payment
 const paymentWrap = document.getElementById("payment-wrap");
 const newPayment = document.getElementById("new-payment");
+const newNotes = document.getElementById("new-notes");
 
 // Google button
 const googleBtnContainer = document.getElementById("googleLoginBtn");
@@ -144,9 +144,11 @@ let currentView = "ativos";
 let orders = [];
 let activeOrderId = null;
 
-// 🔹 CRM — estado
+// 🔹 plano/features
 let restaurantPlan = "basic";
-let features = { crm: false };
+let features = { crm: false, results: false };
+
+// CRM state
 let crmClients = [];
 
 // ===== HELPERS =====
@@ -167,102 +169,34 @@ function formatTime(iso) {
   return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
-function openBackdrop(el) { el?.classList.add("open"); }
-function closeBackdrop(el) { el?.classList.remove("open"); }
-
-// =======================
-// 🔹 CRM — CONTROLE DE ACESSO + VIEW
-// =======================
-function applyCRMAccess() {
-  if (!crmBtn) return;
-  if (!features.crm) {
-    crmBtn.classList.add("locked");
-    crmBtn.onclick = () => {
-      alert("Este recurso está disponível apenas em planos superiores.");
-    };
-  } else {
-    crmBtn.classList.remove("locked");
-    crmBtn.onclick = openCRMView;
-  }
-}
-
-function openCRMView() {
-  board?.classList.add("hidden");
-  crmView?.classList.remove("hidden");
-  fetchCRM();
-}
-
-function closeCRMView() {
-  crmView?.classList.add("hidden");
-  board?.classList.remove("hidden");
-}
-
-async function fetchCRM() {
-  const restaurantId = localStorage.getItem("restaurant_id");
-  if (!restaurantId) return;
-
-  try {
-    const resp = await fetch(`${CRM_URL}/${restaurantId}`);
-    const data = await resp.json().catch(() => ([]));
-
-    if (!resp.ok) {
-      alert(data?.error || "Erro ao carregar CRM");
-      return;
-    }
-
-    crmClients = Array.isArray(data) ? data : [];
-    renderCRM();
-  } catch (e) {
-    console.error("Erro CRM:", e);
-    alert("Erro ao carregar CRM");
-  }
-}
-
-function renderCRM() {
-  if (!crmView) return;
-  crmView.innerHTML = "";
-
-  const header = document.createElement("div");
-  header.className = "crm-header";
-  header.innerHTML = `
-    <div class="crm-title">CRM de Clientes</div>
-    <button type="button" id="crm-back-btn">Voltar</button>
-  `;
-  crmView.appendChild(header);
-
-  const backBtn = crmView.querySelector("#crm-back-btn");
-  backBtn?.addEventListener("click", closeCRMView);
-
-  const table = document.createElement("table");
-  table.className = "crm-table";
-
-  table.innerHTML = `
-    <thead>
-      <tr>
-        <th>Cliente</th>
-        <th>Telefone</th>
-        <th>Pedidos</th>
-        <th>Última compra</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  `;
-
-  const tbody = table.querySelector("tbody");
-
-  crmClients.forEach((c) => {
-    const tr = document.createElement("tr");
-    const phone = features.crm ? (c.client_phone || "—") : "🔒";
-    tr.innerHTML = `
-      <td>${c.client_name || "Cliente"}</td>
-      <td>${phone}</td>
-      <td>${c.orders || 0}</td>
-      <td>${formatTime(c.last_order_at)}</td>
-    `;
-    tbody.appendChild(tr);
+function formatDateTime(iso) {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
   });
+}
 
-  crmView.appendChild(table);
+function escapeHtml(str) {
+  return String(str || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function openBackdrop(el) {
+  el?.classList.add("open");
+}
+
+function closeBackdrop(el) {
+  el?.classList.remove("open");
 }
 
 function buildHeaders() {
@@ -273,13 +207,66 @@ function getRestaurantId() {
   return localStorage.getItem("restaurant_id");
 }
 
-// ===== VIEWS =====
+function normalizePhone(input) {
+  if (input === null || input === undefined) return "";
+  const digits = String(input).replace(/\D/g, "");
+  return digits.trim();
+}
+
+function closeDrawer() {
+  drawer?.classList.remove("open");
+  drawerBackdrop?.classList.remove("open");
+}
+
+// ===== NAV (Board/CRM/Results) =====
+function showBoard() {
+  crmView?.classList.add("hidden");
+  resultsView?.classList.add("hidden");
+  board?.classList.remove("hidden");
+  closeDrawer();
+}
+
+function showCRM() {
+  if (!features.crm) {
+    alert("Este recurso está disponível apenas em planos superiores.");
+    return;
+  }
+  board?.classList.add("hidden");
+  resultsView?.classList.add("hidden");
+  crmView?.classList.remove("hidden");
+  closeDrawer();
+  fetchCRM();
+}
+
+function showResults() {
+  if (!features.results) {
+    alert("Este recurso está disponível apenas em planos superiores.");
+    return;
+  }
+  board?.classList.add("hidden");
+  crmView?.classList.add("hidden");
+  resultsView?.classList.remove("hidden");
+  closeDrawer();
+  renderResults();
+}
+
+function applyAccessUI() {
+  if (drawerCrmBtn) {
+    drawerCrmBtn.classList.toggle("locked", !features.crm);
+  }
+  if (drawerResultsBtn) {
+    drawerResultsBtn.classList.toggle("locked", !features.results);
+  }
+}
+
+// ===== VIEWS (Kanban Tabs) =====
 function setColumnsVisibility(viewKey) {
   Object.keys(columns).forEach((k) => {
-    const col = columns[k];
-    if (!col) return;
+    const colBody = columns[k];
+    if (!colBody) return;
+    const section = colBody.closest(".column") || colBody.parentElement;
     const shouldShow = views[viewKey].includes(k);
-    col.classList.toggle("hidden", !shouldShow);
+    section?.classList.toggle("hidden", !shouldShow);
   });
 }
 
@@ -327,8 +314,13 @@ async function updateOrderStatus(orderId, newFrontStatus) {
 
     const idx = orders.findIndex((o) => o.id === orderId);
     if (idx !== -1) {
-      orders[idx] = { ...orders[idx], ...data, _frontStatus: toFrontStatus(data.status) };
+      orders[idx] = {
+        ...orders[idx],
+        ...data,
+        _frontStatus: toFrontStatus(data.status),
+      };
     }
+
     renderBoard();
     if (activeOrderId === orderId) openOrderModal(orderId);
   } catch (e) {
@@ -379,11 +371,8 @@ function buildOrderCard(order) {
   card.dataset.id = order.id;
 
   const itemsCount = Array.isArray(order.itens) ? order.itens.length : 0;
-
   const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
-
-  const paymentText =
-    isDelivery && order.payment_method ? order.payment_method : "";
+  const paymentText = isDelivery && order.payment_method ? order.payment_method : "";
 
   card.innerHTML = `
     <div class="order-top">
@@ -399,17 +388,7 @@ function buildOrderCard(order) {
   `;
 
   card.addEventListener("click", () => openOrderModal(order.id));
-
   return card;
-}
-
-function escapeHtml(str) {
-  return String(str || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
 
 // ===== MODAL =====
@@ -419,48 +398,74 @@ function openOrderModal(orderId) {
 
   activeOrderId = orderId;
 
-  if (modalTitle) modalTitle.textContent = order.client_name || "Cliente";
-  if (modalNumber) modalNumber.textContent = `#${order.order_number || ""}`;
+  if (modalId) modalId.textContent = `#${order.order_number || ""}`;
+  if (modalCustomer) modalCustomer.textContent = order.client_name || "Cliente";
+  if (modalTime) modalTime.textContent = formatDateTime(order.created_at);
 
-  if (modalList) {
-    modalList.innerHTML = "";
+  // telefone (se existir)
+  const phone = normalizePhone(order.client_phone);
+  if (modalPhoneRow && modalPhone) {
+    const hasPhone = !!phone;
+    modalPhoneRow.style.display = hasPhone ? "" : "none";
+    modalPhone.textContent = hasPhone ? phone : "";
+  }
+
+  // itens
+  if (modalItems) {
+    modalItems.innerHTML = "";
     const itens = Array.isArray(order.itens) ? order.itens : [];
     itens.forEach((it) => {
       const li = document.createElement("li");
-      li.textContent = `${it?.name || it?.nome || "Item"} x${it?.qty || it?.quantidade || 1}`;
-      modalList.appendChild(li);
+      const name = it?.name || it?.nome || "Item";
+      const qty = it?.qty || it?.quantidade || 1;
+      li.textContent = `${name} x${qty}`;
+      modalItems.appendChild(li);
     });
   }
 
+  // observações
   if (modalNotes) {
     modalNotes.textContent = order.notes || "";
-    modalNotes.classList.toggle("hidden", !order.notes);
   }
 
   const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
 
-  // endereço
+  // endereço (somente delivery)
   if (modalAddressRow && modalAddress) {
-    modalAddressRow.classList.toggle("hidden", !isDelivery);
-    modalAddress.textContent = order.address || "";
+    const showAddress = isDelivery && !!String(order.address || "").trim();
+    modalAddressRow.style.display = showAddress ? "" : "none";
+    modalAddress.textContent = showAddress ? String(order.address || "") : "";
   }
 
-  // ✅ pagamento (somente delivery)
+  // pagamento (somente delivery)
   if (modalPaymentRow && modalPayment) {
-    modalPaymentRow.classList.toggle("hidden", !(isDelivery && order.payment_method));
-    modalPayment.textContent = order.payment_method || "";
+    const showPay = isDelivery && !!String(order.payment_method || "").trim();
+    modalPaymentRow.style.display = showPay ? "" : "none";
+    modalPayment.textContent = showPay ? String(order.payment_method || "") : "";
   }
 
+  // botões de etapa
   modalPrevBtn?.classList.toggle("hidden", currentView === "cancelados");
   modalCancelBtn?.classList.toggle("hidden", currentView === "cancelados");
 
+  // texto do botão "próximo"
+  if (modalNextBtn) {
+    const s = getFrontStatus(orderId);
+    const nextLabel =
+      s === "recebido" ? "Ir para Preparo" :
+      s === "preparo" ? "Ir para Pronto" :
+      s === "pronto" ? "Ir para A Caminho" :
+      s === "caminho" ? "Finalizar" :
+      "OK";
+    modalNextBtn.textContent = nextLabel;
+    modalNextBtn.classList.toggle("hidden", s === "finalizado" || s === "cancelado");
+  }
+
   openBackdrop(modalBackdrop);
-  modal?.classList.add("open");
 }
 
 function closeOrderModal() {
   activeOrderId = null;
-  modal?.classList.remove("open");
   closeBackdrop(modalBackdrop);
 }
 
@@ -490,34 +495,60 @@ function cancelOrder(orderId) {
 }
 
 // ===== CREATE ORDER =====
+function updateCreateDeliveryVisibility() {
+  const isDelivery = !!newDelivery?.checked;
+  deliveryAddressWrap?.classList.toggle("hidden", !isDelivery);
+  paymentWrap?.classList.toggle("hidden", !isDelivery);
+}
+
 function openCreateModal() {
-  createModal?.classList.add("open");
   openBackdrop(createModal);
+  updateCreateDeliveryVisibility();
 }
 
 function closeCreateModal() {
-  createModal?.classList.remove("open");
   closeBackdrop(createModal);
-  newClientName && (newClientName.value = "");
-  newItems && (newItems.value = "");
-  newNotes && (newNotes.value = "");
-  newAddress && (newAddress.value = "");
-  newPayment && (newPayment.value = "");
-  newServiceType && (newServiceType.value = "local");
-  deliveryWrap?.classList.add("hidden");
-  paymentWrap?.classList.add("hidden");
+
+  if (newCustomer) newCustomer.value = "";
+  if (newPhone) newPhone.value = "";
+  if (newItems) newItems.value = "";
+  if (newNotes) newNotes.value = "";
+  if (newAddress) newAddress.value = "";
+  if (newPayment) newPayment.value = "";
+  if (newDelivery) newDelivery.checked = false;
+
+  updateCreateDeliveryVisibility();
 }
 
 function parseItems(raw) {
   const s = String(raw || "").trim();
   if (!s) return null;
+
+  // 1) tenta JSON
   try {
     const obj = JSON.parse(s);
     return Array.isArray(obj) ? obj : null;
   } catch {
-    // tenta separar por linhas: nome xqtd
-    const lines = s.split("\n").map((x) => x.trim()).filter(Boolean);
+    // 2) tenta por vírgula (mais comum no seu input)
+    if (s.includes(",")) {
+      const parts = s
+        .split(",")
+        .map((x) => x.trim())
+        .filter(Boolean);
+
+      if (parts.length) {
+        return parts.map((name) => ({ name, qty: 1 }));
+      }
+    }
+
+    // 3) fallback por linhas, aceitando "nome x2"
+    const lines = s
+      .split("\n")
+      .map((x) => x.trim())
+      .filter(Boolean);
+
     if (!lines.length) return null;
+
     return lines.map((ln) => {
       const m = ln.match(/(.+?)\s*x\s*(\d+)$/i);
       if (m) return { name: m[1].trim(), qty: Number(m[2]) };
@@ -526,32 +557,30 @@ function parseItems(raw) {
   }
 }
 
-function updateCreateDeliveryVisibility() {
-  const isDelivery = newServiceType?.value === "delivery";
-  deliveryWrap?.classList.toggle("hidden", !isDelivery);
-  paymentWrap?.classList.toggle("hidden", !isDelivery);
-}
-
 async function saveNewOrder() {
   const rid = getRestaurantId();
-  const client = String(newClientName?.value || "").trim();
+  const client = String(newCustomer?.value || "").trim();
   const itens = parseItems(newItems?.value);
 
-  const service_type = newServiceType?.value === "delivery" ? "delivery" : "local";
+  const isDelivery = !!newDelivery?.checked;
+  const service_type = isDelivery ? "delivery" : "local";
   const address = String(newAddress?.value || "").trim();
   const payment_method = String(newPayment?.value || "").trim();
+
+  const phoneRaw = String(newPhone?.value || "").trim();
+  const client_phone = phoneRaw ? phoneRaw : null; // backend vai normalizar
 
   if (!rid || !client || !itens) {
     alert("Preencha cliente e itens.");
     return;
   }
 
-  if (service_type === "delivery" && !address) {
+  if (isDelivery && !address) {
     alert("Endereço é obrigatório para delivery.");
     return;
   }
 
-  if (service_type === "delivery" && !payment_method) {
+  if (isDelivery && !payment_method) {
     alert("Forma de pagamento é obrigatória para delivery.");
     return;
   }
@@ -560,11 +589,12 @@ async function saveNewOrder() {
     const body = {
       restaurant_id: rid,
       client_name: client,
+      client_phone, // ✅ opcional
       itens,
       notes: String(newNotes?.value || ""),
       service_type,
-      address: service_type === "delivery" ? address : null,
-      payment_method: service_type === "delivery" ? payment_method : null,
+      address: isDelivery ? address : null,
+      payment_method: isDelivery ? payment_method : null,
     };
 
     const resp = await fetch(API_URL, {
@@ -583,6 +613,90 @@ async function saveNewOrder() {
     console.error(e);
     alert("Erro ao criar pedido.");
   }
+}
+
+// ===== CRM =====
+async function fetchCRM() {
+  const restaurantId = getRestaurantId();
+  if (!restaurantId) return;
+
+  try {
+    const resp = await fetch(`${CRM_URL}/${restaurantId}`);
+    const data = await resp.json().catch(() => ([]));
+
+    if (!resp.ok) {
+      alert(data?.error || "Erro ao carregar CRM");
+      return;
+    }
+
+    crmClients = Array.isArray(data) ? data : [];
+    renderCRM();
+  } catch (e) {
+    console.error("Erro CRM:", e);
+    alert("Erro ao carregar CRM");
+  }
+}
+
+function renderCRM() {
+  if (!crmContent) return;
+
+  crmContent.innerHTML = "";
+
+  const table = document.createElement("table");
+  table.className = "crm-table";
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Cliente</th>
+        <th>Telefone</th>
+        <th>Pedidos</th>
+        <th>Última compra</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+
+  const tbody = table.querySelector("tbody");
+
+  crmClients.forEach((c) => {
+    const tr = document.createElement("tr");
+    const phone = features.crm ? (c.client_phone || c.client_id || "—") : "🔒";
+
+    tr.innerHTML = `
+      <td>${escapeHtml(c.client_name || "Cliente")}</td>
+      <td>${escapeHtml(phone)}</td>
+      <td>${Number(c.orders || 0)}</td>
+      <td>${escapeHtml(formatDateTime(c.last_order_at))}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  crmContent.appendChild(table);
+}
+
+// ===== RESULTS =====
+function renderResults() {
+  // métricas usando o array orders já carregado
+  const total = orders.length;
+
+  const delivery = orders.filter(
+    (o) => String(o.service_type || "").toLowerCase() === "delivery"
+  ).length;
+
+  const local = total - delivery;
+
+  // clientes únicos: usa telefone se tiver; senão usa nome
+  const uniqueKeys = new Set();
+  for (const o of orders) {
+    const phone = normalizePhone(o.client_phone);
+    if (phone) uniqueKeys.add(`p:${phone}`);
+    else uniqueKeys.add(`n:${String(o.client_name || "").trim().toLowerCase()}`);
+  }
+
+  if (resultTotalOrdersEl) resultTotalOrdersEl.textContent = String(total);
+  if (resultUniqueClientsEl) resultUniqueClientsEl.textContent = String(uniqueKeys.size);
+  if (resultDeliveryOrdersEl) resultDeliveryOrdersEl.textContent = String(delivery);
+  if (resultLocalOrdersEl) resultLocalOrdersEl.textContent = String(local);
 }
 
 // ===== EMPTY BALLOONS =====
@@ -630,14 +744,20 @@ async function completeLogin(user) {
     localStorage.setItem("restaurant_id", data.restaurant.id);
     localStorage.setItem("user", JSON.stringify(user));
 
-    // 🔹 CRM — plano e acesso (calculado no front pra não depender do backend)
+    // plano e acesso
     restaurantPlan = (data?.restaurant?.plan || "basic").toLowerCase();
+
+    // CRM: pro+
     features.crm = ["pro", "advanced", "custom"].includes(restaurantPlan);
-    applyCRMAccess();
+
+    // Resultados: pro+ (se quiser advanced+ depois, troque aqui)
+    features.results = ["pro", "advanced", "custom"].includes(restaurantPlan);
+
+    applyAccessUI();
 
     // UI
     loginScreen?.classList.add("hidden");
-    board?.classList.remove("hidden");
+    showBoard();
 
     if (userChip) userChip.hidden = false;
     if (userNameEl) userNameEl.textContent = user.name || "Usuário";
@@ -693,41 +813,58 @@ function initGoogleButton(attempt = 0) {
 }
 
 // ===== EVENTS =====
+
+// Modal order
 closeModalBtn?.addEventListener("click", closeOrderModal);
 closeModalSecondaryBtn?.addEventListener("click", closeOrderModal);
-modalBackdrop?.addEventListener("click", (e) => { if (e.target === modalBackdrop) closeOrderModal(); });
+modalBackdrop?.addEventListener("click", (e) => {
+  if (e.target === modalBackdrop) closeOrderModal();
+});
 
-modalNextBtn?.addEventListener("click", () => { if (activeOrderId) advanceStatus(activeOrderId); });
-modalPrevBtn?.addEventListener("click", () => { if (activeOrderId) regressStatus(activeOrderId); });
-modalCancelBtn?.addEventListener("click", () => { if (activeOrderId) cancelOrder(activeOrderId); });
+modalNextBtn?.addEventListener("click", () => {
+  if (activeOrderId) advanceStatus(activeOrderId);
+});
+modalPrevBtn?.addEventListener("click", () => {
+  if (activeOrderId) regressStatus(activeOrderId);
+});
+modalCancelBtn?.addEventListener("click", () => {
+  if (activeOrderId) cancelOrder(activeOrderId);
+});
 
+// Create modal
 openCreateBtn?.addEventListener("click", openCreateModal);
 closeCreateBtn?.addEventListener("click", closeCreateModal);
 cancelCreateBtn?.addEventListener("click", closeCreateModal);
 saveCreateBtn?.addEventListener("click", saveNewOrder);
 
-createModal?.addEventListener("click", (e) => { if (e.target === createModal) closeCreateModal(); });
+createModal?.addEventListener("click", (e) => {
+  if (e.target === createModal) closeCreateModal();
+});
 
+newDelivery?.addEventListener("change", updateCreateDeliveryVisibility);
+
+// Tabs
 tabAtivos?.addEventListener("click", () => changeView("ativos"));
 tabFinalizados?.addEventListener("click", () => changeView("finalizados"));
 tabCancelados?.addEventListener("click", () => changeView("cancelados"));
 tabEntregas?.addEventListener("click", () => changeView("entregas"));
-
-newServiceType?.addEventListener("change", updateCreateDeliveryVisibility);
 
 // Drawer open/close
 openDrawerBtn?.addEventListener("click", () => {
   drawer?.classList.add("open");
   drawerBackdrop?.classList.add("open");
 });
-closeDrawerBtn?.addEventListener("click", () => {
-  drawer?.classList.remove("open");
-  drawerBackdrop?.classList.remove("open");
-});
-drawerBackdrop?.addEventListener("click", () => {
-  drawer?.classList.remove("open");
-  drawerBackdrop?.classList.remove("open");
-});
+closeDrawerBtn?.addEventListener("click", closeDrawer);
+drawerBackdrop?.addEventListener("click", closeDrawer);
+
+// Drawer navigation
+drawerOrdersBtn?.addEventListener("click", showBoard);
+drawerCrmBtn?.addEventListener("click", showCRM);
+drawerResultsBtn?.addEventListener("click", showResults);
+
+// Back buttons (views)
+crmBackBtn?.addEventListener("click", showBoard);
+resultsBackBtn?.addEventListener("click", showBoard);
 
 // Unauthorized
 unauthClose?.addEventListener("click", () => closeBackdrop(unauthorizedModal));
@@ -742,9 +879,11 @@ logoutBtn?.addEventListener("click", () => {
 // ===== INIT =====
 window.addEventListener("load", async () => {
   initGoogleButton();
-
-  // aplica visibilidade inicial do create
   updateCreateDeliveryVisibility();
+
+  // inicia na view de pedidos
+  showBoard();
+  changeView("ativos");
 
   // tenta auto-login
   const savedUserRaw = localStorage.getItem("user");
@@ -753,8 +892,9 @@ window.addEventListener("load", async () => {
   if (savedUser?.email) {
     await completeLogin(savedUser);
   } else {
-    // se não está logado, garante que o CRM não esteja aberto
+    // não logado
     crmView?.classList.add("hidden");
+    resultsView?.classList.add("hidden");
     board?.classList.add("hidden");
     loginScreen?.classList.remove("hidden");
   }
