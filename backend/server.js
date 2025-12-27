@@ -290,49 +290,51 @@ app.get("/crm/:restaurant_id", async (req, res) => {
       return sendError(res, 500, "Erro ao buscar CRM");
     }
 
-    // Agrupa por client_phone (ID)
-    const clients = Object.create(null);
+const clients = Object.create(null);
 
-    for (const o of data || []) {
-      const phoneKey = normalizePhone(o.client_phone);
+for (const o of data || []) {
+  const phoneKey = normalizePhone(o.client_phone);
+  if (!phoneKey) continue; // sem telefone = fora do CRM
 
-      // Sem telefone? não entra no CRM
-      if (!phoneKey) continue;
-
-      if (!clients[phoneKey]) {
-        clients[phoneKey] = {
-          client_id: phoneKey, // 🔹 ID = telefone normalizado
-          client_name: o.client_name || "",
-          client_phone: phoneKey,
-          orders: 0,
-          last_order_at: o.created_at || null,
-          last_service_type: o.service_type || null,
-        };
-      }
-
-      // Atualiza nome se vier melhor preenchido
-      if (!clients[phoneKey].client_name && o.client_name) {
-        clients[phoneKey].client_name = o.client_name;
-      }
-
-      clients[phoneKey].orders += 1;
-      clients[phoneKey].last_order_at = o.created_at || clients[phoneKey].last_order_at;
-      clients[phoneKey].last_service_type =
-        o.service_type || clients[phoneKey].last_service_type;
-    }
-
-    // Ordena por última compra (mais recente primeiro)
-    const result = Object.values(clients).sort((a, b) => {
-      const ta = a.last_order_at ? new Date(a.last_order_at).getTime() : 0;
-      const tb = b.last_order_at ? new Date(b.last_order_at).getTime() : 0;
-      return tb - ta;
-    });
-
-    return res.json(result);
-  } catch (err) {
-    return sendError(res, 500, "Erro ao buscar CRM");
+  if (!clients[phoneKey]) {
+    clients[phoneKey] = {
+      client_name: "",            // vamos preencher corretamente
+      client_phone: phoneKey,
+      orders: 0,
+      last_order_at: null,
+    };
   }
+
+  clients[phoneKey].orders += 1;
+
+  const currTime = o.created_at ? new Date(o.created_at).getTime() : 0;
+  const prevTime = clients[phoneKey].last_order_at
+    ? new Date(clients[phoneKey].last_order_at).getTime()
+    : 0;
+
+  // Atualiza "última compra" sempre
+  if (currTime >= prevTime) {
+    clients[phoneKey].last_order_at = o.created_at || clients[phoneKey].last_order_at;
+  }
+
+  // Atualiza nome SOMENTE se vier um nome válido
+  const name = String(o.client_name || "").trim();
+  if (name) {
+    // se esse pedido é mais recente, usa esse nome; se não tiver nome ainda, também usa
+    if (currTime >= prevTime || !clients[phoneKey].client_name) {
+      clients[phoneKey].client_name = name;
+    }
+  }
+}
+
+const result = Object.values(clients).sort((a, b) => {
+  const ta = a.last_order_at ? new Date(a.last_order_at).getTime() : 0;
+  const tb = b.last_order_at ? new Date(b.last_order_at).getTime() : 0;
+  return tb - ta;
 });
+
+return res.json(result);
+
 
 app.post("/auth/google", async (req, res) => {
   try {
