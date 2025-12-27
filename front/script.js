@@ -418,7 +418,7 @@ function openOrderModal(orderId) {
       const li = document.createElement("li");
       const name = it?.name || it?.nome || "Item";
       const qty = it?.qty || it?.quantidade || 1;
-      li.textContent = `${name} x${qty}`;
+      li.textContent = qty > 1 ? `${name} x${qty}` : `${name}`;
       modalItems.appendChild(li);
     });
   }
