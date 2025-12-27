@@ -178,23 +178,77 @@ app.post("/orders", async (req, res) => {
   }
 });
 
-app.get("/orders/:restaurant_id", async (req, res) => {
+app.get("/crm/:restaurant_id", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
 
+    if (!restaurant_id) {
+      return sendError(res, 400, "restaurant_id é obrigatório");
+    }
+
+    const plan = await getRestaurantPlan(restaurant_id);
+    if (!canUseCRM(plan)) {
+      return sendError(res, 403, "Plano não permite acesso ao CRM");
+    }
+
+    const exists = await restaurantExists(restaurant_id);
+    if (!exists) {
+      return sendError(res, 404, "Restaurante não encontrado");
+    }
+
     const { data, error } = await supabase
       .from("orders")
-      .select("*")
+      .select("id, client_name, client_phone, created_at")
       .eq("restaurant_id", restaurant_id)
       .order("created_at", { ascending: true });
 
     if (error) {
-      return sendError(res, 500, "Erro ao listar pedidos");
+      return sendError(res, 500, "Erro ao buscar CRM");
     }
 
-    return res.json(data);
+    const clients = Object.create(null);
+
+    for (const o of data || []) {
+      // Usa telefone se houver, senão gera um ID anônimo com base no pedido
+      const phoneKey = normalizePhone(o.client_phone);
+      const key = phoneKey || `anon-${o.id}`;
+
+      if (!clients[key]) {
+        clients[key] = {
+          client_name: o.client_name || "(Sem nome)",
+          client_phone: phoneKey || "—",
+          orders: 0,
+          last_order_at: null,
+        };
+      }
+
+      clients[key].orders += 1;
+
+      const currTime = o.created_at ? new Date(o.created_at).getTime() : 0;
+      const prevTime = clients[key].last_order_at
+        ? new Date(clients[key].last_order_at).getTime()
+        : 0;
+
+      if (currTime >= prevTime) {
+        clients[key].last_order_at = o.created_at || clients[key].last_order_at;
+      }
+
+      // Atualiza nome se for mais recente ou não tiver nome ainda
+      const name = String(o.client_name || "").trim();
+      if (name && (currTime >= prevTime || !clients[key].client_name)) {
+        clients[key].client_name = name;
+      }
+    }
+
+    const result = Object.values(clients).sort((a, b) => {
+      const ta = a.last_order_at ? new Date(a.last_order_at).getTime() : 0;
+      const tb = b.last_order_at ? new Date(b.last_order_at).getTime() : 0;
+      return tb - ta;
+    });
+
+    return res.json(result);
   } catch (err) {
-    return sendError(res, 500, "Erro ao listar pedidos");
+    return sendError(res, 500, "Erro ao buscar CRM");
   }
 });
 
