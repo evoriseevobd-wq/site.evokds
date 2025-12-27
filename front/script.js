@@ -699,11 +699,28 @@ function renderResults() {
   if (resultLocalOrdersEl) resultLocalOrdersEl.textContent = String(local);
 }
 
-// ===== EMPTY BALLOONS =====
 function toggleNoOrdersBalloons() {
-  // mantém a lógica atual do seu código
-  // (não removi nada)
+  const col = columns?.caminho;
+  if (!col) return;
+
+  // remove balão antigo
+  const existing = document.getElementById("no-deliveries-balloon");
+  if (existing) existing.remove();
+
+  // só mostra na aba Entrega
+  if (currentView !== "entregas") return;
+
+  const hasDeliveries = orders.some((o) => o._frontStatus === "caminho");
+  if (hasDeliveries) return;
+
+  const balloon = document.createElement("div");
+  balloon.id = "no-deliveries-balloon";
+  balloon.className = "empty-balloon";
+  balloon.textContent = "Sem entregas no momento.";
+
+  col.appendChild(balloon);
 }
+
 
 // ===== GOOGLE AUTH =====
 function parseJwt(token) {
