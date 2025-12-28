@@ -1040,10 +1040,10 @@ select.results-pill option {
 
 /* Ajuste fino das larguras (preenche o balão e evita buracos) */
 #crm-view th:nth-child(1),
-#crm-view td:nth-child(1) { width: 34%; }  /* Cliente */
+#crm-view td:nth-child(1) { width: 30%; }  /* Cliente */
 
 #crm-view th:nth-child(2),
-#crm-view td:nth-child(2) { width: 26%; }  /* Telefone */
+#crm-view td:nth-child(2) { width: 30%; }  /* Telefone */
 
 #crm-view th:nth-child(3),
 #crm-view td:nth-child(3) { width: 12%; }  /* Pedidos */
@@ -1052,119 +1052,8 @@ select.results-pill option {
 #crm-view td:nth-child(4) { width: 28%; }  /* Última compra */
 /* =========================
 /* =======================
-   Esconder Primeira Fileira de Resultados
-========================= */
-#results-view .results-grid:first-of-type,
-#results-view .results-cards:first-of-type,
-#results-view .stats-grid:first-of-type,
-#results-view .metrics-grid:first-of-type {
-  display: none !important;
-}
-
 /* =======================
-   Gráfico - Layout e Personalização
-========================= */
-#results-view .results-chart-wrap,
-#results-view .chart-wrap,
-#results-view .chart-container {
-  background: rgba(46, 8, 8, 0.55);
-  border: 1px solid rgba(91, 28, 28, 0.85);
-  border-radius: 16px;
-  padding: 14px;
-  overflow: hidden;
-  margin-top: 10px;
-}
-
-/* =======================
-   Insights - Cards e Organize
-========================= */
-#results-view .insights-wrap {
-  margin-top: 14px;
-  background: rgba(59, 16, 16, 0.55);
-  border: 1px solid rgba(91, 28, 28, 0.85);
-  border-radius: 16px;
-  padding: 14px;
-}
-
-#results-view .insights-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(260px, 1fr));
-  gap: 12px;
-}
-
-#results-view .insight-card {
-  background: rgba(46, 8, 8, 0.35);
-  border: 1px solid rgba(91, 28, 28, 0.55);
-  border-radius: 16px;
-  padding: 12px 14px;
-}
-
-/* =======================
-   Recursos Avançados - Balão Bonito e Chamativo
-========================= */
-#results-view .custom-upsell {
-  margin-top: 24px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(37, 11, 11, 0.45));
-  border-radius: 16px;
-  padding: 14px;
-  border: 1px solid rgba(249, 115, 115, 0.55);
-  box-shadow: 0 8px 16px rgba(46, 8, 8, 0.55);
-}
-
-#results-view .custom-upsell h4 {
-  font-weight: 900;
-  letter-spacing: 0.3px;
-  color: #ff4757;
-  margin: 0 0 12px 0;
-  font-size: 20px;
-}
-
-#results-view .custom-upsell ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-#results-view .custom-upsell ul li {
-  font-size: 14px;
-  margin: 8px 0;
-  color: rgba(252, 228, 228, 0.8);
-}
-
-#results-view .custom-upsell ul li i {
-  color: #ff4757;
-  margin-right: 8px;
-}
-
-#results-view .custom-upsell .link-container {
-  margin-top: 12px;
-}
-
-#results-view .custom-upsell .link-container a {
-  text-decoration: none;
-  color: #ff4757;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-#results-view .custom-upsell .link-container a:hover {
-  text-decoration: underline;
-}
-
-/* =======================
-   RESPONSIVE
-========================= */
-@media (max-width: 1100px) {
-  #results-view .results-grid { grid-template-columns: repeat(2, minmax(210px, 1fr)); }
-  #results-view .insights-grid { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 720px) {
-  #results-view .results-grid { grid-template-columns: 1fr; }
-}
-
-/* =======================
-   Remover Primeira Fileira de Resultados
+   Remover a Primeira Fileira de Resultados
 ========================= */
 #results-view .results-grid:first-of-type,
 #results-view .results-cards:first-of-type,
@@ -1257,4 +1146,75 @@ select.results-pill option {
   border: 1px solid rgba(91, 28, 28, 0.55);
   border-radius: 16px;
   padding: 12px 14px;
+}
+
+/* =======================
+   Recursos Avançados - Balão Bonito e Chamativo
+========================= */
+#results-view .custom-upsell {
+  margin-top: 24px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(37, 11, 11, 0.45));
+  border-radius: 16px;
+  padding: 14px;
+  border: 1px solid rgba(249, 115, 115, 0.55);
+  box-shadow: 0 8px 16px rgba(46, 8, 8, 0.55);
+}
+
+#results-view .custom-upsell h4 {
+  font-weight: 900;
+  letter-spacing: 0.3px;
+  color: #ff4757;
+  margin: 0 0 12px 0;
+  font-size: 20px;
+}
+
+#results-view .custom-upsell ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#results-view .custom-upsell ul li {
+  font-size: 14px;
+  margin: 8px 0;
+  color: rgba(252, 228, 228, 0.8);
+}
+
+#results-view .custom-upsell ul li i {
+  color: #ff4757;
+  margin-right: 8px;
+}
+
+#results-view .custom-upsell .link-container {
+  margin-top: 12px;
+}
+
+#results-view .custom-upsell .link-container a {
+  text-decoration: none;
+  color: #ff4757;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+#results-view .custom-upsell .link-container a:hover {
+  text-decoration: underline;
+}
+
+/* =======================
+   Responsivo
+========================= */
+@media (max-width: 1100px) {
+  #results-view .results-grid { grid-template-columns: repeat(2, minmax(210px, 1fr)); }
+  #results-view .insights-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  #results-view .results-grid { grid-template-columns: 1fr; }
+}
+
+/* =======================
+   Adicionar Espaço Inferior
+========================= */
+#results-view {
+  padding-bottom: 50px;  /* Adiciona mais espaço abaixo para não ficar colado */
 }
