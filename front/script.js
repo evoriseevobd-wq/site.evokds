@@ -210,12 +210,103 @@ function buildHeaders() {
   return { "Content-Type": "application/json" };
 }
 
+// Função para obter o plano do restaurante a partir do Supabase
 async function getRestaurantPlan(restaurant_id) {
   const { data, error } = await supabase
     .from("restaurants")
     .select("plan")
     .eq("id", restaurant_id)
     .single();
+
+  if (error) return "basic";  // Retorna "basic" se ocorrer erro
+
+  return (data?.plan || "basic").toLowerCase();  // Retorna o plano do restaurante
+}
+
+// Função para verificar se os Resultados podem ser acessados (somente plano ADVANCED)
+function canUseResults(plan) {
+  return plan === "advanced";
+}
+
+// Função para verificar se o CRM pode ser acessado (planos PRO e ADVANCED)
+function canUseCRM(plan) {
+  return plan === "pro" || plan === "advanced";
+}
+
+// Função para verificar se a Gestão de Pedidos pode ser acessada (todos os planos, exceto "basic")
+function canUseOrders(plan) {
+  return plan === "basic" || plan === "pro" || plan === "advanced";
+}
+
+// Função para aplicar as permissões de acordo com o plano do restaurante
+async function applyAccessUI() {
+  const restaurant_id = getRestaurantIdFromSession(); // Função para pegar o ID do restaurante da sessão
+  const plan = await getRestaurantPlan(restaurant_id);  // Obtém o plano do restaurante
+
+  // Controla a visibilidade no menu lateral para cada funcionalidade
+  const isBasic = plan === 'basic';
+  const isPro = plan === 'pro';
+  const isAdvanced = plan === 'advanced';
+
+  // Libera ou bloqueia a "Gestão de Pedidos"
+  drawerOrdersBtn?.classList.toggle("locked", !isBasic && !isPro && !isAdvanced); // Liberado para BASIC, PRO, ADVANCED
+
+  // Libera ou bloqueia o "CRM de Clientes"
+  drawerCrmBtn?.classList.toggle("locked", !(isPro || isAdvanced));  // Liberado para PRO e ADVANCED
+
+  // Libera ou bloqueia os "Resultados"
+  drawerResultsBtn?.classList.toggle("locked", !isAdvanced);  // Liberado apenas para o plano ADVANCED
+}
+
+// Chame essa função após o login ou quando o plano do restaurante for identificado
+applyAccessUI();
+
+// Função para abrir o CRM
+function showCRM() {
+  if (!(restaurantPlan === "pro" || restaurantPlan === "advanced")) {
+    alert("Este recurso está disponível apenas no plano PRO ou Advanced.");
+    return;
+  }
+  // Aqui você coloca o código para exibir a tela de CRM
+}
+
+// Função para abrir os Resultados
+function showResults() {
+  if (restaurantPlan !== "advanced") {
+    alert("Este recurso está disponível apenas no plano Advanced.");
+    return;
+  }
+  // Aqui você coloca o código para exibir a tela de Resultados
+}
+
+// Função para abrir a Gestão de Pedidos
+function showOrders() {
+  if (!(restaurantPlan === "basic" || restaurantPlan === "pro" || restaurantPlan === "advanced")) {
+    alert("Acesso negado. Requer plano BASIC, PRO ou ADVANCED.");
+    return;
+  }
+  // Aqui você coloca o código para exibir a tela de Gestão de Pedidos
+}
+
+// Função de login com Google
+document.getElementById('google-login-btn').addEventListener('click', () => {
+  signInWithGoogle();
+});
+
+// Função de login com Google
+async function signInWithGoogle() {
+  const { user, session, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+  });
+
+  if (error) {
+    alert('Erro ao fazer login: ' + error.message);
+  } else {
+    // Quando o login for bem-sucedido, atualize a interface conforme o plano
+    console.log(user, session);
+    applyAccessUI();  // Atualiza a interface conforme o plano do restaurante
+  }
+}
 
 async function applyAccessUI() {
   const restaurant_id = getRestaurantIdFromSession(); // Função para pegar o id do restaurante
@@ -314,14 +405,7 @@ function showCRM() {
     alert("Este recurso está disponível apenas em planos superiores.");
     return;
   }
-  // Aqui entra o código para mostrar a interface do CRM.
-}
 
-function showResults() {
-  if (!features.results) {
-    alert("Este recurso está disponível apenas em planos superiores.");
-    return;
-  }
   // Aqui entra o código para mostrar a interface de Resultados.
 }
 
