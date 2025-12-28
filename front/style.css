@@ -1018,14 +1018,34 @@ select.results-pill option {
   table-layout: fixed;
 }
 
-#crm-view th, #crm-view td {
-  padding: 18px 16px;
+/* =========================
+   CRM - Centralização + Distribuição de colunas
+   (cole no FINAL do style.css)
+========================= */
+#crm-view table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+#crm-view th,
+#crm-view td {
+  text-align: center;      /* centraliza os textos */
+  vertical-align: middle;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding: 18px 16px;      /* mais “respiro” */
 }
 
-#crm-view th:nth-child(1), #crm-view td:nth-child(1) { width: 34%; }
-#crm-view th:nth-child(2), #crm-view td:nth-child(2) { width: 24%; }
-#crm-view th:nth-child(3), #crm-view td:nth-child(3) { width: 12%; text-align: center; }
-#crm-view th:nth-child(4), #crm-view td:nth-child(4) { width: 30%; }
+/* Ajuste fino das larguras (preenche o balão e evita buracos) */
+#crm-view th:nth-child(1),
+#crm-view td:nth-child(1) { width: 34%; }  /* Cliente */
+
+#crm-view th:nth-child(2),
+#crm-view td:nth-child(2) { width: 26%; }  /* Telefone */
+
+#crm-view th:nth-child(3),
+#crm-view td:nth-child(3) { width: 12%; }  /* Pedidos */
+
+#crm-view th:nth-child(4),
+#crm-view td:nth-child(4) { width: 28%; }  /* Última compra */
