@@ -720,6 +720,28 @@ body.mode-results .tabs {
 /* =======================
    RESULTS EXEC (novo layout limpo)
 ======================= */
+/* =======================
+   RESULTS VIEW (esconder elementos antigos)
+======================= */
+/* Remove textos soltos e elementos antigos da view de resultados */
+.results-view > p,
+.results-view > div:not(.results-content):not(.results-header),
+.results-view > span,
+.results-view > small {
+  display: none !important;
+}
+
+/* Remove cards antigos de métricas que aparecem antes do layout novo */
+.results-view .results-grid:first-of-type,
+.results-view .result-card:not(.results-exec-root .result-card) {
+  display: none !important;
+}
+
+/* Esconde qualquer texto direto dentro de results-view */
+.results-view::before {
+  content: none !important;
+}
+
 .results-exec-root {
   display: flex;
   flex-direction: column;
