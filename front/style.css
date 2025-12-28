@@ -1052,7 +1052,6 @@ select.results-pill option {
 #crm-view td:nth-child(4) { width: 28%; }  /* Última compra */
 /* =========================
 /* =======================
-/* =======================
    Remover a Primeira Fileira de Resultados
 ========================= */
 #results-view .results-grid:first-of-type,
@@ -1095,7 +1094,7 @@ select.results-pill option {
 }
 
 /* =======================
-   Results - Design Moderno
+   Resultados - Mudança da linha Delivery para azul
 ========================= */
 #results-view .results-grid {
   display: grid;
@@ -1125,6 +1124,17 @@ select.results-pill option {
 }
 
 /* =======================
+   Mudança na cor da linha Delivery para azul e o balão de delivery
+========================= */
+#results-view .chart-container .line-delivery {
+  stroke: #3498db;  /* Cor azul para a linha Delivery */
+}
+
+#results-view .chart-container .circle-delivery {
+  fill: #3498db;  /* Cor azul para a bolinha de Delivery */
+}
+
+/* =======================
    Insights - Layout Clean
 ========================= */
 #results-view .insights-wrap {
@@ -1149,7 +1159,7 @@ select.results-pill option {
 }
 
 /* =======================
-   Recursos Avançados - Balão Bonito e Chamativo
+   Recursos Avançados - Balão bonito e chamativo
 ========================= */
 #results-view .custom-upsell {
   margin-top: 24px;
