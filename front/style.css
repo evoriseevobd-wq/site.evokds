@@ -510,21 +510,21 @@ body.mode-results .tabs {
 }
 
 .login-badge {
-  width: 74px;
-  height: 74px;
+  width: 120px;  /* Aumentado de 74px */
+  height: 120px;  /* Aumentado de 74px */
   margin: 0 auto 10px;
   border-radius: 18px;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, rgba(185, 28, 28, 1), rgba(249, 115, 115, 1));
+  background: transparent;  /* Removido o gradiente - agora fica transparente */
+  border: none;  /* Remove qualquer borda se houver */
 }
 
 .login-logo {
-  width: 44px;
-  height: 44px;
+  width: 120px;  /* Aumentado de 44px - agora a fênix ocupa todo o espaço */
+  height: 120px;  /* Aumentado de 44px */
   object-fit: contain;
 }
-
 .google-btn { display: flex; justify-content: center; margin-top: 12px; }
 
 /* =======================
