@@ -1,4 +1,3 @@
-
 :root {
   --bg: #0e0e0e;
   --surface: #3b1010;
@@ -15,10 +14,10 @@
   --primary: #f97373;
   --shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
 
-  /* Chart colors */
-  --chart-total: rgba(252, 228, 228, 0.9);
-  --chart-delivery: #38bdf8; /* azul */
-  --chart-local: #22c55e;
+  /* ✅ Chart colors CORRIGIDAS */
+  --chart-total: rgba(139, 92, 246, 0.85);  /* ROXO para barras */
+  --chart-delivery: rgba(56, 189, 248, 0.85);  /* AZUL para linha delivery */
+  --chart-local: rgba(34, 197, 94, 0.85);  /* VERDE para linha local */
 }
 
 /* =======================
@@ -102,8 +101,6 @@ body {
   box-shadow: 0 12px 24px rgba(249, 115, 115, 0.15);
 }
 
-/* ✅ Esconde as tabs (Ativos/Finalizados/Cancelados/Entrega) quando estiver em CRM/Resultados
-   (precisa do JS colocar body.classList.add('mode-crm') / 'mode-results') */
 body.mode-crm .tabs,
 body.mode-results .tabs {
   display: none !important;
@@ -187,7 +184,7 @@ body.mode-results .tabs {
 }
 
 /* =======================
-   ORDER CARD (novo - compat script.js)
+   ORDER CARD (novo)
 ======================= */
 .order-card {
   background: rgba(46, 8, 8, 0.85);
@@ -484,7 +481,6 @@ body.mode-results .tabs {
   user-select: none;
 }
 
-/* ✅ Compat com JS: usa .hidden (não .visible) */
 .delivery-address { display: block; margin-top: 10px; }
 .payment-wrap { display: block; margin-top: 10px; }
 
@@ -665,10 +661,23 @@ body.mode-results .tabs {
   box-shadow: var(--shadow);
 }
 
-/* ✅ Mais espaçamento no CRM (o que você pediu) */
+/* =======================
+   CRM TABLE
+======================= */
 .crm-table {
+  width: 100%;
   border-collapse: separate;
-  border-spacing: 0 14px; /* mais afastado entre linhas */
+  border-spacing: 0 14px;
+  table-layout: fixed;
+}
+
+.crm-table thead th {
+  text-align: center;
+  padding: 12px 16px;
+  color: rgba(252, 228, 228, 0.75);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
 }
 
 .crm-table tbody tr {
@@ -677,76 +686,44 @@ body.mode-results .tabs {
 }
 
 .crm-table tbody td {
-  padding: 18px 16px; /* mais respiro */
+  text-align: center;
+  vertical-align: middle;
+  padding: 18px 16px;
   border-bottom: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* arredonda a linha inteira */
 .crm-table tbody tr td:first-child {
   border-top-left-radius: 12px;
   border-bottom-left-radius: 12px;
 }
+
 .crm-table tbody tr td:last-child {
   border-top-right-radius: 12px;
   border-bottom-right-radius: 12px;
 }
 
-/* =======================
-   RESULTS VIEW (MVP cards)
-======================= */
-.results-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(180px, 1fr));
-  gap: 14px;
-}
+.crm-table th:nth-child(1),
+.crm-table td:nth-child(1) { width: 30%; }
 
-.result-card {
-  background: rgba(46, 8, 8, 0.55);
-  border: 1px solid rgba(91, 28, 28, 0.85);
-  border-radius: 16px;
-  padding: 14px;
-}
+.crm-table th:nth-child(2),
+.crm-table td:nth-child(2) { width: 30%; }
 
-.result-label {
-  color: rgba(252, 228, 228, 0.75);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-}
+.crm-table th:nth-child(3),
+.crm-table td:nth-child(3) { width: 12%; }
 
-.result-value {
-  margin-top: 8px;
-  font-weight: 900;
-  font-size: 28px;
-}
-
-/* ✅ Remove o texto “financeiro/ticket médio…” */
-.results-note {
-  display: none !important;
-}
+.crm-table th:nth-child(4),
+.crm-table td:nth-child(4) { width: 28%; }
 
 /* =======================
-   RESPONSIVE
-======================= */
-@media (max-width: 1100px) {
-  .board { grid-template-columns: repeat(2, minmax(260px, 1fr)); }
-  .results-grid { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
-}
-
-@media (max-width: 720px) {
-  .board { grid-template-columns: 1fr; }
-  .brand { font-size: 22px; }
-  .tabs { overflow-x: auto; }
-  .results-grid { grid-template-columns: 1fr; }
-}
-
-/* =======================
-   RESULTS EXEC / INSIGHTS (novo)
+   RESULTS EXEC (novo layout limpo)
 ======================= */
 .results-exec-root {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
 }
 
 .results-exec-head {
@@ -791,13 +768,11 @@ body.mode-results .tabs {
   box-shadow: 0 12px 24px rgba(249, 115, 115, 0.12);
 }
 
-/* ✅ SELECTS (dropdowns) com visual moderno */
-select.results-pill,
-.results-exec-filters select.results-pill {
+select.results-pill {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  padding-right: 44px; /* espaço pro ícone */
+  padding-right: 44px;
   line-height: 1;
   background-image:
     linear-gradient(45deg, transparent 50%, rgba(252,228,228,0.85) 50%),
@@ -826,7 +801,7 @@ select.results-pill option {
 }
 
 /* =======================
-   CHART
+   CHART (gráfico SVG)
 ======================= */
 .results-exec-chart {
   background: rgba(46, 8, 8, 0.55);
@@ -842,12 +817,14 @@ select.results-pill option {
   display: block;
 }
 
+/* ✅ LEGENDA - cores corretas */
 .results-exec-legend {
-  margin-top: 10px;
+  margin-top: 12px;
   display: flex;
   gap: 14px;
   flex-wrap: wrap;
   font-weight: 800;
+  font-size: 13px;
   color: rgba(252, 228, 228, 0.9);
 }
 
@@ -855,48 +832,42 @@ select.results-pill option {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 8px 12px;
   border-radius: 999px;
   border: 1px solid rgba(91, 28, 28, 0.55);
   background: rgba(46, 8, 8, 0.35);
 }
 
 .legend-dot {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 999px;
   display: inline-block;
 }
 
-.legend-total { background: var(--chart-total); }
-.legend-delivery { background: rgba(56, 189, 248, 0.9); }
-.legend-local { background: rgba(34, 197, 94, 0.9); }
+/* ✅ Cores corretas na legenda */
+.legend-total { background: var(--chart-total); }  /* ROXO */
+.legend-delivery { background: var(--chart-delivery); }  /* AZUL */
+.legend-local { background: var(--chart-local); }  /* VERDE */
 
-/* ✅ Força a LINHA do delivery a ficar AZUL (mesmo se o SVG vier com stroke inline) */
-.results-exec-chart .line-delivery,
-.results-exec-chart .series-delivery,
-.results-exec-chart [data-series="delivery"],
-.results-exec-chart path.delivery,
-.results-exec-chart polyline.delivery {
-  stroke: var(--chart-delivery) !important;
+/* ✅ FORÇAR cores no SVG (barras e linhas) */
+.results-exec-chart svg rect {
+  fill: var(--chart-total) !important;  /* barras ROXAS */
 }
 
-/* (opcional) mantém local verde e total claro se existirem classes/attrs */
-.results-exec-chart .line-local,
-.results-exec-chart .series-local,
-.results-exec-chart [data-series="local"],
-.results-exec-chart path.local,
-.results-exec-chart polyline.local {
-  stroke: var(--chart-local) !important;
-}
-.results-exec-chart .line-total,
-.results-exec-chart .series-total,
-.results-exec-chart [data-series="total"],
-.results-exec-chart path.total,
-.results-exec-chart polyline.total {
-  stroke: var(--chart-total) !important;
+.results-exec-chart svg path:nth-of-type(1) {
+  stroke: var(--chart-delivery) !important;  /* linha delivery AZUL */
+  fill: none !important;
 }
 
+.results-exec-chart svg path:nth-of-type(2) {
+  stroke: var(--chart-local) !important;  /* linha local VERDE */
+  fill: none !important;
+}
+
+/* =======================
+   CARDS (métricas)
+======================= */
 .results-exec-cards {
   display: grid;
   grid-template-columns: repeat(4, minmax(180px, 1fr));
@@ -915,6 +886,7 @@ select.results-pill option {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.8px;
+  margin: 0;
 }
 
 .metric-value {
@@ -929,11 +901,14 @@ select.results-pill option {
   color: rgba(229, 194, 194, 0.9);
 }
 
+/* =======================
+   INSIGHTS (novo layout limpo)
+======================= */
 .results-exec-insights {
   background: rgba(59, 16, 16, 0.55);
   border: 1px solid rgba(91, 28, 28, 0.85);
   border-radius: 16px;
-  padding: 14px;
+  padding: 18px;
   box-shadow: var(--shadow);
 }
 
@@ -943,7 +918,7 @@ select.results-pill option {
   align-items: flex-start;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  margin-bottom: 14px;
 }
 
 .insights-title {
@@ -951,6 +926,7 @@ select.results-pill option {
   font-weight: 900;
   letter-spacing: 0.6px;
   font-size: 16px;
+  color: rgba(252, 228, 228, 0.95);
 }
 
 .insights-subtitle {
@@ -959,17 +935,25 @@ select.results-pill option {
   color: rgba(229, 194, 194, 0.9);
 }
 
+/* Grid com 4 cards de insights */
 .insights-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(280px, 1fr));
   gap: 12px;
+  margin-bottom: 18px;
 }
 
+/* Cada card de insight individual */
 .insight-card {
   background: rgba(46, 8, 8, 0.35);
   border: 1px solid rgba(91, 28, 28, 0.55);
   border-radius: 16px;
-  padding: 12px 14px;
+  padding: 14px 16px;
+  transition: transform 0.15s ease;
+}
+
+.insight-card:hover {
+  transform: translateY(-2px);
 }
 
 .insight-label {
@@ -977,301 +961,106 @@ select.results-pill option {
   text-transform: uppercase;
   letter-spacing: 0.8px;
   color: rgba(252, 228, 228, 0.75);
+  margin: 0;
 }
 
 .insight-value {
   margin-top: 8px;
   font-weight: 900;
   font-size: 22px;
+  color: rgba(252, 228, 228, 0.95);
 }
 
 .insight-note {
   margin-top: 6px;
   font-size: 12px;
   color: rgba(229, 194, 194, 0.9);
+  line-height: 1.4;
 }
 
-.insight-locked {
-  opacity: 0.55;
-  filter: grayscale(0.15);
+/* ✅ BALÃO DE RECURSOS CUSTOM (design premium e chamativo) */
+.insights-locked {
+  background: linear-gradient(145deg, rgba(249, 115, 115, 0.08), rgba(46, 8, 8, 0.65));
+  border: 2px solid rgba(249, 115, 115, 0.55);
+  border-radius: 18px;
+  padding: 20px 22px;
+  box-shadow: 0 12px 28px rgba(249, 115, 115, 0.18), 
+              0 4px 12px rgba(0, 0, 0, 0.35);
   position: relative;
+  overflow: hidden;
 }
 
-.insight-locked::after {
-  content: "🔒";
+/* Efeito de brilho sutil no topo */
+.insights-locked::before {
+  content: "";
   position: absolute;
-  top: 12px;
-  right: 12px;
-  opacity: 0.9;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(249, 115, 115, 0.4), 
+    transparent
+  );
 }
 
+.locked-title {
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: 0.4px;
+  color: rgba(249, 115, 115, 1);
+  margin: 0 0 14px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.locked-title::before {
+  content: "🔒";
+  font-size: 20px;
+}
+
+/* Lista de recursos custom */
+.locked-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.locked-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(46, 8, 8, 0.45);
+  border: 1px solid rgba(91, 28, 28, 0.65);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(252, 228, 228, 0.90);
+  transition: all 0.2s ease;
+}
+
+.locked-item:hover {
+  background: rgba(46, 8, 8, 0.65);
+  border-color: rgba(249, 115, 115, 0.45);
+  transform: translateX(4px);
+}
+
+/* =======================
+   RESPONSIVE
+======================= */
 @media (max-width: 1100px) {
+  .board { grid-template-columns: repeat(2, minmax(260px, 1fr)); }
   .results-exec-cards { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
   .insights-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 720px) {
+  .board { grid-template-columns: 1fr; }
+  .brand { font-size: 22px; }
+  .tabs { overflow-x: auto; }
   .results-exec-cards { grid-template-columns: 1fr; }
-}
-/* CRM: aplica na tabela que estiver dentro do container do CRM */
-#crm-view table {
-  width: 100%;
-  table-layout: fixed;
-}
-
-/* =========================
-   CRM - Centralização + Distribuição de colunas
-   (cole no FINAL do style.css)
-========================= */
-#crm-view table {
-  width: 100%;
-  table-layout: fixed;
-}
-
-#crm-view th,
-#crm-view td {
-  text-align: center;      /* centraliza os textos */
-  vertical-align: middle;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding: 18px 16px;      /* mais “respiro” */
-}
-
-/* Ajuste fino das larguras (preenche o balão e evita buracos) */
-#crm-view th:nth-child(1),
-#crm-view td:nth-child(1) { width: 30%; }  /* Cliente */
-
-#crm-view th:nth-child(2),
-#crm-view td:nth-child(2) { width: 30%; }  /* Telefone */
-
-#crm-view th:nth-child(3),
-#crm-view td:nth-child(3) { width: 12%; }  /* Pedidos */
-
-#crm-view th:nth-child(4),
-#crm-view td:nth-child(4) { width: 28%; }  /* Última compra */
-/* =========================
-/* =======================
-   Remover a Primeira Fileira de Resultados
-========================= */
-#results-view .results-grid:first-of-type,
-#results-view .results-cards:first-of-type,
-#results-view .stats-grid:first-of-type,
-#results-view .metrics-grid:first-of-type {
-  display: none !important;
-}
-
-/* =======================
-   Header mais clean
-========================= */
-#results-view .results-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 8px 0 14px;
-}
-
-#results-view .results-title {
-  font-size: 18px;
-  font-weight: 900;
-  letter-spacing: 0.4px;
-  margin: 0;
-}
-
-/* =======================
-   Gráfico: container moderno
-========================= */
-#results-view .results-chart-wrap,
-#results-view .chart-wrap,
-#results-view .chart-container {
-  background: rgba(46, 8, 8, 0.55);
-  border: 1px solid rgba(91, 28, 28, 0.85);
-  border-radius: 16px;
-  padding: 14px;
-  overflow: hidden;
-  margin-top: 10px;
-}
-
-/* =======================
-   Resultados - Mudança da linha Delivery para azul
-========================= */
-#results-view .results-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(210px, 1fr));
-  gap: 14px;
-  margin-top: 14px;
-}
-
-#results-view .result-card {
-  background: rgba(46, 8, 8, 0.55);
-  border: 1px solid rgba(91, 28, 28, 0.85);
-  border-radius: 16px;
-  padding: 14px;
-}
-
-#results-view .result-label {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: rgba(252, 228, 228, 0.75);
-}
-
-#results-view .result-value {
-  margin-top: 8px;
-  font-weight: 900;
-  font-size: 30px;
-}
-
-/* =======================
-   Mudança na cor da linha Delivery para azul e o balão de delivery
-========================= */
-#results-view .chart-container .line-delivery {
-  stroke: #3498db;  /* Cor azul para a linha Delivery */
-}
-
-#results-view .chart-container .circle-delivery {
-  fill: #3498db;  /* Cor azul para a bolinha de Delivery */
-}
-
-/* =======================
-   Insights - Layout Clean
-========================= */
-#results-view .insights-wrap {
-  margin-top: 14px;
-  background: rgba(59, 16, 16, 0.55);
-  border: 1px solid rgba(91, 28, 28, 0.85);
-  border-radius: 16px;
-  padding: 14px;
-}
-
-#results-view .insights-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(260px, 1fr));
-  gap: 12px;
-}
-
-#results-view .insight-card {
-  background: rgba(46, 8, 8, 0.35);
-  border: 1px solid rgba(91, 28, 28, 0.55);
-  border-radius: 16px;
-  padding: 12px 14px;
-}
-
-/* =======================
-   Recursos Avançados - Balão bonito e chamativo
-========================= */
-#results-view .custom-upsell {
-  margin-top: 24px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(37, 11, 11, 0.45));
-  border-radius: 16px;
-  padding: 14px;
-  border: 1px solid rgba(249, 115, 115, 0.55);
-  box-shadow: 0 8px 16px rgba(46, 8, 8, 0.55);
-}
-
-#results-view .custom-upsell h4 {
-  font-weight: 900;
-  letter-spacing: 0.3px;
-  color: #ff4757;
-  margin: 0 0 12px 0;
-  font-size: 20px;
-}
-
-#results-view .custom-upsell ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-#results-view .custom-upsell ul li {
-  font-size: 14px;
-  margin: 8px 0;
-  color: rgba(252, 228, 228, 0.8);
-}
-
-#results-view .custom-upsell ul li i {
-  color: #ff4757;
-  margin-right: 8px;
-}
-
-#results-view .custom-upsell .link-container {
-  margin-top: 12px;
-}
-
-#results-view .custom-upsell .link-container a {
-  text-decoration: none;
-  color: #ff4757;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-#results-view .custom-upsell .link-container a:hover {
-  text-decoration: underline;
-}
-
-/* =======================
-   Responsivo
-========================= */
-@media (max-width: 1100px) {
-  #results-view .results-grid { grid-template-columns: repeat(2, minmax(210px, 1fr)); }
-  #results-view .insights-grid { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 720px) {
-  #results-view .results-grid { grid-template-columns: 1fr; }
-}
-
-/* =======================
-   Adicionar Espaço Inferior
-========================= */
-#results-view {
-  padding-bottom: 50px;  /* Adiciona mais espaço abaixo para não ficar colado */
-}
-/* Linha Delivery Azul (cobertura ampla) */
-#results-view path.delivery,
-#results-view polyline[data-series="delivery"],
-#results-view .line-delivery,
-#results-view .series-delivery,
-#results-view .results-chart-wrap svg .delivery {
-  stroke: #3498db !important;
-  fill: none !important;
-}
-
-/* Bolinha Delivery Azul */
-#results-view circle.delivery,
-#results-view circle[data-series="delivery"] {
-  fill: #3498db !important;
-  stroke: #3498db !important;
-}
-
-/* Balão Custom bonito */
-#results-view .custom-upsell,
-#results-view .insights-wrap .custom-upsell,
-#results-view .results-grid .custom-upsell {
-  display: block !important;
-  background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(37,11,11,0.45)) !important;
-  border: 2px solid #ff4757 !important;
-  border-radius: 18px !important;
-  padding: 16px 18px !important;
-  box-shadow: 0px 8px 18px rgba(0,0,0,0.4) !important;
-  margin-top: 18px !important;
-}
-
-#results-view .custom-upsell h4 {
-  font-size: 19px !important;
-  font-weight: 900 !important;
-  color: #ff6b81 !important;
-  margin-bottom: 10px !important;
-}
-
-#results-view .custom-upsell ul li {
-  font-size: 15px !important;
-  color: #f0e6e6 !important;
-  margin: 6px 0 !important;
-}
-
-#results-view .custom-upsell ul li i {
-  color: #ff6b81 !important;
-  margin-right: 8px !important;
+  .insights-grid { grid-template-columns: 1fr; }
 }
