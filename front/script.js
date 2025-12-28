@@ -94,7 +94,7 @@ const unauthorizedModal = document.getElementById("unauthorized-modal");
 const unauthClose = document.getElementById("unauth-close");
 
 // ===== ORDER MODAL (IDs do seu index.html) =====
-const modalBackdrop = document.getElementById("modal"); // backdrop inteiro
+const modalBackdrop = document.getElementById("modal");
 const closeModalBtn = document.getElementById("close-modal");
 const closeModalSecondaryBtn = document.getElementById("close-modal-secondary");
 
@@ -127,9 +127,9 @@ const saveCreateBtn = document.getElementById("save-create");
 
 // Create fields
 const newCustomer = document.getElementById("new-customer");
-const newPhone = document.getElementById("new-phone"); // opcional
+const newPhone = document.getElementById("new-phone");
 const newItems = document.getElementById("new-items");
-const newDelivery = document.getElementById("new-delivery"); // checkbox
+const newDelivery = document.getElementById("new-delivery");
 const deliveryAddressWrap = document.getElementById("delivery-address-wrap");
 const newAddress = document.getElementById("new-address");
 const paymentWrap = document.getElementById("payment-wrap");
@@ -153,8 +153,8 @@ let crmClients = [];
 
 // Results state (Executive)
 const resultsState = {
-  period: "7d", // hoje | 3d | 7d | 30d | tudo
-  type: "all", // all | delivery | local
+  period: "7d",
+  type: "all",
   uiReady: false,
 };
 
@@ -210,154 +210,44 @@ function buildHeaders() {
   return { "Content-Type": "application/json" };
 }
 
-// Função para obter o plano do restaurante a partir do Supabase
-async function getRestaurantPlan(restaurant_id) {
-  const { data, error } = await supabase
-    .from("restaurants")
-    .select("plan")
-    .eq("id", restaurant_id)
-    .single();
-
-  if (error) return "basic";  // Retorna "basic" se ocorrer erro
-
-  return (data?.plan || "basic").toLowerCase();  // Retorna o plano do restaurante
+function getRestaurantId() {
+  return localStorage.getItem("restaurant_id");
 }
 
-// Função para verificar se os Resultados podem ser acessados (somente plano ADVANCED)
-function canUseResults(plan) {
-  return plan === "advanced";
+function normalizePhone(phone) {
+  const p = String(phone || "").replace(/\D/g, "");
+  return p || null;
 }
 
-// Função para verificar se o CRM pode ser acessado (planos PRO e ADVANCED)
+// ===== FUNÇÕES DE CONTROLE DE PLANO (UNIFICADAS) =====
 function canUseCRM(plan) {
-  return plan === "pro" || plan === "advanced";
+  return plan === "pro" || plan === "advanced" || plan === "custom";
 }
 
-// Função para verificar se a Gestão de Pedidos pode ser acessada (todos os planos, exceto "basic")
+function canUseResults(plan) {
+  return plan === "advanced" || plan === "custom";
+}
+
 function canUseOrders(plan) {
-  return plan === "basic" || plan === "pro" || plan === "advanced";
+  // Todos os planos têm acesso à gestão de pedidos
+  return true;
 }
 
-// Função para aplicar as permissões de acordo com o plano do restaurante
-async function applyAccessUI() {
-  const restaurant_id = getRestaurantIdFromSession(); // Função para pegar o ID do restaurante da sessão
-  const plan = await getRestaurantPlan(restaurant_id);  // Obtém o plano do restaurante
-
-  // Controla a visibilidade no menu lateral para cada funcionalidade
-  const isBasic = plan === 'basic';
-  const isPro = plan === 'pro';
-  const isAdvanced = plan === 'advanced';
-
-  // Libera ou bloqueia a "Gestão de Pedidos"
-  drawerOrdersBtn?.classList.toggle("locked", !isBasic && !isPro && !isAdvanced); // Liberado para BASIC, PRO, ADVANCED
-
-  // Libera ou bloqueia o "CRM de Clientes"
-  drawerCrmBtn?.classList.toggle("locked", !(isPro || isAdvanced));  // Liberado para PRO e ADVANCED
-
-  // Libera ou bloqueia os "Resultados"
-  drawerResultsBtn?.classList.toggle("locked", !isAdvanced);  // Liberado apenas para o plano ADVANCED
+function applyAccessUI() {
+  const plan = restaurantPlan.toLowerCase();
+  
+  // Atualiza features baseado no plano
+  features.crm = canUseCRM(plan);
+  features.results = canUseResults(plan);
+  
+  // Controla visibilidade no menu lateral
+  drawerCrmBtn?.classList.toggle("locked", !features.crm);
+  drawerResultsBtn?.classList.toggle("locked", !features.results);
 }
 
-// Chame essa função após o login ou quando o plano do restaurante for identificado
-applyAccessUI();
-
-// Função para abrir o CRM
-function showCRM() {
-  if (!(restaurantPlan === "pro" || restaurantPlan === "advanced")) {
-    alert("Este recurso está disponível apenas no plano PRO ou Advanced.");
-    return;
-  }
-  // Aqui você coloca o código para exibir a tela de CRM
-}
-
-// Função para abrir os Resultados
-function showResults() {
-  if (restaurantPlan !== "advanced") {
-    alert("Este recurso está disponível apenas no plano Advanced.");
-    return;
-  }
-  // Aqui você coloca o código para exibir a tela de Resultados
-}
-
-// Função para abrir a Gestão de Pedidos
-function showOrders() {
-  if (!(restaurantPlan === "basic" || restaurantPlan === "pro" || restaurantPlan === "advanced")) {
-    alert("Acesso negado. Requer plano BASIC, PRO ou ADVANCED.");
-    return;
-  }
-  // Aqui você coloca o código para exibir a tela de Gestão de Pedidos
-}
-
-// Função de login com Google
-document.getElementById('google-login-btn').addEventListener('click', () => {
-  signInWithGoogle();
-});
-
-// Função de login com Google
-async function signInWithGoogle() {
-  const { user, session, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-  });
-
-  if (error) {
-    alert('Erro ao fazer login: ' + error.message);
-  } else {
-    // Quando o login for bem-sucedido, atualize a interface conforme o plano
-    console.log(user, session);
-    applyAccessUI();  // Atualiza a interface conforme o plano do restaurante
-  }
-}
-
-async function applyAccessUI() {
-  const restaurant_id = getRestaurantIdFromSession(); // Função para pegar o id do restaurante
-  const plan = await getRestaurantPlan(restaurant_id);  // Obtém o plano do restaurante
-
-  // Controle da visibilidade no menu lateral para cada funcionalidade
-  const isBasic = plan === 'basic';
-  const isPro = plan === 'pro';
-  const isAdvanced = plan === 'advanced';
-
-  // Gestão de Pedidos
-  drawerOrdersBtn?.classList.toggle("locked", !isBasic && !isPro && !isAdvanced); // Somente plano BASIC, PRO ou ADVANCED tem acesso
-
-  // CRM
-  drawerCrmBtn?.classList.toggle("locked", !isPro && !isAdvanced);  // Somente plano PRO ou ADVANCED tem acesso ao CRM
-
-  // Resultados
-  drawerResultsBtn?.classList.toggle("locked", !isAdvanced);  // Somente plano ADVANCED tem acesso aos Resultados
-}
-
-// Chame essa função ao carregar a página ou após a autenticação do restaurante
-applyAccessUI();
-
-// Função para abrir o CRM
-function showCRM() {
-  if (!(restaurantPlan === "pro" || restaurantPlan === "advanced")) {
-    alert("Este recurso está disponível apenas no plano PRO ou Advanced.");
-    return;
-  }
-  // Exibe o CRM
-  // Código para mostrar a tela de CRM
-}
-
-// Função para abrir os Resultados
-function showResults() {
-  if (restaurantPlan !== "advanced") {
-    alert("Este recurso está disponível apenas no plano Advanced.");
-    return;
-  }
-  // Exibe os Resultados
-  // Código para mostrar a tela de Resultados
-}
-
-// Função para abrir a Gestão de Pedidos
-function showOrders() {
-  if (!(restaurantPlan === "basic" || restaurantPlan === "pro" || restaurantPlan === "advanced")) {
-    alert("Acesso negado. Requer plano BASIC, PRO ou ADVANCED.");
-    return;
-  }
-  // Exibe a tela de Gestão de Pedidos
-  // Código para mostrar a tela de Gestão de Pedidos
+function closeDrawer() {
+  drawer?.classList.remove("open");
+  drawerBackdrop?.classList.remove("open");
 }
 
 // ===== TABS VISIBILITY (Ativos/Finalizados/Cancelados/Entrega) =====
@@ -393,31 +283,32 @@ function showBoard() {
   crmView?.classList.add("hidden");
   resultsView?.classList.add("hidden");
   board?.classList.remove("hidden");
-
-  // ✅ Tabs só no board
   showTabsBar();
-
   closeDrawer();
 }
 
 function showCRM() {
   if (!features.crm) {
-    alert("Este recurso está disponível apenas em planos superiores.");
+    alert("Este recurso está disponível apenas nos planos PRO e ADVANCED.");
     return;
   }
 
-  // Aqui entra o código para mostrar a interface de Resultados.
+  hideTabsBar();
+  board?.classList.add("hidden");
+  resultsView?.classList.add("hidden");
+  crmView?.classList.remove("hidden");
+  closeDrawer();
+
+  fetchCRM();
 }
 
 function showResults() {
   if (!features.results) {
-    alert("Este recurso está disponível apenas em planos superiores.");
+    alert("Este recurso está disponível apenas no plano ADVANCED.");
     return;
   }
 
-  // ✅ some tabs nos Resultados
   hideTabsBar();
-
   board?.classList.add("hidden");
   crmView?.classList.add("hidden");
   resultsView?.classList.remove("hidden");
@@ -425,16 +316,6 @@ function showResults() {
 
   ensureResultsExecutiveUI();
   renderResultsExecutive();
-}
-
-function applyAccessUI() {
-  // Para o plano Basic
-  drawerCrmBtn?.classList.toggle("locked", !features.crm);
-  drawerResultsBtn?.classList.toggle("locked", !features.results);
-  
-  // Controlar a gestão de pedidos - somente no plano BASIC
-  const isBasic = restaurantPlan === 'basic';
-  drawerOrdersBtn?.classList.toggle("locked", !isBasic);  // Adicionando o controle de acesso da gestão de pedidos
 }
 
 // ===== VIEWS (Kanban Tabs) =====
@@ -580,7 +461,6 @@ function openOrderModal(orderId) {
   if (modalCustomer) modalCustomer.textContent = order.client_name || "Cliente";
   if (modalTime) modalTime.textContent = formatDateTime(order.created_at);
 
-  // telefone (se existir)
   const phone = normalizePhone(order.client_phone);
   if (modalPhoneRow && modalPhone) {
     const hasPhone = !!phone;
@@ -588,7 +468,6 @@ function openOrderModal(orderId) {
     modalPhone.textContent = hasPhone ? phone : "";
   }
 
-  // itens
   if (modalItems) {
     modalItems.innerHTML = "";
     const itens = Array.isArray(order.itens) ? order.itens : [];
@@ -601,44 +480,37 @@ function openOrderModal(orderId) {
     });
   }
 
-  // observações
   if (modalNotes) modalNotes.textContent = order.notes || "";
 
   const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
 
-  // endereço (somente delivery)
   if (modalAddressRow && modalAddress) {
     const showAddress = isDelivery && !!String(order.address || "").trim();
     modalAddressRow.style.display = showAddress ? "" : "none";
     modalAddress.textContent = showAddress ? String(order.address || "") : "";
   }
 
-  // pagamento (somente delivery)
   if (modalPaymentRow && modalPayment) {
     const showPay = isDelivery && !!String(order.payment_method || "").trim();
     modalPaymentRow.style.display = showPay ? "" : "none";
     modalPayment.textContent = showPay ? String(order.payment_method || "") : "";
   }
 
-  // botões de etapa
   modalPrevBtn?.classList.toggle("hidden", currentView === "cancelados");
   modalCancelBtn?.classList.toggle("hidden", currentView === "cancelados");
 
-  // texto do botão "próximo"
   if (modalNextBtn) {
     const s = getFrontStatus(orderId);
-const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
-
-const nextLabel =
-  s === "recebido"
-    ? "Ir para Preparo"
-    : s === "preparo"
-    ? "Ir para Pronto"
-    : s === "pronto"
-    ? (isDelivery ? "Enviar para entrega" : "Finalizar pedido")
-    : s === "caminho"
-    ? "Finalizar"
-    : "OK";
+    const nextLabel =
+      s === "recebido"
+        ? "Ir para Preparo"
+        : s === "preparo"
+        ? "Ir para Pronto"
+        : s === "pronto"
+        ? (isDelivery ? "Enviar para entrega" : "Finalizar pedido")
+        : s === "caminho"
+        ? "Finalizar"
+        : "OK";
     modalNextBtn.textContent = nextLabel;
     modalNextBtn.classList.toggle("hidden", s === "finalizado" || s === "cancelado");
   }
@@ -657,16 +529,32 @@ function getFrontStatus(orderId) {
 }
 
 function advanceStatus(orderId) {
+  const o = orders.find((x) => x.id === orderId);
+  if (!o) return;
+  
   const s = getFrontStatus(orderId);
-  const seq = ["recebido", "preparo", "pronto", "caminho", "finalizado"];
+  const isDelivery = String(o.service_type || "").toLowerCase() === "delivery";
+  
+  const seq = isDelivery 
+    ? ["recebido", "preparo", "pronto", "caminho", "finalizado"]
+    : ["recebido", "preparo", "pronto", "finalizado"];
+  
   const i = seq.indexOf(s);
   if (i === -1 || i === seq.length - 1) return;
   updateOrderStatus(orderId, seq[i + 1]);
 }
 
 function regressStatus(orderId) {
+  const o = orders.find((x) => x.id === orderId);
+  if (!o) return;
+  
   const s = getFrontStatus(orderId);
-  const seq = ["recebido", "preparo", "pronto", "caminho", "finalizado"];
+  const isDelivery = String(o.service_type || "").toLowerCase() === "delivery";
+  
+  const seq = isDelivery 
+    ? ["recebido", "preparo", "pronto", "caminho", "finalizado"]
+    : ["recebido", "preparo", "pronto", "finalizado"];
+  
   const i = seq.indexOf(s);
   if (i <= 0) return;
   updateOrderStatus(orderId, seq[i - 1]);
@@ -706,12 +594,10 @@ function parseItems(raw) {
   const s = String(raw || "").trim();
   if (!s) return null;
 
-  // 1) tenta JSON
   try {
     const obj = JSON.parse(s);
     return Array.isArray(obj) ? obj : null;
   } catch {
-    // 2) tenta por vírgula
     if (s.includes(",")) {
       const parts = s
         .split(",")
@@ -721,7 +607,6 @@ function parseItems(raw) {
       if (parts.length) return parts.map((name) => ({ name, qty: 1 }));
     }
 
-    // 3) fallback por linhas, aceitando "nome x2"
     const lines = s
       .split("\n")
       .map((x) => x.trim())
@@ -748,7 +633,7 @@ async function saveNewOrder() {
   const payment_method = String(newPayment?.value || "").trim();
 
   const phoneRaw = String(newPhone?.value || "").trim();
-  const client_phone = phoneRaw ? phoneRaw : null; // backend vai normalizar
+  const client_phone = phoneRaw ? phoneRaw : null;
 
   if (!rid || !client || !itens) {
     alert("Preencha cliente e itens.");
@@ -769,7 +654,7 @@ async function saveNewOrder() {
     const body = {
       restaurant_id: rid,
       client_name: client,
-      client_phone, // ✅ opcional
+      client_phone,
       itens,
       notes: String(newNotes?.value || ""),
       service_type,
@@ -888,7 +773,6 @@ function getPeriodRange(periodKey) {
     };
   }
 
-  // tudo
   let min = nowMs;
   for (const o of orders) {
     const t = new Date(o.created_at).getTime();
@@ -919,12 +803,11 @@ function filterOrdersForResults(range, typeKey) {
 }
 
 function uniqueClientsCount(list) {
-  // Regra: telefone identifica cliente; sem telefone = anônimo por pedido
   const set = new Set();
   for (const o of list) {
     const phone = normalizePhone(o.client_phone);
     if (phone) set.add(`p:${phone}`);
-    else set.add(`anon:${o.id}`); // cada pedido sem telefone conta como 1 cliente único anônimo
+    else set.add(`anon:${o.id}`);
   }
   return set.size;
 }
@@ -966,9 +849,8 @@ function bucketKeyDay(d) {
 }
 
 function buildSeries(range, list) {
-  const map = new Map(); // key -> { total, delivery, local }
+  const map = new Map();
 
-  // init buckets
   if (range.bucket === "hour") {
     for (let h = 0; h < 24; h++) map.set(String(h), { total: 0, delivery: 0, local: 0 });
   } else {
@@ -1023,7 +905,6 @@ function niceStep(maxVal) {
 function ensureResultsExecutiveUI() {
   if (!resultsView) return;
 
-  // prefer container interno, se existir
   let container = resultsView.querySelector(".results-content");
   if (!container) {
     container = document.createElement("div");
@@ -1184,10 +1065,8 @@ function renderChartSVG(svg, range, series) {
 
   const n = series.labels.length || 1;
 
-  // build svg
   const parts = [];
 
-  // background grid & y labels
   const ticks = 5;
   for (let i = 0; i <= ticks; i++) {
     const val = (maxY * i) / ticks;
@@ -1198,7 +1077,6 @@ function renderChartSVG(svg, range, series) {
     );
   }
 
-  // bars (total)
   const barW = Math.max(6, Math.min(26, plotW / Math.max(10, n)));
   for (let i = 0; i < n; i++) {
     const cx = x(i, n);
@@ -1211,7 +1089,6 @@ function renderChartSVG(svg, range, series) {
     );
   }
 
-  // line path helper
   function buildPath(values) {
     let d = "";
     for (let i = 0; i < n; i++) {
@@ -1222,17 +1099,14 @@ function renderChartSVG(svg, range, series) {
     return d;
   }
 
-  // delivery line
   parts.push(
     `<path d="${buildPath(series.delivery)}" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="3" />`
   );
 
-  // local line
   parts.push(
     `<path d="${buildPath(series.local)}" fill="none" stroke="rgba(34,197,94,0.85)" stroke-width="3" />`
   );
 
-  // x labels (sparse)
   const labelEvery = range.bucket === "hour" ? 4 : Math.ceil(n / 7);
   for (let i = 0; i < n; i++) {
     if (i % Math.max(1, labelEvery) !== 0 && i !== n - 1) continue;
@@ -1297,17 +1171,13 @@ function computeTopItems(list) {
 }
 
 function renderResultsExecutive() {
-  // garante UI
   ensureResultsExecutiveUI();
 
-  // range atual
   const range = getPeriodRange(resultsState.period);
   const list = filterOrdersForResults(range, resultsState.type);
 
-  // resumo atual
   const curr = computeSummary(list);
 
-  // range anterior (mesma duração)
   const span = Math.max(1, range.endMs - range.startMs);
   const prevRange = {
     ...range,
@@ -1317,13 +1187,11 @@ function renderResultsExecutive() {
   const prevList = filterOrdersForResults(prevRange, resultsState.type);
   const prev = computeSummary(prevList);
 
-  // atualiza IDs antigos (compatibilidade)
   if (resultTotalOrdersEl) resultTotalOrdersEl.textContent = String(curr.total);
   if (resultUniqueClientsEl) resultUniqueClientsEl.textContent = String(curr.unique);
   if (resultDeliveryOrdersEl) resultDeliveryOrdersEl.textContent = String(curr.delivery);
   if (resultLocalOrdersEl) resultLocalOrdersEl.textContent = String(curr.local);
 
-  // atualiza cards novos
   const root = resultsView?.querySelector(".results-exec-root");
   if (root) {
     const setMetric = (key, val) => {
@@ -1348,12 +1216,10 @@ function renderResultsExecutive() {
       if (el) el.textContent = `Comparado ao período anterior: ${subs[k]}`;
     });
 
-    // gráfico
     const series = buildSeries(range, list);
     const svg = root.querySelector("#results-chart-svg");
     renderChartSVG(svg, range, series);
 
-    // insights
     const deltaTotal = formatPct(pctChange(curr.total, prev.total));
     const deltaTotalEl = root.querySelector(`[data-insight="deltaTotal"]`);
     const deltaTotalNote = root.querySelector(`[data-insight-note="deltaTotal"]`);
@@ -1383,7 +1249,6 @@ function renderResultsExecutive() {
   }
 }
 
-// Mantém função antiga (caso você ainda chame em algum lugar)
 function renderResults() {
   renderResultsExecutive();
 }
@@ -1392,11 +1257,9 @@ function toggleNoOrdersBalloons() {
   const col = columns?.caminho;
   if (!col) return;
 
-  // remove balão antigo
   const existing = document.getElementById("no-deliveries-balloon");
   if (existing) existing.remove();
 
-  // só mostra na aba Entrega
   if (currentView !== "entregas") return;
 
   const hasDeliveries = orders.some((o) => o._frontStatus === "caminho");
@@ -1449,18 +1312,10 @@ async function completeLogin(user) {
     localStorage.setItem("restaurant_id", data.restaurant.id);
     localStorage.setItem("user", JSON.stringify(user));
 
-    // plano e acesso
     restaurantPlan = (data?.restaurant?.plan || "basic").toLowerCase();
-
-    // CRM: pro+
-    features.crm = ["pro", "advanced", "custom"].includes(restaurantPlan);
-
-    // Resultados: pro+ (se quiser advanced+ depois, troque aqui)
-    features.results = ["pro", "advanced", "custom"].includes(restaurantPlan);
 
     applyAccessUI();
 
-    // UI
     loginScreen?.classList.add("hidden");
     showBoard();
 
@@ -1519,7 +1374,6 @@ function initGoogleButton(attempt = 0) {
 
 // ===== EVENTS =====
 
-// Modal order
 closeModalBtn?.addEventListener("click", closeOrderModal);
 closeModalSecondaryBtn?.addEventListener("click", closeOrderModal);
 modalBackdrop?.addEventListener("click", (e) => {
@@ -1536,7 +1390,6 @@ modalCancelBtn?.addEventListener("click", () => {
   if (activeOrderId) cancelOrder(activeOrderId);
 });
 
-// Create modal
 openCreateBtn?.addEventListener("click", openCreateModal);
 closeCreateBtn?.addEventListener("click", closeCreateModal);
 cancelCreateBtn?.addEventListener("click", closeCreateModal);
@@ -1548,13 +1401,11 @@ createModal?.addEventListener("click", (e) => {
 
 newDelivery?.addEventListener("change", updateCreateDeliveryVisibility);
 
-// Tabs
 tabAtivos?.addEventListener("click", () => changeView("ativos"));
 tabFinalizados?.addEventListener("click", () => changeView("finalizados"));
 tabCancelados?.addEventListener("click", () => changeView("cancelados"));
 tabEntregas?.addEventListener("click", () => changeView("entregas"));
 
-// Drawer open/close
 openDrawerBtn?.addEventListener("click", () => {
   drawer?.classList.add("open");
   drawerBackdrop?.classList.add("open");
@@ -1562,26 +1413,15 @@ openDrawerBtn?.addEventListener("click", () => {
 closeDrawerBtn?.addEventListener("click", closeDrawer);
 drawerBackdrop?.addEventListener("click", closeDrawer);
 
-// Drawer navigation
-// Bloqueio de navegação do "drawer"
-drawerOrdersBtn?.addEventListener("click", () => {
-  if (restaurantPlan !== "basic") {
-    alert("Acesso negado. Requer plano básico.");
-    return;
-  }
-  showBoard();  // Aqui você mostra a interface da Gestão de Pedidos
-});
+drawerOrdersBtn?.addEventListener("click", showBoard);
 drawerCrmBtn?.addEventListener("click", showCRM);
 drawerResultsBtn?.addEventListener("click", showResults);
 
-// Back buttons (views)
 crmBackBtn?.addEventListener("click", showBoard);
 resultsBackBtn?.addEventListener("click", showBoard);
 
-// Unauthorized
 unauthClose?.addEventListener("click", () => closeBackdrop(unauthorizedModal));
 
-// Logout
 logoutBtn?.addEventListener("click", () => {
   localStorage.removeItem("restaurant_id");
   localStorage.removeItem("user");
@@ -1593,18 +1433,15 @@ window.addEventListener("load", async () => {
   initGoogleButton();
   updateCreateDeliveryVisibility();
 
-  // inicia na view de pedidos
   showBoard();
   changeView("ativos");
 
-  // tenta auto-login
   const savedUserRaw = localStorage.getItem("user");
   const savedUser = savedUserRaw ? JSON.parse(savedUserRaw) : null;
 
   if (savedUser?.email) {
     await completeLogin(savedUser);
   } else {
-    // não logado
     crmView?.classList.add("hidden");
     resultsView?.classList.add("hidden");
     board?.classList.add("hidden");
