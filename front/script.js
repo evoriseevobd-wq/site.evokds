@@ -217,23 +217,6 @@ async function getRestaurantPlan(restaurant_id) {
     .eq("id", restaurant_id)
     .single();
 
-  if (error) return "basic";  // Retorna "basic" se der erro na busca
-
-  return (data?.plan || "basic").toLowerCase();  // Retorna o plano do restaurante
-}
-
-function canUseResults(plan) {
-  return plan === "advanced";  // Apenas o plano Advanced pode acessar os Resultados
-}
-
-function canUseCRM(plan) {
-  return plan === "pro" || plan === "advanced";  // Plano PRO e Advanced têm acesso ao CRM
-}
-
-function canUseOrders(plan) {
-  return plan === "basic" || plan === "pro" || plan === "advanced";  // Todos os planos, exceto Basic, têm acesso à Gestão de Pedidos
-}
-
 async function applyAccessUI() {
   const restaurant_id = getRestaurantIdFromSession(); // Função para pegar o id do restaurante
   const plan = await getRestaurantPlan(restaurant_id);  // Obtém o plano do restaurante
