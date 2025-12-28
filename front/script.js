@@ -270,15 +270,15 @@ function showCRM() {
     alert("Este recurso está disponível apenas em planos superiores.");
     return;
   }
+  // Aqui entra o código para mostrar a interface do CRM.
+}
 
-  // ✅ some tabs no CRM
-  hideTabsBar();
-
-  board?.classList.add("hidden");
-  resultsView?.classList.add("hidden");
-  crmView?.classList.remove("hidden");
-  closeDrawer();
-  fetchCRM();
+function showResults() {
+  if (!features.results) {
+    alert("Este recurso está disponível apenas em planos superiores.");
+    return;
+  }
+  // Aqui entra o código para mostrar a interface de Resultados.
 }
 
 function showResults() {
@@ -300,8 +300,13 @@ function showResults() {
 }
 
 function applyAccessUI() {
-  if (drawerCrmBtn) drawerCrmBtn.classList.toggle("locked", !features.crm);
-  if (drawerResultsBtn) drawerResultsBtn.classList.toggle("locked", !features.results);
+  // Para o plano Basic
+  drawerCrmBtn?.classList.toggle("locked", !features.crm);
+  drawerResultsBtn?.classList.toggle("locked", !features.results);
+  
+  // Controlar a gestão de pedidos - somente no plano BASIC
+  const isBasic = restaurantPlan === 'basic';
+  drawerOrdersBtn?.classList.toggle("locked", !isBasic);  // Adicionando o controle de acesso da gestão de pedidos
 }
 
 // ===== VIEWS (Kanban Tabs) =====
@@ -1430,7 +1435,14 @@ closeDrawerBtn?.addEventListener("click", closeDrawer);
 drawerBackdrop?.addEventListener("click", closeDrawer);
 
 // Drawer navigation
-drawerOrdersBtn?.addEventListener("click", showBoard);
+// Bloqueio de navegação do "drawer"
+drawerOrdersBtn?.addEventListener("click", () => {
+  if (restaurantPlan !== "basic") {
+    alert("Acesso negado. Requer plano básico.");
+    return;
+  }
+  showBoard();  // Aqui você mostra a interface da Gestão de Pedidos
+});
 drawerCrmBtn?.addEventListener("click", showCRM);
 drawerResultsBtn?.addEventListener("click", showResults);
 
