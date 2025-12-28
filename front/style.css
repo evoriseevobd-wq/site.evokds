@@ -1064,3 +1064,234 @@ select.results-pill option {
   .results-exec-cards { grid-template-columns: 1fr; }
   .insights-grid { grid-template-columns: 1fr; }
 }
+
+/* =======================
+   MODAL DE UPGRADE (bloqueio de plano)
+======================= */
+.upgrade-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  animation: fadeIn 0.2s ease;
+}
+
+.upgrade-modal-backdrop.open {
+  display: flex;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.upgrade-modal {
+  width: min(520px, 92vw);
+  background: linear-gradient(145deg, rgba(59, 16, 16, 0.95), rgba(42, 11, 11, 0.98));
+  border: 2px solid rgba(249, 115, 115, 0.65);
+  border-radius: 22px;
+  padding: 28px 24px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65),
+              0 0 40px rgba(249, 115, 115, 0.25);
+  text-align: center;
+  position: relative;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Efeito de brilho no topo */
+.upgrade-modal::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(249, 115, 115, 0.8), 
+    transparent
+  );
+  border-radius: 2px;
+}
+
+.upgrade-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 16px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, rgba(249, 115, 115, 0.25), rgba(185, 28, 28, 0.35));
+  border: 2px solid rgba(249, 115, 115, 0.45);
+  font-size: 42px;
+  animation: pulse 2s ease infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.upgrade-title {
+  margin: 0 0 10px 0;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  color: rgba(249, 115, 115, 1);
+  text-shadow: 0 2px 8px rgba(249, 115, 115, 0.3);
+}
+
+.upgrade-message {
+  margin: 0 0 10px 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgba(252, 228, 228, 0.90);
+}
+
+.upgrade-plan {
+  display: inline-block;
+  padding: 6px 14px;
+  background: rgba(249, 115, 115, 0.18);
+  border: 1px solid rgba(249, 115, 115, 0.55);
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 13px;
+  color: rgba(249, 115, 115, 1);
+  margin: 8px 0 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.upgrade-features {
+  text-align: left;
+  background: rgba(46, 8, 8, 0.45);
+  border: 1px solid rgba(91, 28, 28, 0.65);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin: 16px 0 20px;
+}
+
+.upgrade-features-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: rgba(229, 194, 194, 0.85);
+  margin: 0 0 10px 0;
+}
+
+.upgrade-features ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upgrade-features li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: rgba(252, 228, 228, 0.88);
+}
+
+.upgrade-features li::before {
+  content: "✓";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(249, 115, 115, 0.25);
+  color: rgba(249, 115, 115, 1);
+  font-weight: 900;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.upgrade-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.upgrade-btn {
+  background: linear-gradient(90deg, rgba(185, 28, 28, 1), rgba(249, 115, 115, 1));
+  color: rgba(14, 14, 14, 1);
+  border: 0;
+  border-radius: 14px;
+  padding: 12px 24px;
+  font-weight: 900;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(249, 115, 115, 0.35);
+}
+
+.upgrade-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(249, 115, 115, 0.45);
+}
+
+.upgrade-btn:active {
+  transform: translateY(0);
+}
+
+.upgrade-close-btn {
+  background: transparent;
+  border: 1px solid rgba(91, 28, 28, 0.85);
+  color: rgba(252, 228, 228, 0.85);
+  border-radius: 14px;
+  padding: 12px 24px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.upgrade-close-btn:hover {
+  border-color: rgba(249, 115, 115, 0.6);
+  color: rgba(252, 228, 228, 1);
+}
+
+/* Botão X no canto */
+.upgrade-dismiss {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: rgba(46, 8, 8, 0.65);
+  color: rgba(252, 228, 228, 0.85);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 18px;
+  display: grid;
+  place-items: center;
+  transition: all 0.2s ease;
+}
+
+.upgrade-dismiss:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: rgba(239, 68, 68, 1);
+}
