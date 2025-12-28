@@ -1012,3 +1012,20 @@ select.results-pill option {
 @media (max-width: 720px) {
   .results-exec-cards { grid-template-columns: 1fr; }
 }
+/* CRM: aplica na tabela que estiver dentro do container do CRM */
+#crm-view table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+#crm-view th, #crm-view td {
+  padding: 18px 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#crm-view th:nth-child(1), #crm-view td:nth-child(1) { width: 34%; }
+#crm-view th:nth-child(2), #crm-view td:nth-child(2) { width: 24%; }
+#crm-view th:nth-child(3), #crm-view td:nth-child(3) { width: 12%; text-align: center; }
+#crm-view th:nth-child(4), #crm-view td:nth-child(4) { width: 30%; }
