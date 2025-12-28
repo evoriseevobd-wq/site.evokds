@@ -1201,3 +1201,109 @@ select.results-pill option {
 @media (max-width: 720px) {
   #results-view .results-grid { grid-template-columns: 1fr; }
 }
+/* =======================
+   Remove a Primeira Fileira de Resultados
+========================= */
+#results-view .results-grid:first-of-type,
+#results-view .results-cards:first-of-type,
+#results-view .stats-grid:first-of-type,
+#results-view .metrics-grid:first-of-type {
+  display: none !important;
+}
+
+/* =======================
+   Results - Design Moderno
+========================= */
+#results-view .results-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(210px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+#results-view .result-card {
+  background: rgba(46, 8, 8, 0.55);
+  border: 1px solid rgba(91, 28, 28, 0.85);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+#results-view .result-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: rgba(252, 228, 228, 0.75);
+}
+
+#results-view .result-value {
+  margin-top: 8px;
+  font-weight: 900;
+  font-size: 30px;
+}
+
+/* =======================
+   Gráfico - Layout e Personalização
+========================= */
+#results-view .results-chart-wrap,
+#results-view .chart-wrap,
+#results-view .chart-container {
+  background: rgba(46, 8, 8, 0.55);
+  border: 1px solid rgba(91, 28, 28, 0.85);
+  border-radius: 16px;
+  padding: 14px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+/* =======================
+   Insights - Cards e Organize
+========================= */
+#results-view .insights-wrap {
+  margin-top: 14px;
+  background: rgba(59, 16, 16, 0.55);
+  border: 1px solid rgba(91, 28, 28, 0.85);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+#results-view .insights-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+#results-view .insight-card {
+  background: rgba(46, 8, 8, 0.35);
+  border: 1px solid rgba(91, 28, 28, 0.55);
+  border-radius: 16px;
+  padding: 12px 14px;
+}
+
+/* =======================
+   Recursos Avançados - Balão Separado
+========================= */
+#results-view .custom-upsell {
+  margin-top: 12px;
+  background: rgba(46, 8, 8, 0.35);
+  border: 1px dashed rgba(249, 115, 115, 0.45);
+  border-radius: 16px;
+  padding: 12px 14px;
+}
+
+#results-view .custom-upsell h4 {
+  margin: 0 0 8px 0;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+}
+
+/* =======================
+   RESPONSIVE
+========================= */
+@media (max-width: 1100px) {
+  #results-view .results-grid { grid-template-columns: repeat(2, minmax(210px, 1fr)); }
+  #results-view .insights-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  #results-view .results-grid { grid-template-columns: 1fr; }
+}
