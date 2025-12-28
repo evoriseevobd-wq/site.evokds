@@ -13,6 +13,11 @@
   --text: #fce4e4;
   --primary: #f97373;
   --shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+
+  /* Chart colors */
+  --chart-total: rgba(252, 228, 228, 0.9);
+  --chart-delivery: #38bdf8; /* azul */
+  --chart-local: #22c55e;
 }
 
 /* =======================
@@ -94,6 +99,13 @@ body {
   color: var(--text);
   border-color: rgba(249, 115, 115, 0.9);
   box-shadow: 0 12px 24px rgba(249, 115, 115, 0.15);
+}
+
+/* ✅ Esconde as tabs (Ativos/Finalizados/Cancelados/Entrega) quando estiver em CRM/Resultados
+   (precisa do JS colocar body.classList.add('mode-crm') / 'mode-results') */
+body.mode-crm .tabs,
+body.mode-results .tabs {
+  display: none !important;
 }
 
 /* =======================
@@ -652,10 +664,10 @@ body {
   box-shadow: var(--shadow);
 }
 
-/* Mais espaçamento no CRM */
+/* ✅ Mais espaçamento no CRM (o que você pediu) */
 .crm-table {
-  border-collapse: separate;     /* <- permite espaçamento */
-  border-spacing: 0 10px;        /* <- espaço entre as linhas */
+  border-collapse: separate;
+  border-spacing: 0 14px; /* mais afastado entre linhas */
 }
 
 .crm-table tbody tr {
@@ -664,8 +676,8 @@ body {
 }
 
 .crm-table tbody td {
-  padding: 16px 14px;            /* <- mais espaço interno */
-  border-bottom: none;           /* <- tira linha grudada */
+  padding: 18px 16px; /* mais respiro */
+  border-bottom: none;
 }
 
 /* arredonda a linha inteira */
@@ -679,7 +691,7 @@ body {
 }
 
 /* =======================
-   RESULTS VIEW
+   RESULTS VIEW (MVP cards)
 ======================= */
 .results-grid {
   display: grid;
@@ -707,9 +719,9 @@ body {
   font-size: 28px;
 }
 
+/* ✅ Remove o texto “financeiro/ticket médio…” */
 .results-note {
-  margin-top: 14px;
-  font-size: 13px;
+  display: none !important;
 }
 
 /* =======================
@@ -726,6 +738,7 @@ body {
   .tabs { overflow-x: auto; }
   .results-grid { grid-template-columns: 1fr; }
 }
+
 /* =======================
    RESULTS EXEC / INSIGHTS (novo)
 ======================= */
@@ -777,6 +790,43 @@ body {
   box-shadow: 0 12px 24px rgba(249, 115, 115, 0.12);
 }
 
+/* ✅ SELECTS (dropdowns) com visual moderno */
+select.results-pill,
+.results-exec-filters select.results-pill {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 44px; /* espaço pro ícone */
+  line-height: 1;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(252,228,228,0.85) 50%),
+    linear-gradient(135deg, rgba(252,228,228,0.85) 50%, transparent 50%),
+    linear-gradient(to right, rgba(91,28,28,0.65), rgba(91,28,28,0.0));
+  background-position:
+    calc(100% - 18px) 52%,
+    calc(100% - 12px) 52%,
+    calc(100% - 42px) 50%;
+  background-size:
+    6px 6px,
+    6px 6px,
+    1px 18px;
+  background-repeat: no-repeat;
+}
+
+select.results-pill:focus {
+  outline: none;
+  border-color: rgba(249, 115, 115, 0.9);
+  box-shadow: 0 0 0 4px rgba(249, 115, 115, 0.14);
+}
+
+select.results-pill option {
+  background: rgba(42, 11, 11, 0.98);
+  color: rgba(252, 228, 228, 0.95);
+}
+
+/* =======================
+   CHART
+======================= */
 .results-exec-chart {
   background: rgba(46, 8, 8, 0.55);
   border: 1px solid rgba(91, 28, 28, 0.85);
@@ -817,10 +867,34 @@ body {
   display: inline-block;
 }
 
-/* (cores “sem gritar”, mas distinguíveis) */
-.legend-total { background: rgba(252, 228, 228, 0.9); }
+.legend-total { background: var(--chart-total); }
 .legend-delivery { background: rgba(56, 189, 248, 0.9); }
 .legend-local { background: rgba(34, 197, 94, 0.9); }
+
+/* ✅ Força a LINHA do delivery a ficar AZUL (mesmo se o SVG vier com stroke inline) */
+.results-exec-chart .line-delivery,
+.results-exec-chart .series-delivery,
+.results-exec-chart [data-series="delivery"],
+.results-exec-chart path.delivery,
+.results-exec-chart polyline.delivery {
+  stroke: var(--chart-delivery) !important;
+}
+
+/* (opcional) mantém local verde e total claro se existirem classes/attrs */
+.results-exec-chart .line-local,
+.results-exec-chart .series-local,
+.results-exec-chart [data-series="local"],
+.results-exec-chart path.local,
+.results-exec-chart polyline.local {
+  stroke: var(--chart-local) !important;
+}
+.results-exec-chart .line-total,
+.results-exec-chart .series-total,
+.results-exec-chart [data-series="total"],
+.results-exec-chart path.total,
+.results-exec-chart polyline.total {
+  stroke: var(--chart-total) !important;
+}
 
 .results-exec-cards {
   display: grid;
