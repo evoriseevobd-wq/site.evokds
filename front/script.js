@@ -1455,10 +1455,16 @@ modalBackdrop?.addEventListener("click", (e) => {
 });
 
 modalNextBtn?.addEventListener("click", () => {
-  if (activeOrderId) advanceStatus(activeOrderId);
+  if (activeOrderId) {
+    advanceStatus(activeOrderId);
+    closeOrderModal();
+  }
 });
 modalPrevBtn?.addEventListener("click", () => {
-  if (activeOrderId) regressStatus(activeOrderId);
+  if (activeOrderId) {
+    regressStatus(activeOrderId);
+    closeOrderModal();
+  }
 });
 modalCancelBtn?.addEventListener("click", () => {
   if (activeOrderId) cancelOrder(activeOrderId);
