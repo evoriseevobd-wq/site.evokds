@@ -210,19 +210,80 @@ function buildHeaders() {
   return { "Content-Type": "application/json" };
 }
 
-function getRestaurantId() {
-  return localStorage.getItem("restaurant_id");
+async function getRestaurantPlan(restaurant_id) {
+  const { data, error } = await supabase
+    .from("restaurants")
+    .select("plan")
+    .eq("id", restaurant_id)
+    .single();
+
+  if (error) return "basic";  // Retorna "basic" se der erro na busca
+
+  return (data?.plan || "basic").toLowerCase();  // Retorna o plano do restaurante
 }
 
-function normalizePhone(input) {
-  if (input === null || input === undefined) return "";
-  const digits = String(input).replace(/\D/g, "");
-  return digits.trim();
+function canUseResults(plan) {
+  return plan === "advanced";  // Apenas o plano Advanced pode acessar os Resultados
 }
 
-function closeDrawer() {
-  drawer?.classList.remove("open");
-  drawerBackdrop?.classList.remove("open");
+function canUseCRM(plan) {
+  return plan === "pro" || plan === "advanced";  // Plano PRO e Advanced têm acesso ao CRM
+}
+
+function canUseOrders(plan) {
+  return plan === "basic" || plan === "pro" || plan === "advanced";  // Todos os planos, exceto Basic, têm acesso à Gestão de Pedidos
+}
+
+async function applyAccessUI() {
+  const restaurant_id = getRestaurantIdFromSession(); // Função para pegar o id do restaurante
+  const plan = await getRestaurantPlan(restaurant_id);  // Obtém o plano do restaurante
+
+  // Controle da visibilidade no menu lateral para cada funcionalidade
+  const isBasic = plan === 'basic';
+  const isPro = plan === 'pro';
+  const isAdvanced = plan === 'advanced';
+
+  // Gestão de Pedidos
+  drawerOrdersBtn?.classList.toggle("locked", !isBasic && !isPro && !isAdvanced); // Somente plano BASIC, PRO ou ADVANCED tem acesso
+
+  // CRM
+  drawerCrmBtn?.classList.toggle("locked", !isPro && !isAdvanced);  // Somente plano PRO ou ADVANCED tem acesso ao CRM
+
+  // Resultados
+  drawerResultsBtn?.classList.toggle("locked", !isAdvanced);  // Somente plano ADVANCED tem acesso aos Resultados
+}
+
+// Chame essa função ao carregar a página ou após a autenticação do restaurante
+applyAccessUI();
+
+// Função para abrir o CRM
+function showCRM() {
+  if (!(restaurantPlan === "pro" || restaurantPlan === "advanced")) {
+    alert("Este recurso está disponível apenas no plano PRO ou Advanced.");
+    return;
+  }
+  // Exibe o CRM
+  // Código para mostrar a tela de CRM
+}
+
+// Função para abrir os Resultados
+function showResults() {
+  if (restaurantPlan !== "advanced") {
+    alert("Este recurso está disponível apenas no plano Advanced.");
+    return;
+  }
+  // Exibe os Resultados
+  // Código para mostrar a tela de Resultados
+}
+
+// Função para abrir a Gestão de Pedidos
+function showOrders() {
+  if (!(restaurantPlan === "basic" || restaurantPlan === "pro" || restaurantPlan === "advanced")) {
+    alert("Acesso negado. Requer plano BASIC, PRO ou ADVANCED.");
+    return;
+  }
+  // Exibe a tela de Gestão de Pedidos
+  // Código para mostrar a tela de Gestão de Pedidos
 }
 
 // ===== TABS VISIBILITY (Ativos/Finalizados/Cancelados/Entrega) =====
