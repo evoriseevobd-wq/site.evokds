@@ -278,6 +278,80 @@ function hideTabsBar() {
   tabsContainer?.classList.add("hidden");
 }
 
+// ===== UPGRADE MODAL =====
+function showUpgradeModal(requiredPlan, featureName) {
+  // Remove modal existente se houver
+  const existing = document.getElementById("upgrade-modal-backdrop");
+  if (existing) existing.remove();
+
+  // Cria backdrop
+  const backdrop = document.createElement("div");
+  backdrop.id = "upgrade-modal-backdrop";
+  backdrop.className = "upgrade-modal-backdrop open";
+
+  // Define features baseado no plano
+  let features = [];
+  let planDisplay = "";
+  
+  if (requiredPlan === "pro") {
+    planDisplay = "PRO ou ADVANCED";
+    features = [
+      "CRM completo de clientes",
+      "Histórico de pedidos por cliente",
+      "Análise de frequência de compra",
+      "Suporte prioritário"
+    ];
+  } else if (requiredPlan === "advanced") {
+    planDisplay = "ADVANCED";
+    features = [
+      "Relatórios executivos avançados",
+      "Gráficos e insights detalhados",
+      "Análise de picos e tendências",
+      "Exportação de dados",
+      "Suporte premium"
+    ];
+  }
+
+  backdrop.innerHTML = `
+    <div class="upgrade-modal">
+      <button class="upgrade-dismiss" onclick="this.closest('.upgrade-modal-backdrop').remove()">×</button>
+      
+      <div class="upgrade-icon">🔒</div>
+      
+      <h2 class="upgrade-title">Recurso Premium</h2>
+      
+      <p class="upgrade-message">
+        O recurso <strong>${featureName}</strong> está disponível apenas no plano:
+      </p>
+      
+      <div class="upgrade-plan">${planDisplay}</div>
+      
+      <div class="upgrade-features">
+        <div class="upgrade-features-title">O que você ganha:</div>
+        <ul>
+          ${features.map(f => `<li>${f}</li>`).join("")}
+        </ul>
+      </div>
+      
+      <div class="upgrade-actions">
+        <button class="upgrade-btn" onclick="window.open('https://wa.me/5514998053245?text=Quero%20fazer%20upgrade%20do%20meu%20plano', '_blank')">
+          Fazer Upgrade
+        </button>
+        <button class="upgrade-close-btn" onclick="this.closest('.upgrade-modal-backdrop').remove()">
+          Agora não
+        </button>
+      </div>
+    </div>
+  `;
+
+  // Fecha ao clicar no backdrop
+  backdrop.addEventListener("click", (e) => {
+    if (e.target === backdrop) backdrop.remove();
+  });
+
+  document.body.appendChild(backdrop);
+}
+
 // ===== NAV (Board/CRM/Results) =====
 function showBoard() {
   crmView?.classList.add("hidden");
@@ -289,7 +363,7 @@ function showBoard() {
 
 function showCRM() {
   if (!features.crm) {
-    alert("Este recurso está disponível apenas nos planos PRO e ADVANCED.");
+    showUpgradeModal("pro", "CRM de Clientes");
     return;
   }
 
@@ -304,7 +378,7 @@ function showCRM() {
 
 function showResults() {
   if (!features.results) {
-    alert("Este recurso está disponível apenas no plano ADVANCED.");
+    showUpgradeModal("advanced", "Resultados Executivos");
     return;
   }
 
