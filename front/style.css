@@ -1228,3 +1228,50 @@ select.results-pill option {
 #results-view {
   padding-bottom: 50px;  /* Adiciona mais espaço abaixo para não ficar colado */
 }
+/* Linha Delivery Azul (cobertura ampla) */
+#results-view path.delivery,
+#results-view polyline[data-series="delivery"],
+#results-view .line-delivery,
+#results-view .series-delivery,
+#results-view .results-chart-wrap svg .delivery {
+  stroke: #3498db !important;
+  fill: none !important;
+}
+
+/* Bolinha Delivery Azul */
+#results-view circle.delivery,
+#results-view circle[data-series="delivery"] {
+  fill: #3498db !important;
+  stroke: #3498db !important;
+}
+
+/* Balão Custom bonito */
+#results-view .custom-upsell,
+#results-view .insights-wrap .custom-upsell,
+#results-view .results-grid .custom-upsell {
+  display: block !important;
+  background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(37,11,11,0.45)) !important;
+  border: 2px solid #ff4757 !important;
+  border-radius: 18px !important;
+  padding: 16px 18px !important;
+  box-shadow: 0px 8px 18px rgba(0,0,0,0.4) !important;
+  margin-top: 18px !important;
+}
+
+#results-view .custom-upsell h4 {
+  font-size: 19px !important;
+  font-weight: 900 !important;
+  color: #ff6b81 !important;
+  margin-bottom: 10px !important;
+}
+
+#results-view .custom-upsell ul li {
+  font-size: 15px !important;
+  color: #f0e6e6 !important;
+  margin: 6px 0 !important;
+}
+
+#results-view .custom-upsell ul li i {
+  color: #ff6b81 !important;
+  margin-right: 8px !important;
+}
