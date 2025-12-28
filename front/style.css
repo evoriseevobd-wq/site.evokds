@@ -1051,194 +1051,14 @@ select.results-pill option {
 #crm-view th:nth-child(4),
 #crm-view td:nth-child(4) { width: 28%; }  /* Última compra */
 /* =========================
-   RESULTS - Layout moderno + limpar duplicações + gráfico primeiro
-   (cole no FINAL do style.css)
-========================= */
-
-/* 0) some com qualquer “nota” tipo financeiro/ticket médio */
-#results-view .results-note,
-#results-view .results-disclaimer,
-#results-view .results-subnote {
-  display: none !important;
-}
-
-/* 1) Esconde a PRIMEIRA linha/grade de cards (deixa o gráfico vir primeiro) */
-#results-view .results-grid:first-of-type,
-#results-view .results-cards:first-of-type,
-#results-view .stats-grid:first-of-type,
-#results-view .metrics-grid:first-of-type {
-  display: none !important;
-}
-
-/* fallback extra se as classes forem diferentes (não quebra nada se não bater) */
-#results-view > *:is(.results-grid,.results-cards,.stats-grid,.metrics-grid):first-of-type {
-  display: none !important;
-}
-
-/* 2) Se existir algum bloco duplicado marcado, some também */
-#results-view [data-dup="true"] {
-  display: none !important;
-}
-
-/* 3) Header mais clean */
-#results-view .results-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 8px 0 14px;
-}
-
-#results-view .results-title {
-  font-size: 18px;
-  font-weight: 900;
-  letter-spacing: 0.4px;
-  margin: 0;
-}
-
-/* 4) Cards numéricos (os que ficam DEPOIS do gráfico) */
-#results-view .results-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(210px, 1fr));
-  gap: 14px;
-  margin-top: 14px;
-}
-
-#results-view .result-card {
-  background: rgba(46, 8, 8, 0.55);
-  border: 1px solid rgba(91, 28, 28, 0.85);
-  border-radius: 16px;
-  padding: 14px;
-}
-
-#results-view .result-label {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: rgba(252, 228, 228, 0.75);
-}
-
-#results-view .result-value {
-  margin-top: 8px;
-  font-weight: 900;
-  font-size: 30px;
-}
-
-/* 5) Gráfico: container moderno */
-#results-view .results-chart-wrap,
-#results-view .chart-wrap,
-#results-view .chart-container {
-  background: rgba(46, 8, 8, 0.55);
-  border: 1px solid rgba(91, 28, 28, 0.85);
-  border-radius: 16px;
-  padding: 14px;
-  overflow: hidden;
-  margin-top: 10px;
-}
-
-/* legenda mais discreta */
-#results-view .results-legend {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-top: 10px;
-}
-
-#results-view .legend-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(91, 28, 28, 0.55);
-  background: rgba(46, 8, 8, 0.35);
-  font-weight: 800;
-  color: rgba(252, 228, 228, 0.92);
-}
-
-/* 6) Insights: bloco + grid */
-#results-view .insights-wrap {
-  margin-top: 14px;
-  background: rgba(59, 16, 16, 0.55);
-  border: 1px solid rgba(91, 28, 28, 0.85);
-  border-radius: 16px;
-  padding: 14px;
-}
-
-#results-view .insights-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(260px, 1fr));
-  gap: 12px;
-}
-
-#results-view .insight-card {
-  background: rgba(46, 8, 8, 0.35);
-  border: 1px solid rgba(91, 28, 28, 0.55);
-  border-radius: 16px;
-  padding: 12px 14px;
-}
-
-/* 7) “Recursos avançados (Custom)” em um balão separado */
-#results-view .custom-upsell {
-  margin-top: 12px;
-  background: rgba(46, 8, 8, 0.35);
-  border: 1px dashed rgba(249, 115, 115, 0.45);
-  border-radius: 16px;
-  padding: 12px 14px;
-}
-
-#results-view .custom-upsell h4 {
-  margin: 0 0 8px 0;
-  font-weight: 900;
-  letter-spacing: 0.3px;
-}
-
-/* Responsivo */
-@media (max-width: 1100px) {
-  #results-view .results-grid { grid-template-columns: repeat(2, minmax(210px, 1fr)); }
-  #results-view .insights-grid { grid-template-columns: 1fr; }
-}
-@media (max-width: 720px) {
-  #results-view .results-grid { grid-template-columns: 1fr; }
-}
 /* =======================
-   Remove a Primeira Fileira de Resultados
+   Esconder Primeira Fileira de Resultados
 ========================= */
 #results-view .results-grid:first-of-type,
 #results-view .results-cards:first-of-type,
 #results-view .stats-grid:first-of-type,
 #results-view .metrics-grid:first-of-type {
   display: none !important;
-}
-
-/* =======================
-   Results - Design Moderno
-========================= */
-#results-view .results-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(210px, 1fr));
-  gap: 14px;
-  margin-top: 14px;
-}
-
-#results-view .result-card {
-  background: rgba(46, 8, 8, 0.55);
-  border: 1px solid rgba(91, 28, 28, 0.85);
-  border-radius: 16px;
-  padding: 14px;
-}
-
-#results-view .result-label {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: rgba(252, 228, 228, 0.75);
-}
-
-#results-view .result-value {
-  margin-top: 8px;
-  font-weight: 900;
-  font-size: 30px;
 }
 
 /* =======================
@@ -1279,36 +1099,6 @@ select.results-pill option {
   padding: 12px 14px;
 }
 
-/* =======================
-   Recursos Avançados - Balão Separado
-========================= */
-#results-view .custom-upsell {
-  margin-top: 12px;
-  background: rgba(46, 8, 8, 0.35);
-  border: 1px dashed rgba(249, 115, 115, 0.45);
-  border-radius: 16px;
-  padding: 12px 14px;
-}
-
-#results-view .custom-upsell h4 {
-  margin: 0 0 8px 0;
-  font-weight: 900;
-  letter-spacing: 0.3px;
-}
-
-/* =======================
-   RESPONSIVE
-========================= */
-@media (max-width: 1100px) {
-  #results-view .results-grid { grid-template-columns: repeat(2, minmax(210px, 1fr)); }
-  #results-view .insights-grid { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 720px) {
-  #results-view .results-grid { grid-template-columns: 1fr; }
-}
-/* =======================
-/* =======================
 /* =======================
    Recursos Avançados - Balão Bonito e Chamativo
 ========================= */
@@ -1362,52 +1152,19 @@ select.results-pill option {
 }
 
 /* =======================
-   Espaçamento Inferior
+   RESPONSIVE
 ========================= */
-#results-view {
-  padding-bottom: 50px;  /* Adiciona mais espaço abaixo para não ficar colado */
+@media (max-width: 1100px) {
+  #results-view .results-grid { grid-template-columns: repeat(2, minmax(210px, 1fr)); }
+  #results-view .insights-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  #results-view .results-grid { grid-template-columns: 1fr; }
 }
 
 /* =======================
-   Gráfico - Layout e Personalização
-========================= */
-#results-view .results-chart-wrap,
-#results-view .chart-wrap,
-#results-view .chart-container {
-  background: rgba(46, 8, 8, 0.55);
-  border: 1px solid rgba(91, 28, 28, 0.85);
-  border-radius: 16px;
-  padding: 14px;
-  overflow: hidden;
-  margin-top: 10px;
-}
-
-/* =======================
-   Insights - Cards e Organize
-========================= */
-#results-view .insights-wrap {
-  margin-top: 14px;
-  background: rgba(59, 16, 16, 0.55);
-  border: 1px solid rgba(91, 28, 28, 0.85);
-  border-radius: 16px;
-  padding: 14px;
-}
-
-#results-view .insights-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(260px, 1fr));
-  gap: 12px;
-}
-
-#results-view .insight-card {
-  background: rgba(46, 8, 8, 0.35);
-  border: 1px solid rgba(91, 28, 28, 0.55);
-  border-radius: 16px;
-  padding: 12px 14px;
-}
-
-/* =======================
-   Remove a Primeira Fileira de Resultados
+   Remover Primeira Fileira de Resultados
 ========================= */
 #results-view .results-grid:first-of-type,
 #results-view .results-cards:first-of-type,
@@ -1500,68 +1257,4 @@ select.results-pill option {
   border: 1px solid rgba(91, 28, 28, 0.55);
   border-radius: 16px;
   padding: 12px 14px;
-}
-
-/* =======================
-   Footer + Recursos Avançados (Custom) - Balão Bonito
-========================= */
-#results-view .custom-upsell {
-  margin-top: 24px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(37, 11, 11, 0.45));
-  border-radius: 16px;
-  padding: 14px;
-  border: 1px solid rgba(249, 115, 115, 0.55);
-  box-shadow: 0 8px 16px rgba(46, 8, 8, 0.55);
-}
-
-#results-view .custom-upsell h4 {
-  font-weight: 900;
-  letter-spacing: 0.3px;
-  color: #ff4757;
-  margin: 0 0 12px 0;
-  font-size: 20px;
-}
-
-#results-view .custom-upsell ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-#results-view .custom-upsell ul li {
-  font-size: 14px;
-  margin: 8px 0;
-  color: rgba(252, 228, 228, 0.8);
-}
-
-#results-view .custom-upsell ul li i {
-  color: #ff4757;
-  margin-right: 8px;
-}
-
-#results-view .custom-upsell .link-container {
-  margin-top: 12px;
-}
-
-#results-view .custom-upsell .link-container a {
-  text-decoration: none;
-  color: #ff4757;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-#results-view .custom-upsell .link-container a:hover {
-  text-decoration: underline;
-}
-
-/* =======================
-   RESPONSIVE
-========================= */
-@media (max-width: 1100px) {
-  #results-view .results-grid { grid-template-columns: repeat(2, minmax(210px, 1fr)); }
-  #results-view .insights-grid { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 720px) {
-  #results-view .results-grid { grid-template-columns: 1fr; }
 }
