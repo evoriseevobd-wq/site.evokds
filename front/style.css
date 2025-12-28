@@ -1307,3 +1307,61 @@ select.results-pill option {
 @media (max-width: 720px) {
   #results-view .results-grid { grid-template-columns: 1fr; }
 }
+/* =======================
+   Recursos Avançados (Custom) - Balão Bonito e Chamativo
+========================= */
+#results-view .custom-upsell {
+  margin-top: 24px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(37, 11, 11, 0.45));
+  border-radius: 16px;
+  padding: 14px;
+  border: 1px solid rgba(249, 115, 115, 0.55);
+  box-shadow: 0 8px 16px rgba(46, 8, 8, 0.55);
+}
+
+#results-view .custom-upsell h4 {
+  font-weight: 900;
+  letter-spacing: 0.3px;
+  color: #ff4757;
+  margin: 0 0 12px 0;
+  font-size: 20px;
+}
+
+#results-view .custom-upsell ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#results-view .custom-upsell ul li {
+  font-size: 14px;
+  margin: 8px 0;
+  color: rgba(252, 228, 228, 0.8);
+}
+
+#results-view .custom-upsell ul li i {
+  color: #ff4757;
+  margin-right: 8px;
+}
+
+#results-view .custom-upsell .link-container {
+  margin-top: 12px;
+}
+
+#results-view .custom-upsell .link-container a {
+  text-decoration: none;
+  color: #ff4757;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+#results-view .custom-upsell .link-container a:hover {
+  text-decoration: underline;
+}
+
+/* =======================
+   Espaçamento Inferior
+========================= */
+#results-view {
+  padding-bottom: 50px;  /* Adiciona mais espaço abaixo para não ficar colado */
+}
