@@ -1084,8 +1084,8 @@ function ensureResultsExecutiveUI() {
       <div class="insights-locked">
         <div class="locked-title">Recursos avançados (Custom)</div>
         <div class="locked-list">
-          <div class="locked-item">🔒 Dashboard personalizado por meta e KPIs</div>
-          <div class="locked-item">🔒 Alertas automáticos e playbooks</div>
+          <div class="locked-item">🔒 Relatorio detalhado de etapas</div>
+          <div class="locked-item">🔒 Alertas automáticos</div>
           <div class="locked-item">🔒 Relatórios por unidade / multiunidade</div>
           <div class="locked-item">🔒 Integrações sob demanda</div>
         </div>
