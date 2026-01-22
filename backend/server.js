@@ -62,6 +62,103 @@ function normalizePhone(input) {
 }
 
 /* =========================
+   API PARA N8N (WEBHOOK)
+   Endpoint: POST /api/n8n/pedido
+========================= */
+app.post("/api/n8n/pedido", async (req, res) => {
+  try {
+    const {
+      restaurant_id,
+      client_name,
+      client_phone,
+      items,
+      itens,
+      notes,
+      service_type,
+      address,
+      payment_method,
+    } = req.body || {};
+
+    const normalizedItems = Array.isArray(items)
+      ? items
+      : Array.isArray(itens)
+      ? itens
+      : null;
+
+    if (!restaurant_id || !client_name || !normalizedItems) {
+      return sendError(
+        res,
+        400,
+        "restaurant_id, client_name e items são obrigatórios"
+      );
+    }
+
+    const exists = await restaurantExists(restaurant_id);
+    if (!exists) return sendError(res, 404, "Restaurante não encontrado");
+
+    const finalServiceType =
+      service_type === "delivery" ? "delivery" : "local";
+
+    if (finalServiceType === "delivery" && (!address || !address.trim())) {
+      return sendError(res, 400, "Endereço é obrigatório para pedidos de delivery");
+    }
+
+    if (
+      finalServiceType === "delivery" &&
+      (!payment_method || !payment_method.trim())
+    ) {
+      return sendError(res, 400, "Forma de pagamento é obrigatória para pedidos de delivery");
+    }
+
+    const { data: last, error: lastErr } = await supabase
+      .from("orders")
+      .select("order_number")
+      .eq("restaurant_id", restaurant_id)
+      .order("order_number", { ascending: false })
+      .limit(1);
+
+    if (lastErr) return sendError(res, 500, "Erro ao buscar último número");
+
+    const nextNumber =
+      last && last.length > 0 && last[0].order_number
+        ? Number(last[0].order_number) + 1
+        : 1;
+
+    const now = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from("orders")
+      .insert([
+        {
+          restaurant_id,
+          client_name,
+          client_phone: normalizePhone(client_phone),
+          order_number: nextNumber,
+          itens: normalizedItems,
+          notes: notes || "",
+          status: "pending",
+          service_type: finalServiceType,
+          address: address || null,
+          payment_method: payment_method || null,
+          created_at: now,
+          update_at: now,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) return sendError(res, 500, "Erro ao criar pedido");
+    return res.status(201).json({
+      success: true,
+      message: "Pedido criado com sucesso via N8n",
+      order: data,
+    });
+  } catch (err) {
+    return sendError(res, 500, "Erro ao criar pedido via N8n");
+  }
+});
+
+/* =========================
    ORDERS
 ========================= */
 
