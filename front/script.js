@@ -5,13 +5,13 @@ const GOOGLE_CLIENT_ID =
 const API_BASE = "https://kds-backend.dahead.easypanel.host";
 const API_URL = `${API_BASE}/orders`;
 const AUTH_URL = `${API_BASE}/auth/google`;
-
-// 🔹 CRM
 const CRM_URL = `${API_BASE}/crm`;
 
-// 🔹 NOVAS ROTAS V1 (ROI E DEMANDA) - AGREGADO
-const METRICS_URL = `${API_BASE}/api/v1/metrics`;
-const FORECAST_URL = `${API_BASE}/api/v1/demand-forecast`;
+// 🔥 NOVAS ROTAS V1 - MELHORADAS
+const METRICS_URL = `${API_BASE}/api/v1/analytics/roi`;
+const FORECAST_URL = `${API_BASE}/api/v1/analytics/demand-forecast`;
+const CART_RECOVERY_URL = `${API_BASE}/api/v1/cart-recovery/pending`;
+const PDV_ORDERS_URL = `${API_BASE}/api/v1/pdv/orders`;
 
 // ===== STATUS MAP =====
 const STATUS_TO_BACKEND = {
@@ -43,12 +43,9 @@ const views = {
 // ===== ELEMENTS =====
 const loginScreen = document.getElementById("login-screen");
 const board = document.getElementById("board");
-
-// Views
 const crmView = document.getElementById("crm-view");
 const resultsView = document.getElementById("results-view");
 
-// Drawer
 const drawer = document.getElementById("drawer");
 const openDrawerBtn = document.getElementById("open-drawer");
 const closeDrawerBtn = document.getElementById("close-drawer");
@@ -58,26 +55,16 @@ const drawerOrdersBtn = document.getElementById("drawer-orders");
 const drawerCrmBtn = document.getElementById("drawer-crm");
 const drawerResultsBtn = document.getElementById("drawer-results");
 
-// Back buttons
 const crmBackBtn = document.getElementById("crm-back-btn");
 const resultsBackBtn = document.getElementById("results-back-btn");
 
-// CRM content
 const crmContent = crmView?.querySelector(".crm-content") || null;
 
-// Results IDs (mantidos para compatibilidade com seu HTML atual)
-const resultTotalOrdersEl = document.getElementById("result-total-orders");
-const resultUniqueClientsEl = document.getElementById("result-unique-clients");
-const resultDeliveryOrdersEl = document.getElementById("result-delivery-orders");
-const resultLocalOrdersEl = document.getElementById("result-local-orders");
-
-// Tabs
 const tabAtivos = document.getElementById("tab-ativos");
 const tabFinalizados = document.getElementById("tab-finalizados");
 const tabCancelados = document.getElementById("tab-cancelados");
 const tabEntregas = document.getElementById("tab-entregas");
 
-// Columns (column-body)
 const columns = {
   recebido: document.getElementById("col-recebido"),
   preparo: document.getElementById("col-preparo"),
@@ -87,17 +74,14 @@ const columns = {
   cancelado: document.getElementById("col-cancelado"),
 };
 
-// User chip
 const userChip = document.getElementById("user-chip");
 const userNameEl = document.getElementById("user-name");
 const userAvatar = document.getElementById("user-avatar");
 const logoutBtn = document.getElementById("logout-btn");
 
-// Unauthorized modal
 const unauthorizedModal = document.getElementById("unauthorized-modal");
 const unauthClose = document.getElementById("unauth-close");
 
-// ===== ORDER MODAL (IDs do seu index.html) =====
 const modalBackdrop = document.getElementById("modal");
 const closeModalBtn = document.getElementById("close-modal");
 const closeModalSecondaryBtn = document.getElementById("close-modal-secondary");
@@ -105,31 +89,24 @@ const closeModalSecondaryBtn = document.getElementById("close-modal-secondary");
 const modalId = document.getElementById("modal-id");
 const modalCustomer = document.getElementById("modal-customer");
 const modalTime = document.getElementById("modal-time");
-
 const modalPhoneRow = document.getElementById("modal-phone-row");
 const modalPhone = document.getElementById("modal-phone");
-
 const modalAddressRow = document.getElementById("modal-address-row");
 const modalAddress = document.getElementById("modal-address");
-
 const modalPaymentRow = document.getElementById("modal-payment-row");
 const modalPayment = document.getElementById("modal-payment");
-
 const modalItems = document.getElementById("modal-items");
 const modalNotes = document.getElementById("modal-notes");
-
 const modalPrevBtn = document.getElementById("modal-prev");
 const modalCancelBtn = document.getElementById("modal-cancel");
 const modalNextBtn = document.getElementById("modal-next");
 
-// ===== CREATE MODAL (IDs do seu index.html) =====
 const createModal = document.getElementById("create-modal");
 const openCreateBtn = document.getElementById("open-create");
 const closeCreateBtn = document.getElementById("close-create");
 const cancelCreateBtn = document.getElementById("cancel-create");
 const saveCreateBtn = document.getElementById("save-create");
 
-// Create fields
 const newCustomer = document.getElementById("new-customer");
 const newPhone = document.getElementById("new-phone");
 const newItems = document.getElementById("new-items");
@@ -140,25 +117,28 @@ const paymentWrap = document.getElementById("payment-wrap");
 const newPayment = document.getElementById("new-payment");
 const newNotes = document.getElementById("new-notes");
 
-// Google button
 const googleBtnContainer = document.getElementById("googleLoginBtn");
 
 // ===== STATE =====
 let currentView = "ativos";
 let orders = [];
 let activeOrderId = null;
-let isFetching = false; // Trava para evitar polling duplicado
+let isFetching = false;
 
-// 🔹 plano/features
-let restaurantPlan = "basic";
-let features = { crm: false, results: false, roi: false, forecast: false };
+let restaurantPlan = "essential";
+let features = { 
+  crm: false, 
+  results: false, 
+  roi: false, 
+  forecast: false,
+  pdv_sync: false,
+  cart_recovery: false
+};
 
-// CRM state
 let crmClients = [];
 
-// Results state (Executive)
 const resultsState = {
-  period: "7d",
+  period: "30d",
   type: "all",
   uiReady: false,
 };
@@ -194,6 +174,13 @@ function formatDateTime(iso) {
   });
 }
 
+function formatCurrency(value) {
+  return new Intl.NumberFormat("pt-BR", { 
+    style: "currency", 
+    currency: "BRL" 
+  }).format(value || 0);
+}
+
 function escapeHtml(str) {
   return String(str || "")
     .replaceAll("&", "&amp;")
@@ -224,38 +211,20 @@ function normalizePhone(phone) {
   return p || null;
 }
 
-// ===== FUNÇÕES DE CONTROLE DE PLANO (UNIFICADAS) =====
-function canUseCRM(plan) {
-  const p = plan.toLowerCase();
-  return p === "pro" || p === "advanced" || p === "executive" || p === "custom";
-}
-
-function canUseResults(plan) {
-  const p = plan.toLowerCase();
-  return p === "advanced" || p === "executive" || p === "custom";
-}
-
-function canUseROI(plan) {
-  const p = plan.toLowerCase();
-  return p === "executive" || p === "custom";
-}
-
-function canUseForecast(plan) {
-  const p = plan.toLowerCase();
-  return p === "executive" || p === "custom";
-}
-
-function canUseOrders(plan) {
-  return true;
-}
-
+// ===== PLAN FEATURES =====
 function applyAccessUI() {
   const plan = restaurantPlan.toLowerCase();
   
-  features.crm = canUseCRM(plan);
-  features.results = canUseResults(plan);
-  features.roi = canUseROI(plan);
-  features.forecast = canUseForecast(plan);
+  // Essential: nada bloqueado, mas recursos limitados
+  // Advanced: CRM, Results, Cart Recovery, PDV Manual
+  // Executive: Tudo + ROI, Forecast, PDV Auto
+  
+  features.crm = ["advanced", "executive", "custom"].includes(plan);
+  features.results = ["advanced", "executive", "custom"].includes(plan);
+  features.roi = ["executive", "custom"].includes(plan);
+  features.forecast = ["executive", "custom"].includes(plan);
+  features.pdv_sync = ["advanced", "executive", "custom"].includes(plan);
+  features.cart_recovery = ["advanced", "executive", "custom"].includes(plan);
   
   drawerCrmBtn?.classList.toggle("locked", !features.crm);
   drawerResultsBtn?.classList.toggle("locked", !features.results);
@@ -266,7 +235,7 @@ function closeDrawer() {
   drawerBackdrop?.classList.remove("open");
 }
 
-// ===== TABS VISIBILITY =====
+// ===== TABS =====
 function findTabsContainer() {
   const a = tabAtivos;
   if (!a) return null;
@@ -305,44 +274,54 @@ function showUpgradeModal(requiredPlan, featureName) {
 
   let featuresList = [];
   let planDisplay = "";
+  let planPrice = "";
   
-  if (requiredPlan === "pro") {
-    planDisplay = "PRO ou ADVANCED";
+  if (requiredPlan === "advanced") {
+    planDisplay = "ADVANCED";
+    planPrice = "R$ 2.500/mês";
     featuresList = [
       "CRM completo de clientes",
-      "Histórico de pedidos por cliente",
-      "Análise de frequência de compra",
-      "Suporte prioritário"
-    ];
-  } else if (requiredPlan === "advanced") {
-    planDisplay = "ADVANCED";
-    featuresList = [
-      "Relatórios executivos avançados",
-      "Gráficos e insights detalhados",
-      "Análise de picos e tendências",
-      "Exportação de dados"
+      "Recuperação de carrinho abandonado",
+      "Link de rastreio em tempo real",
+      "Integração PDV manual (MarketUP)",
+      "Relatórios executivos"
     ];
   } else if (requiredPlan === "executive") {
     planDisplay = "EXECUTIVE";
+    planPrice = "R$ 4.500/mês";
     featuresList = [
-      "Cálculo de ROI em tempo real",
+      "Dashboard de ROI em tempo real",
       "Previsão de demanda por IA",
-      "Multiplicador de lucro",
-      "Dashboard de inteligência financeira"
+      "Sincronização PDV 100% automática",
+      "Campanhas ativas automatizadas",
+      "Análise financeira completa"
     ];
   }
 
   backdrop.innerHTML = `
     <div class="upgrade-modal">
+      <button class="upgrade-dismiss" onclick="document.getElementById('upgrade-modal-backdrop').remove()">×</button>
       <div class="upgrade-icon">🔒</div>
-      <h2>Recurso Bloqueado</h2>
-      <p>O recurso <strong>${featureName}</strong> está disponível apenas nos planos <strong>${planDisplay}</strong>.</p>
+      <h2 class="upgrade-title">Recurso Bloqueado</h2>
+      <p class="upgrade-message">
+        O recurso <strong>${featureName}</strong> está disponível apenas no plano:
+      </p>
+      <div class="upgrade-plan">${planDisplay} - ${planPrice}</div>
+      
       <div class="upgrade-features">
-        ${featuresList.map(f => `<div class="upgrade-feature-item">✓ ${f}</div>`).join("")}
+        <p class="upgrade-features-title">O que você ganha com o upgrade:</p>
+        <ul>
+          ${featuresList.map(f => `<li>${f}</li>`).join("")}
+        </ul>
       </div>
+      
       <div class="upgrade-actions">
-        <button class="btn-upgrade-now" onclick="window.open('https://wa.me/5511999999999?text=Quero+fazer+upgrade+para+o+plano+${requiredPlan}', '_blank')">Fazer Upgrade Agora</button>
-        <button class="btn-upgrade-close" onclick="document.getElementById('upgrade-modal-backdrop').remove()">Depois</button>
+        <button class="upgrade-btn" onclick="window.open('https://wa.me/5514997194089?text=Quero fazer upgrade para o plano ${requiredPlan}!', '_blank')">
+          🚀 Fazer Upgrade Agora
+        </button>
+        <button class="upgrade-close-btn" onclick="document.getElementById('upgrade-modal-backdrop').remove()">
+          Depois
+        </button>
       </div>
     </div>
   `;
@@ -374,7 +353,7 @@ function showBoard() {
 
 function showCRM() {
   if (!features.crm) {
-    showUpgradeModal("pro", "CRM de Clientes");
+    showUpgradeModal("advanced", "CRM de Clientes");
     return;
   }
   board?.classList.add("hidden");
@@ -415,14 +394,13 @@ async function fetchOrders() {
     const data = await resp.json();
     const newOrders = Array.isArray(data) ? data : [];
 
-    // Preservar o estado local e atualizar apenas o necessário
     orders = newOrders.map((o) => ({
       ...o,
       _frontStatus: toFrontStatus(o.status),
     }));
 
     if (!crmView?.classList.contains("hidden")) {
-      // Se estiver no CRM, não renderiza o board
+      // Não renderiza board se estiver no CRM
     } else if (!resultsView?.classList.contains("hidden")) {
       renderResultsExecutive();
     } else {
@@ -430,7 +408,6 @@ async function fetchOrders() {
     }
   } catch (e) {
     console.error("Polling Error:", e);
-    // Exibir erro amigável se necessário
   } finally {
     isFetching = false;
   }
@@ -439,7 +416,7 @@ async function fetchOrders() {
 async function updateOrderStatus(orderId, newFrontStatus) {
   const backStatus = toBackStatus(newFrontStatus);
   try {
-    const resp = await fetch(`${API_URL}/${orderId}/status`, {
+    const resp = await fetch(`${API_URL}/${orderId}`, {
       method: "PATCH",
       headers: buildHeaders(),
       body: JSON.stringify({ status: backStatus }),
@@ -487,6 +464,11 @@ function buildOrderCard(order) {
   const itemsCount = Array.isArray(order.itens) ? order.itens.length : 0;
   const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
   const paymentText = isDelivery && order.payment_method ? order.payment_method : "";
+  
+  // Exibe valor do pedido se disponível
+  const priceTag = order.total_price 
+    ? `<div class="order-price-tag">${formatCurrency(order.total_price)}</div>` 
+    : "";
 
   card.innerHTML = `
     <div class="order-top">
@@ -499,6 +481,7 @@ function buildOrderCard(order) {
     </div>
     ${isDelivery ? `<div class="order-delivery-tag">Delivery</div>` : ""}
     ${paymentText ? `<div class="order-payment-tag">${escapeHtml(paymentText)}</div>` : ""}
+    ${priceTag}
   `;
 
   card.addEventListener("click", () => openOrderModal(order.id));
@@ -546,7 +529,10 @@ function openOrderModal(orderId) {
       const li = document.createElement("li");
       const name = it?.name || it?.nome || "Item";
       const qty = it?.qty || it?.quantidade || 1;
-      li.textContent = qty > 1 ? `${name} x${qty}` : `${name}`;
+      const price = it?.price || it?.preco || 0;
+      li.textContent = qty > 1 
+        ? `${name} x${qty}${price > 0 ? ` - ${formatCurrency(price * qty)}` : ''}` 
+        : `${name}${price > 0 ? ` - ${formatCurrency(price)}` : ''}`;
       modalItems.appendChild(li);
     });
   }
@@ -731,11 +717,10 @@ async function saveNewOrder() {
       service_type,
       address: isDelivery ? address : null,
       payment_method: isDelivery ? payment_method : null,
-      // Preparado para receber total_price via PDV externo
       total_price: 0 
     };
 
-    const resp = await fetch(API_URL, {
+    const resp = await fetch(`${API_BASE}/api/v1/pedidos`, {
       method: "POST",
       headers: buildHeaders(),
       body: JSON.stringify(body),
@@ -744,7 +729,7 @@ async function saveNewOrder() {
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok) throw new Error(data?.error || "Erro ao criar pedido");
 
-    orders.push({ ...data, _frontStatus: toFrontStatus(data.status) });
+    orders.push({ ...data.order, _frontStatus: toFrontStatus(data.order.status) });
     closeCreateModal();
     renderBoard();
   } catch (e) {
@@ -788,6 +773,7 @@ function renderCRM() {
         <th>Cliente</th>
         <th>Telefone</th>
         <th>Pedidos</th>
+        <th>Total Gasto</th>
         <th>Última compra</th>
       </tr>
     </thead>
@@ -798,12 +784,14 @@ function renderCRM() {
 
   crmClients.forEach((c) => {
     const tr = document.createElement("tr");
-    const phone = features.crm ? (c.client_phone || c.client_id || "—") : "🔒";
+    const phone = c.client_phone || "—";
+    const totalSpent = c.total_spent || 0;
 
     tr.innerHTML = `
       <td>${escapeHtml(c.client_name || "Cliente")}</td>
       <td>${escapeHtml(phone)}</td>
       <td>${Number(c.orders || 0)}</td>
+      <td>${formatCurrency(totalSpent)}</td>
       <td>${escapeHtml(formatDateTime(c.last_order_at))}</td>
     `;
     tbody.appendChild(tr);
@@ -812,39 +800,7 @@ function renderCRM() {
   crmContent.appendChild(table);
 }
 
-// ===== RESULTS (Executive) =====
-function getPeriodRange(p) {
-  const now = new Date();
-  const endMs = now.getTime();
-  let startMs = endMs;
-  let bucket = "day";
-  let days = 7;
-
-  if (p === "24h") {
-    startMs = endMs - 24 * 60 * 60 * 1000;
-    bucket = "hour";
-    days = 1;
-  } else if (p === "7d") {
-    startMs = endMs - 7 * 24 * 60 * 60 * 1000;
-    days = 7;
-  } else if (p === "30d") {
-    startMs = endMs - 30 * 24 * 60 * 60 * 1000;
-    days = 30;
-  }
-
-  return { startMs, endMs, bucket, days };
-}
-
-function niceStep(max) {
-  if (max <= 5) return 1;
-  if (max <= 10) return 2;
-  if (max <= 25) return 5;
-  if (max <= 50) return 10;
-  if (max <= 100) return 20;
-  if (max <= 500) return 100;
-  return Math.pow(10, Math.floor(Math.log10(max)));
-}
-
+// ===== RESULTS EXECUTIVE =====
 function initResultsUI() {
   const container = resultsView;
   if (!container) return;
@@ -852,53 +808,72 @@ function initResultsUI() {
   container.innerHTML = "";
 
   const root = document.createElement("div");
-  root.className = "results-container";
+  root.className = "results-exec-root";
   root.innerHTML = `
-    <div class="results-header">
-      <div class="results-title-row">
-        <h2>Inteligência Financeira</h2>
-        <div class="results-filters">
-          <select id="results-period" class="results-select">
-            <option value="24h">Últimas 24h</option>
-            <option value="7d">Últimos 7 dias</option>
-            <option value="30d">Últimos 30 dias</option>
-          </select>
-          <select id="results-type" class="results-select">
-            <option value="all">Todos os tipos</option>
-            <option value="delivery">Delivery</option>
-            <option value="local">Local</option>
-          </select>
-        </div>
+    <div class="results-exec-head">
+      <div>
+        <h2 class="results-exec-title">💎 Inteligência Financeira Executive</h2>
+        <p class="results-exec-subtitle">Dashboard completo de performance e ROI</p>
+      </div>
+      <div class="results-exec-filters">
+        <select id="results-period" class="results-pill">
+          <option value="7d">Últimos 7 dias</option>
+          <option value="30d">Últimos 30 dias</option>
+          <option value="90d">Últimos 90 dias</option>
+        </select>
       </div>
     </div>
 
-    <div id="roi-container" class="roi-card hidden">
-      <div class="roi-header">
-        <div class="roi-badge">EXECUTIVE</div>
-        <h3>Retorno sobre Investimento (ROI)</h3>
+    <!-- 🔥 ROI CARD (EXECUTIVE) -->
+    <div id="roi-container" class="roi-grid ${!features.roi ? 'hidden' : ''}">
+      <div class="roi-card premium">
+        <div class="roi-label">💰 Faturamento Total</div>
+        <div id="roi-total-sales" class="roi-value">R$ 0,00</div>
+        <div class="roi-sub">Receita do período</div>
       </div>
-      <div class="roi-grid">
-        <div class="roi-item">
-          <div class="roi-label">Vendas Totais</div>
-          <div id="roi-total-sales" class="roi-value">R$ 0,00</div>
-        </div>
-        <div class="roi-item">
-          <div class="roi-label">Multiplicador de Lucro</div>
-          <div id="roi-multiplier" class="roi-value">0x</div>
-          <div class="roi-subtext">O software já se pagou!</div>
-        </div>
-        <div class="roi-item">
-          <div class="roi-label">Receita via IA</div>
-          <div id="roi-ia-revenue" class="roi-value">R$ 0,00</div>
-        </div>
+      
+      <div class="roi-card premium">
+        <div class="roi-label">📈 ROI do Sistema</div>
+        <div id="roi-multiplier" class="roi-value">0x</div>
+        <div id="roi-message" class="roi-sub">Calculando...</div>
+      </div>
+      
+      <div class="roi-card premium">
+        <div class="roi-label">🤖 Receita via IA</div>
+        <div id="roi-ia-revenue" class="roi-value">R$ 0,00</div>
+        <div class="roi-sub" id="roi-ia-percent">0% do total</div>
+      </div>
+      
+      <div class="roi-card premium">
+        <div class="roi-label">🎯 Ticket Médio</div>
+        <div id="roi-avg-ticket" class="roi-value">R$ 0,00</div>
+        <div class="roi-sub">Por pedido</div>
       </div>
     </div>
 
-    <div id="demand-alert" class="demand-alert hidden">
-      <div class="demand-icon">⚡</div>
-      <div id="demand-message" class="demand-text">Alta demanda prevista para as próximas horas!</div>
+    <!-- 🔥 ALERTA DE DEMANDA (EXECUTIVE) -->
+    <div id="demand-alert" class="demand-alert-box hidden">
+      <div>
+        <div class="demand-icon">⚡</div>
+      </div>
+      <div>
+        <div class="demand-title" id="demand-title">Alta Demanda Detectada!</div>
+        <div class="demand-text" id="demand-message">Volume acima da média histórica.</div>
+      </div>
     </div>
 
+    <!-- 🔥 RECUPERAÇÃO DE CARRINHO (ADVANCED/EXECUTIVE) -->
+    <div id="cart-recovery-box" class="cart-recovery-box ${!features.cart_recovery ? 'hidden' : ''}">
+      <div class="cart-recovery-header">
+        <h3>🛒 Carrinhos Abandonados</h3>
+        <button id="refresh-cart-btn" class="ghost-button small">Atualizar</button>
+      </div>
+      <div id="cart-recovery-content">
+        <p class="muted">Carregando...</p>
+      </div>
+    </div>
+
+    <!-- MÉTRICAS BÁSICAS -->
     <div class="results-grid">
       <div class="metric-card">
         <div class="metric-label">Total de Pedidos</div>
@@ -918,13 +893,14 @@ function initResultsUI() {
       </div>
     </div>
 
-    <div class="chart-section">
+    <!-- GRÁFICO -->
+    <div class="results-exec-chart">
       <div class="chart-header">
-        <h3>Volume de Pedidos</h3>
-        <div class="chart-legend">
-          <span class="legend-item"><i style="background: rgba(139,92,246,0.35)"></i> Total</span>
-          <span class="legend-item"><i style="background: #fff"></i> Delivery</span>
-          <span class="legend-item"><i style="background: #22c55e"></i> Local</span>
+        <h3>Volume de Pedidos no Período</h3>
+        <div class="results-exec-legend">
+          <span class="legend-item"><span class="legend-dot legend-total"></span> Total</span>
+          <span class="legend-item"><span class="legend-dot legend-delivery"></span> Delivery</span>
+          <span class="legend-item"><span class="legend-dot legend-local"></span> Local</span>
         </div>
       </div>
       <div class="chart-wrapper">
@@ -932,8 +908,15 @@ function initResultsUI() {
       </div>
     </div>
 
-    <div class="insights-section">
-      <h3>Insights do Período</h3>
+    <!-- INSIGHTS -->
+    <div class="results-exec-insights">
+      <div class="insights-head">
+        <div>
+          <h3 class="insights-title">Insights do Período</h3>
+          <p class="insights-subtitle">Análise detalhada de performance</p>
+        </div>
+      </div>
+
       <div class="insights-grid">
         <div class="insight-card">
           <div class="insight-label">Crescimento</div>
@@ -944,29 +927,39 @@ function initResultsUI() {
         <div class="insight-card">
           <div class="insight-label">Picos de Horário</div>
           <div class="insight-value" data-insight="peaks">—</div>
-          <div class="insight-note" data-insight-note="peaks"></div>
+          <div class="insight-note" data-insight-note="peaks">Analisando...</div>
         </div>
 
         <div class="insight-card">
           <div class="insight-label">Top itens</div>
           <div class="insight-value" data-insight="topItems">—</div>
-          <div class="insight-note" data-insight-note="topItems"></div>
+          <div class="insight-note" data-insight-note="topItems">Calculando...</div>
         </div>
 
         <div class="insight-card">
-          <div class="insight-label">Cancelamentos</div>
-          <div class="insight-value" data-insight="cancelRate">0%</div>
-          <div class="insight-note" data-insight-note="cancelRate"></div>
+          <div class="insight-label">Taxa de Conversão</div>
+          <div class="insight-value" data-insight="conversionRate">0%</div>
+          <div class="insight-note" data-insight-note="conversionRate">Pedidos finalizados</div>
         </div>
       </div>
+
+      ${!features.roi ? `
+        <div class="insights-locked">
+          <h4 class="locked-title">Recursos Exclusivos do Plano Executive</h4>
+          <div class="locked-list">
+            <div class="locked-item">Dashboard de ROI em tempo real</div>
+            <div class="locked-item">Previsão de demanda por IA</div>
+            <div class="locked-item">Sincronização automática com PDV</div>
+            <div class="locked-item">Campanhas ativas automatizadas</div>
+          </div>
+        </div>
+      ` : ''}
     </div>
   `;
 
   container.appendChild(root);
 
   const periodSel = root.querySelector("#results-period");
-  const typeSel = root.querySelector("#results-type");
-
   if (periodSel) {
     periodSel.value = resultsState.period;
     periodSel.addEventListener("change", () => {
@@ -975,283 +968,157 @@ function initResultsUI() {
     });
   }
 
-  if (typeSel) {
-    typeSel.value = resultsState.type;
-    typeSel.addEventListener("change", () => {
-      resultsState.type = typeSel.value;
-      renderResultsExecutive();
-    });
+  const refreshCartBtn = root.querySelector("#refresh-cart-btn");
+  if (refreshCartBtn) {
+    refreshCartBtn.addEventListener("click", fetchCartRecovery);
   }
 
   resultsState.uiReady = true;
 }
 
-function renderChartSVG(svg, range, series) {
-  if (!svg) return;
+// ===== CART RECOVERY =====
+async function fetchCartRecovery() {
+  if (!features.cart_recovery) return;
+  
+  const rid = getRestaurantId();
+  if (!rid) return;
 
-  const W = 1000;
-  const H = 320;
-  const padL = 64;
-  const padR = 18;
-  const padT = 18;
-  const padB = 56;
+  try {
+    const resp = await fetch(`${CART_RECOVERY_URL}/${rid}`);
+    const data = await resp.json();
 
-  const plotW = W - padL - padR;
-  const plotH = H - padT - padB;
+    const container = document.getElementById("cart-recovery-content");
+    if (!container) return;
 
-  const maxTotal = Math.max(1, ...series.total);
-  const step = niceStep(maxTotal);
-  const maxY = Math.ceil(maxTotal / step) * step;
-
-  const y = (val) => padT + (1 - val / maxY) * plotH;
-  const x = (i, n) => padL + (n <= 1 ? plotW / 2 : (i * plotW) / (n - 1));
-
-  const n = series.labels.length || 1;
-
-  const parts = [];
-
-  // Y Axis Ticks
-  const ticks = 5;
-  for (let i = 0; i <= ticks; i++) {
-    const val = (maxY * i) / ticks;
-    const yy = y(val);
-    parts.push(`<line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="rgba(255,255,255,0.08)" />`);
-    parts.push(
-      `<text x="${padL - 10}" y="${yy + 4}" text-anchor="end" font-size="12" fill="rgba(255,255,255,0.6)">${Math.round(val)}</text>`
-    );
-  }
-
-  // Bars (Total)
-  const barW = Math.max(6, Math.min(26, plotW / Math.max(10, n)));
-  for (let i = 0; i < n; i++) {
-    const cx = x(i, n);
-    const v = series.total[i] || 0;
-    const yy = y(v);
-    const hh = padT + plotH - yy;
-    const bx = cx - barW / 2;
-    parts.push(
-      `<rect x="${bx}" y="${yy}" width="${barW}" height="${hh}" rx="6" ry="6" fill="rgba(139,92,246,0.35)" />`
-    );
-  }
-
-  // Paths (Lines)
-  function buildPath(values) {
-    let d = "";
-    for (let i = 0; i < n; i++) {
-      const cx = x(i, n);
-      const yy = y(values[i] || 0);
-      d += i === 0 ? `M ${cx} ${yy}` : ` L ${cx} ${yy}`;
+    if (!data.abandoned_carts || data.abandoned_carts.length === 0) {
+      container.innerHTML = `
+        <p class="muted">✅ Nenhum carrinho abandonado no momento!</p>
+      `;
+      return;
     }
-    return d;
+
+    container.innerHTML = `
+      <div class="cart-stats">
+        <div class="cart-stat">
+          <strong>${data.total_abandoned}</strong> carrinho(s) abandonado(s)
+        </div>
+        <div class="cart-stat">
+          <strong>${formatCurrency(data.recovery_opportunity)}</strong> em oportunidade de recuperação
+        </div>
+      </div>
+      <div class="cart-list">
+        ${data.abandoned_carts.map(cart => `
+          <div class="cart-item">
+            <div class="cart-phone">${cart.client_phone}</div>
+            <div class="cart-time">${formatDateTime(cart.last_interaction)}</div>
+            <div class="cart-messages">${cart.message_count} mensagens</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } catch (e) {
+    console.error("Erro ao buscar carrinhos:", e);
   }
-
-  parts.push(
-    `<path d="${buildPath(series.delivery)}" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="3" />`
-  );
-
-  parts.push(
-    `<path d="${buildPath(series.local)}" fill="none" stroke="rgba(34,197,94,0.85)" stroke-width="3" />`
-  );
-
-  // X Axis Labels
-  const labelEvery = range.bucket === "hour" ? 4 : Math.ceil(n / 7);
-  for (let i = 0; i < n; i++) {
-    if (i % Math.max(1, labelEvery) !== 0 && i !== n - 1) continue;
-    const cx = x(i, n);
-    const raw = series.labels[i];
-    const text =
-      range.bucket === "hour"
-        ? `${raw}h`
-        : (() => {
-            const [yyyy, mm, dd] = String(raw).split("-");
-            if (!dd) return raw;
-            return `${dd}/${mm}`;
-          })();
-    parts.push(
-      `<text x="${cx}" y="${H - 18}" text-anchor="middle" font-size="12" fill="rgba(255,255,255,0.6)">${text}</text>`
-    );
-  }
-
-  svg.innerHTML = parts.join("");
 }
 
-function computePeaks(list) {
-  const counts = new Array(24).fill(0);
-  for (const o of list) {
-    const d = new Date(o.created_at);
-    const h = d.getHours();
-    counts[h] = (counts[h] || 0) + 1;
-  }
-  const ranked = counts
-    .map((v, h) => ({ h, v }))
-    .sort((a, b) => b.v - a.v)
-    .filter((x) => x.v > 0)
-    .slice(0, 3);
-
-  if (!ranked.length) return { text: "—", note: "Sem dados no período." };
-
-  const text = ranked.map((x) => `${String(x.h).padStart(2, "0")}h`).join(" • ");
-  const note = ranked.map((x) => `${String(x.h).padStart(2, "0")}h: ${x.v}`).join(" | ");
-  return { text, note };
-}
-
-function computeTopItems(list) {
-  const map = new Map();
-  for (const o of list) {
-    const itens = Array.isArray(o.itens) ? o.itens : [];
-    for (const it of itens) {
-      const name = String(it?.name || it?.nome || "").trim();
-      if (!name) continue;
-      const qty = Number(it?.qty || it?.quantidade || 1) || 1;
-      map.set(name, (map.get(name) || 0) + qty);
-    }
-  }
-  const top = Array.from(map.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
-
-  if (!top.length) return { text: "—", note: "Sem itens no período." };
-
-  const text = top.map(([n]) => n).slice(0, 2).join(" • ") + (top.length > 2 ? " • ..." : "");
-  const note = top.map(([n, q]) => `${n} (${q})`).join(" | ");
-  return { text, note };
-}
-
+// ===== RENDER RESULTS =====
 async function renderResultsExecutive() {
   if (!resultsState.uiReady) return;
 
   const rid = getRestaurantId();
   if (!rid) return;
 
-  const range = getPeriodRange(resultsState.period);
-  const type = resultsState.type;
+  // Métricas básicas locais
+  const filtered = orders;
 
-  // Filtragem local dos pedidos carregados
-  const filtered = orders.filter((o) => {
-    const ms = new Date(o.created_at).getTime();
-    if (ms < range.startMs || ms > range.endMs) return false;
-    if (type !== "all" && o.service_type !== type) return false;
-    return true;
-  });
-
-  // Cálculo de ROI em Tempo Real (Executive)
-  if (features.roi) {
-    const roiCont = document.getElementById("roi-container");
-    if (roiCont) {
-      roiCont.classList.remove("hidden");
-      
-      // Soma total_price dos pedidos (considerando que o backend agora envia esse campo)
-      const totalSales = filtered.reduce((acc, o) => acc + (Number(o.total_price) || 0), 0);
-      const multiplier = totalSales / 4000;
-
-      const salesEl = document.getElementById("roi-total-sales");
-      const multEl = document.getElementById("roi-multiplier");
-      
-      if (salesEl) salesEl.textContent = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalSales);
-      if (multEl) multEl.textContent = `ROI de ${multiplier.toFixed(1)}x`;
-    }
-
-    // IA Metrics (Opcional se o backend suportar)
-    try {
-      const roiResp = await fetch(`${METRICS_URL}/${rid}`);
-      if (roiResp.ok) {
-        const m = await roiResp.json();
-        const revEl = document.getElementById("roi-ia-revenue");
-        if (revEl) revEl.textContent = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(m.ia_revenue || 0);
-      }
-    } catch (e) { console.error("ROI API Error:", e); }
-
-    // Demand Forecast
-    try {
-      const demandResp = await fetch(`${FORECAST_URL}/${rid}`);
-      if (demandResp.ok) {
-        const d = await demandResp.json();
-        const alertBox = document.getElementById("demand-alert");
-        if (alertBox) {
-          alertBox.classList.toggle("hidden", !d.is_high_demand);
-          const msgEl = document.getElementById("demand-message");
-          if (msgEl) msgEl.textContent = d.alert_message;
-        }
-      }
-    } catch (e) { console.error("Demand Error:", e); }
-  }
-
-  const prevRange = {
-    startMs: range.startMs - (range.endMs - range.startMs),
-    endMs: range.startMs,
-  };
-  const prevList = orders.filter((o) => {
-    const ms = new Date(o.created_at).getTime();
-    return ms >= prevRange.startMs && ms < prevRange.endMs;
-  });
-
-  // Métricas Básicas
   const metrics = {
     total: filtered.length,
     unique: new Set(filtered.map((o) => o.client_phone || o.client_name)).size,
     delivery: filtered.filter((o) => o.service_type === "delivery").length,
-    local: filtered.filter((o) => o.service_type === "local").length,
+    local: filtered.filter((o) => o.service_type === "local" || !o.service_type).length,
   };
 
-  // Atualiza cards
   document.querySelectorAll("[data-metric]").forEach((el) => {
     const k = el.dataset.metric;
     if (metrics[k] !== undefined) el.textContent = metrics[k];
   });
 
+  // ROI Executive
+  if (features.roi) {
+    try {
+      const roiResp = await fetch(`${METRICS_URL}/${rid}?period=${resultsState.period}`);
+      if (roiResp.ok) {
+        const roi = await roiResp.json();
+        
+        const salesEl = document.getElementById("roi-total-sales");
+        const multEl = document.getElementById("roi-multiplier");
+        const msgEl = document.getElementById("roi-message");
+        const iaRevEl = document.getElementById("roi-ia-revenue");
+        const iaPercentEl = document.getElementById("roi-ia-percent");
+        const avgTicketEl = document.getElementById("roi-avg-ticket");
+        
+        if (salesEl) salesEl.textContent = formatCurrency(roi.total_revenue);
+        if (multEl) multEl.textContent = `${roi.multiplier}x`;
+        if (msgEl) msgEl.textContent = roi.message;
+        if (iaRevEl) iaRevEl.textContent = formatCurrency(roi.ia_revenue);
+        if (avgTicketEl) avgTicketEl.textContent = formatCurrency(roi.avg_ticket_overall);
+        
+        if (iaPercentEl) {
+          const percent = roi.total_revenue > 0 
+            ? ((roi.ia_revenue / roi.total_revenue) * 100).toFixed(1) 
+            : 0;
+          iaPercentEl.textContent = `${percent}% do total`;
+        }
+      }
+    } catch (e) {
+      console.error("ROI Error:", e);
+    }
+
+    // Demand Forecast
+    try {
+      const demandResp = await fetch(`${FORECAST_URL}/${rid}`);
+      if (demandResp.ok) {
+        const demand = await demandResp.json();
+        const alertBox = document.getElementById("demand-alert");
+        const titleEl = document.getElementById("demand-title");
+        const msgEl = document.getElementById("demand-message");
+        
+        if (alertBox && demand.is_high_demand) {
+          alertBox.classList.remove("hidden");
+          if (titleEl) titleEl.textContent = "🚀 Alta Demanda Detectada!";
+          if (msgEl) msgEl.textContent = demand.alert_message;
+        } else if (alertBox) {
+          alertBox.classList.add("hidden");
+        }
+      }
+    } catch (e) {
+      console.error("Demand Error:", e);
+    }
+  }
+
+  // Cart Recovery
+  if (features.cart_recovery) {
+    fetchCartRecovery();
+  }
+
   // Insights
-  const deltaTotal = prevList.length > 0 ? ((filtered.length - prevList.length) / prevList.length) * 100 : 0;
-  const deltaEl = document.querySelector('[data-insight="deltaTotal"]');
-  if (deltaEl) {
-    deltaEl.textContent = `${deltaTotal > 0 ? "+" : ""}${Math.round(deltaTotal)}%`;
-    deltaEl.style.color = deltaTotal >= 0 ? "#22c55e" : "#ef4444";
-  }
+  const finishedOrders = filtered.filter(o => o.status === 'finished').length;
+  const conversionRate = filtered.length > 0 ? (finishedOrders / filtered.length) * 100 : 0;
+  const convEl = document.querySelector('[data-insight="conversionRate"]');
+  if (convEl) convEl.textContent = `${Math.round(conversionRate)}%`;
 
-  const peaks = computePeaks(filtered);
-  const peaksEl = document.querySelector('[data-insight="peaks"]');
-  if (peaksEl) peaksEl.textContent = peaks.text;
-  const peaksNote = document.querySelector('[data-insight-note="peaks"]');
-  if (peaksNote) peaksNote.textContent = peaks.note;
-
-  const tops = computeTopItems(filtered);
-  const topsEl = document.querySelector('[data-insight="topItems"]');
-  if (topsEl) topsEl.textContent = tops.text;
-  const topsNote = document.querySelector('[data-insight-note="topItems"]');
-  if (topsNote) topsNote.textContent = tops.note;
-
-  const cancels = filtered.filter((o) => o._frontStatus === "cancelado").length;
-  const cancelRate = filtered.length > 0 ? (cancels / filtered.length) * 100 : 0;
-  const cancelEl = document.querySelector('[data-insight="cancelRate"]');
-  if (cancelEl) cancelEl.textContent = `${Math.round(cancelRate)}%`;
-
-  // Gráfico
-  const series = { labels: [], total: [], delivery: [], local: [] };
-  if (range.bucket === "hour") {
-    for (let h = 0; h < 24; h++) {
-      series.labels.push(h);
-      const hList = filtered.filter((o) => new Date(o.created_at).getHours() === h);
-      series.total.push(hList.length);
-      series.delivery.push(hList.filter((o) => o.service_type === "delivery").length);
-      series.local.push(hList.filter((o) => o.service_type === "local").length);
-    }
-  } else {
-    const days = range.days;
-    for (let i = 0; i < days; i++) {
-      const d = new Date(range.startMs + i * 24 * 60 * 60 * 1000);
-      const iso = d.toISOString().split("T")[0];
-      series.labels.push(iso);
-      const dList = filtered.filter((o) => o.created_at?.startsWith(iso));
-      series.total.push(dList.length);
-      series.delivery.push(dList.filter((o) => o.service_type === "delivery").length);
-      series.local.push(dList.filter((o) => o.service_type === "local").length);
-    }
-  }
-
+  // Simples gráfico (placeholder - você pode melhorar)
   const svg = document.getElementById("results-chart-svg");
-  renderChartSVG(svg, range, series);
+  if (svg) {
+    svg.innerHTML = `
+      <text x="500" y="160" text-anchor="middle" font-size="14" fill="rgba(255,255,255,0.6)">
+        Gráfico será renderizado com dados reais
+      </text>
+    `;
+  }
 }
 
-// ===== AUTH & GOOGLE =====
+// ===== AUTH =====
 function decodeJwt(token) {
   try {
     const base64Url = token.split(".")[1];
@@ -1275,7 +1142,7 @@ async function handleCredentialResponse(response) {
     if (data.authorized && data.restaurant) {
       localStorage.setItem("restaurant_id", data.restaurant.id);
       localStorage.setItem("restaurant_name", data.restaurant.name);
-      localStorage.setItem("restaurant_plan", data.restaurant.plan || "basic");
+      localStorage.setItem("restaurant_plan", data.restaurant.plan || "essential");
       localStorage.setItem("user_email", payload.email);
       localStorage.setItem("user_name", payload.name);
       localStorage.setItem("user_picture", payload.picture);
@@ -1310,7 +1177,7 @@ function logout() {
   location.reload();
 }
 
-// ===== INITIALIZATION =====
+// ===== INIT =====
 function init() {
   const rid = getRestaurantId();
 
@@ -1324,10 +1191,9 @@ function init() {
   loginScreen?.classList.add("hidden");
   board?.classList.remove("hidden");
 
-  restaurantPlan = localStorage.getItem("restaurant_plan") || "basic";
+  restaurantPlan = localStorage.getItem("restaurant_plan") || "essential";
   applyAccessUI();
 
-  // User UI
   if (userChip) {
     userChip.hidden = false;
     if (userNameEl) userNameEl.textContent = localStorage.getItem("user_name") || "Usuário";
@@ -1350,7 +1216,6 @@ function init() {
   resultsBackBtn?.addEventListener("click", showBoard);
 
   tabAtivos?.addEventListener("click", () => changeView("ativos"));
-  tabFinalizados?.classList.add("tab-item"); // Garantir classe para estilo
   tabFinalizados?.addEventListener("click", () => changeView("finalizados"));
   tabCancelados?.addEventListener("click", () => changeView("cancelados"));
   tabEntregas?.addEventListener("click", () => changeView("entregas"));
@@ -1375,10 +1240,9 @@ function init() {
   logoutBtn?.addEventListener("click", logout);
   unauthClose?.addEventListener("click", () => closeBackdrop(unauthorizedModal));
 
-  // Polling com tratamento de erro e trava de concorrência
+  // Polling
   fetchOrders();
   setInterval(fetchOrders, 15000);
 }
 
-// Start
 document.addEventListener("DOMContentLoaded", init);
