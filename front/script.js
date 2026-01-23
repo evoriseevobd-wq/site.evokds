@@ -147,6 +147,7 @@ const googleBtnContainer = document.getElementById("googleLoginBtn");
 let currentView = "ativos";
 let orders = [];
 let activeOrderId = null;
+let isFetching = false; // Trava para evitar polling duplicado
 
 // 🔹 plano/features
 let restaurantPlan = "basic";
@@ -225,36 +226,37 @@ function normalizePhone(phone) {
 
 // ===== FUNÇÕES DE CONTROLE DE PLANO (UNIFICADAS) =====
 function canUseCRM(plan) {
-  return plan === "pro" || plan === "advanced" || plan === "custom";
+  const p = plan.toLowerCase();
+  return p === "pro" || p === "advanced" || p === "executive" || p === "custom";
 }
 
 function canUseResults(plan) {
-  return plan === "advanced" || plan === "executive" || plan === "custom";
+  const p = plan.toLowerCase();
+  return p === "advanced" || p === "executive" || p === "custom";
 }
 
 function canUseROI(plan) {
-  return plan === "executive" || plan === "custom";
+  const p = plan.toLowerCase();
+  return p === "executive" || p === "custom";
 }
 
 function canUseForecast(plan) {
-  return plan === "executive" || plan === "custom";
+  const p = plan.toLowerCase();
+  return p === "executive" || p === "custom";
 }
 
 function canUseOrders(plan) {
-  // Todos os planos têm acesso à gestão de pedidos
   return true;
 }
 
 function applyAccessUI() {
   const plan = restaurantPlan.toLowerCase();
   
-  // Atualiza features baseado no plano
   features.crm = canUseCRM(plan);
   features.results = canUseResults(plan);
   features.roi = canUseROI(plan);
   features.forecast = canUseForecast(plan);
   
-  // Controla visibilidade no menu lateral
   drawerCrmBtn?.classList.toggle("locked", !features.crm);
   drawerResultsBtn?.classList.toggle("locked", !features.results);
 }
@@ -264,7 +266,7 @@ function closeDrawer() {
   drawerBackdrop?.classList.remove("open");
 }
 
-// ===== TABS VISIBILITY (Ativos/Finalizados/Cancelados/Entrega) =====
+// ===== TABS VISIBILITY =====
 function findTabsContainer() {
   const a = tabAtivos;
   if (!a) return null;
@@ -294,16 +296,13 @@ function hideTabsBar() {
 
 // ===== UPGRADE MODAL =====
 function showUpgradeModal(requiredPlan, featureName) {
-  // Remove modal existente se houver
   const existing = document.getElementById("upgrade-modal-backdrop");
   if (existing) existing.remove();
 
-  // Cria backdrop
   const backdrop = document.createElement("div");
   backdrop.id = "upgrade-modal-backdrop";
   backdrop.className = "upgrade-modal-backdrop open";
 
-  // Define features baseado no plano
   let featuresList = [];
   let planDisplay = "";
   
@@ -323,55 +322,54 @@ function showUpgradeModal(requiredPlan, featureName) {
       "Análise de picos e tendências",
       "Exportação de dados"
     ];
+  } else if (requiredPlan === "executive") {
+    planDisplay = "EXECUTIVE";
+    featuresList = [
+      "Cálculo de ROI em tempo real",
+      "Previsão de demanda por IA",
+      "Multiplicador de lucro",
+      "Dashboard de inteligência financeira"
+    ];
   }
 
   backdrop.innerHTML = `
     <div class="upgrade-modal">
-      <button class="upgrade-dismiss" onclick="this.closest('.upgrade-modal-backdrop').remove()">×</button>
-      
       <div class="upgrade-icon">🔒</div>
-      
-      <h2 class="upgrade-title">Recurso Premium</h2>
-      
-      <p class="upgrade-message">
-        O recurso <strong>${featureName}</strong> está disponível apenas no plano:
-      </p>
-      
-      <div class="upgrade-plan">${planDisplay}</div>
-      
+      <h2>Recurso Bloqueado</h2>
+      <p>O recurso <strong>${featureName}</strong> está disponível apenas nos planos <strong>${planDisplay}</strong>.</p>
       <div class="upgrade-features">
-        <div class="upgrade-features-title">O que você ganha:</div>
-        <ul>
-          ${featuresList.map(f => `<li>${f}</li>`).join("")}
-        </ul>
+        ${featuresList.map(f => `<div class="upgrade-feature-item">✓ ${f}</div>`).join("")}
       </div>
-      
       <div class="upgrade-actions">
-        <button class="upgrade-btn" onclick="window.open('https://wa.me/5514998053245?text=Quero%20fazer%20upgrade%20do%20meu%20plano', '_blank')">
-          Fazer Upgrade
-        </button>
-        <button class="upgrade-close-btn" onclick="this.closest('.upgrade-modal-backdrop').remove()">
-          Agora não
-        </button>
+        <button class="btn-upgrade-now" onclick="window.open('https://wa.me/5511999999999?text=Quero+fazer+upgrade+para+o+plano+${requiredPlan}', '_blank')">Fazer Upgrade Agora</button>
+        <button class="btn-upgrade-close" onclick="document.getElementById('upgrade-modal-backdrop').remove()">Depois</button>
       </div>
     </div>
   `;
 
-  // Fecha ao clicar no backdrop
-  backdrop.addEventListener("click", (e) => {
-    if (e.target === backdrop) backdrop.remove();
-  });
-
   document.body.appendChild(backdrop);
 }
 
-// ===== NAV (Board/CRM/Results) =====
+// ===== NAVIGATION =====
+function changeView(v) {
+  currentView = v;
+  
+  tabAtivos?.classList.toggle("active", v === "ativos");
+  tabFinalizados?.classList.toggle("active", v === "finalizados");
+  tabCancelados?.classList.toggle("active", v === "cancelados");
+  tabEntregas?.classList.toggle("active", v === "entregas");
+
+  renderBoard();
+}
+
 function showBoard() {
+  currentView = "ativos";
   crmView?.classList.add("hidden");
   resultsView?.classList.add("hidden");
   board?.classList.remove("hidden");
   showTabsBar();
   closeDrawer();
+  renderBoard();
 }
 
 function showCRM() {
@@ -379,124 +377,94 @@ function showCRM() {
     showUpgradeModal("pro", "CRM de Clientes");
     return;
   }
-
-  hideTabsBar();
   board?.classList.add("hidden");
   resultsView?.classList.add("hidden");
   crmView?.classList.remove("hidden");
+  hideTabsBar();
   closeDrawer();
-
   fetchCRM();
 }
 
 function showResults() {
   if (!features.results) {
-    showUpgradeModal("advanced", "Resultados Executivos");
+    showUpgradeModal("advanced", "Módulo de Resultados");
     return;
   }
-
-  hideTabsBar();
   board?.classList.add("hidden");
   crmView?.classList.add("hidden");
   resultsView?.classList.remove("hidden");
+  hideTabsBar();
   closeDrawer();
-
-  ensureResultsExecutiveUI();
+  
+  if (!resultsState.uiReady) {
+    initResultsUI();
+  }
   renderResultsExecutive();
 }
 
-// ===== VIEWS (Kanban Tabs) =====
-function setColumnsVisibility(viewKey) {
-  Object.keys(columns).forEach((k) => {
-    const colBody = columns[k];
-    if (!colBody) return;
-    const section = colBody.closest(".column") || colBody.parentElement;
-    const shouldShow = views[viewKey].includes(k);
-    section?.classList.toggle("hidden", !shouldShow);
-  });
-}
-
-function changeView(viewKey) {
-  currentView = viewKey;
-  tabAtivos?.classList.toggle("active", viewKey === "ativos");
-  tabFinalizados?.classList.toggle("active", viewKey === "finalizados");
-  tabCancelados?.classList.toggle("active", viewKey === "cancelados");
-  tabEntregas?.classList.toggle("active", viewKey === "entregas");
-  setColumnsVisibility(viewKey);
-  renderBoard();
-}
-
-// ===== ORDERS API =====
+// ===== CORE LOGIC =====
 async function fetchOrders() {
   const rid = getRestaurantId();
-  if (!rid) return;
+  if (!rid || isFetching) return;
 
+  isFetching = true;
   try {
     const resp = await fetch(`${API_URL}/${rid}`);
-    const data = await resp.json().catch(() => []);
-    if (!resp.ok) throw new Error(data?.error || "Erro ao buscar pedidos");
+    if (!resp.ok) throw new Error("Erro ao buscar pedidos");
+    
+    const data = await resp.json();
+    const newOrders = Array.isArray(data) ? data : [];
 
-    orders = (Array.isArray(data) ? data : []).map((o) => ({
+    // Preservar o estado local e atualizar apenas o necessário
+    orders = newOrders.map((o) => ({
       ...o,
       _frontStatus: toFrontStatus(o.status),
     }));
 
-    renderBoard();
+    if (!crmView?.classList.contains("hidden")) {
+      // Se estiver no CRM, não renderiza o board
+    } else if (!resultsView?.classList.contains("hidden")) {
+      renderResultsExecutive();
+    } else {
+      renderBoard();
+    }
   } catch (e) {
-    console.error(e);
-    // alert("Erro ao buscar pedidos.");
+    console.error("Polling Error:", e);
+    // Exibir erro amigável se necessário
+  } finally {
+    isFetching = false;
   }
 }
 
 async function updateOrderStatus(orderId, newFrontStatus) {
+  const backStatus = toBackStatus(newFrontStatus);
   try {
-    const resp = await fetch(`${API_URL}/${orderId}`, {
+    const resp = await fetch(`${API_URL}/${orderId}/status`, {
       method: "PATCH",
       headers: buildHeaders(),
-      body: JSON.stringify({ status: toBackStatus(newFrontStatus) }),
+      body: JSON.stringify({ status: backStatus }),
     });
-    const data = await resp.json().catch(() => ({}));
-    if (!resp.ok) throw new Error(data?.error || "Erro ao atualizar");
+
+    if (!resp.ok) throw new Error("Erro ao atualizar status");
 
     const idx = orders.findIndex((o) => o.id === orderId);
     if (idx !== -1) {
-      orders[idx] = {
-        ...orders[idx],
-        ...data,
-        _frontStatus: toFrontStatus(data.status),
-      };
+      orders[idx].status = backStatus;
+      orders[idx]._frontStatus = newFrontStatus;
     }
-
     renderBoard();
     if (activeOrderId === orderId) openOrderModal(orderId);
   } catch (e) {
     console.error(e);
-    alert("Erro ao atualizar pedido.");
+    alert("Não foi possível atualizar o status do pedido.");
   }
 }
 
-async function deleteOrder(orderId) {
-  try {
-    const resp = await fetch(`${API_URL}/${orderId}`, { method: "DELETE" });
-    if (!resp.ok) {
-      const data = await resp.json().catch(() => ({}));
-      throw new Error(data?.error || "Erro ao deletar");
-    }
-    orders = orders.filter((o) => o.id !== orderId);
-    closeOrderModal();
-    renderBoard();
-  } catch (e) {
-    console.error(e);
-    alert("Erro ao deletar pedido.");
-  }
-}
-
-// ===== BOARD RENDER =====
 function renderBoard() {
-  Object.keys(columns).forEach((k) => {
-    const col = columns[k];
-    if (!col) return;
-    col.innerHTML = "";
+  if (!board || board.classList.contains("hidden")) return;
+
+  Object.values(columns).forEach((c) => {
+    if (c) c.innerHTML = "";
   });
 
   const visible = views[currentView];
@@ -763,6 +731,8 @@ async function saveNewOrder() {
       service_type,
       address: isDelivery ? address : null,
       payment_method: isDelivery ? payment_method : null,
+      // Preparado para receber total_price via PDV externo
+      total_price: 0 
     };
 
     const resp = await fetch(API_URL, {
@@ -843,46 +813,26 @@ function renderCRM() {
 }
 
 // ===== RESULTS (Executive) =====
-function getLocalDayStartMs(d) {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-}
-
-function getPeriodRange(periodKey) {
+function getPeriodRange(p) {
   const now = new Date();
-  const nowMs = now.getTime();
-  const dayMs = 24 * 60 * 60 * 1000;
+  const endMs = now.getTime();
+  let startMs = endMs;
+  let bucket = "day";
+  let days = 7;
 
-  if (periodKey === "hoje") {
-    return {
-      bucket: "hour",
-      startMs: getLocalDayStartMs(now),
-      endMs: nowMs,
-      label: "Hoje",
-      days: 1,
-    };
+  if (p === "24h") {
+    startMs = endMs - 24 * 60 * 60 * 1000;
+    bucket = "hour";
+    days = 1;
+  } else if (p === "7d") {
+    startMs = endMs - 7 * 24 * 60 * 60 * 1000;
+    days = 7;
+  } else if (p === "30d") {
+    startMs = endMs - 30 * 24 * 60 * 60 * 1000;
+    days = 30;
   }
 
-  const n =
-    periodKey === "3d" ? 3 : periodKey === "7d" ? 7 : periodKey === "30d" ? 30 : null;
-
-  if (n) {
-    const start = new Date(nowMs - (n - 1) * dayMs);
-    return {
-      bucket: "day",
-      startMs: getLocalDayStartMs(start),
-      endMs: nowMs,
-      label: `Últimos ${n} dias`,
-      days: n,
-    };
-  }
-
-  return {
-    bucket: "day",
-    startMs: 0,
-    endMs: nowMs,
-    label: "Tudo",
-    days: 365,
-  };
+  return { startMs, endMs, bucket, days };
 }
 
 function niceStep(max) {
@@ -891,114 +841,108 @@ function niceStep(max) {
   if (max <= 25) return 5;
   if (max <= 50) return 10;
   if (max <= 100) return 20;
-  return Math.ceil(max / 5);
+  if (max <= 500) return 100;
+  return Math.pow(10, Math.floor(Math.log10(max)));
 }
 
-function ensureResultsExecutiveUI() {
-  const container = resultsView?.querySelector(".results-content");
+function initResultsUI() {
+  const container = resultsView;
   if (!container) return;
 
-  let root = container.querySelector(".results-exec-root");
-  if (root) {
-    resultsState.uiReady = true;
-    return;
-  }
+  container.innerHTML = "";
 
-  root = document.createElement("div");
-  root.className = "results-exec-root";
-
+  const root = document.createElement("div");
+  root.className = "results-container";
   root.innerHTML = `
-    <!-- NOVO: CARDS DE ROI (EXECUTIVE) -->
-    <div class="results-roi-grid hidden" id="roi-container">
-      <div class="roi-card premium">
-        <div class="roi-label">Lucro Gerado pela IA</div>
-        <div class="roi-value" id="roi-ia-revenue">R$ 0,00</div>
-        <div class="roi-sub">Vendas diretas via WhatsApp</div>
-      </div>
-      <div class="roi-card">
-        <div class="roi-label">Ticket Médio IA</div>
-        <div class="roi-value" id="roi-ia-ticket">R$ 0,00</div>
-        <div class="roi-sub">Média por pedido</div>
-      </div>
-    </div>
-
-    <!-- NOVO: ALERTA DE DEMANDA (EXECUTIVE) -->
-    <div class="demand-alert-box hidden" id="demand-alert">
-      <div class="demand-icon">🚀</div>
-      <div class="demand-content">
-        <div class="demand-title">Alta Demanda Detectada!</div>
-        <div class="demand-text" id="demand-message">O volume atual está 20% acima da média.</div>
+    <div class="results-header">
+      <div class="results-title-row">
+        <h2>Inteligência Financeira</h2>
+        <div class="results-filters">
+          <select id="results-period" class="results-select">
+            <option value="24h">Últimas 24h</option>
+            <option value="7d">Últimos 7 dias</option>
+            <option value="30d">Últimos 30 dias</option>
+          </select>
+          <select id="results-type" class="results-select">
+            <option value="all">Todos os tipos</option>
+            <option value="delivery">Delivery</option>
+            <option value="local">Local</option>
+          </select>
+        </div>
       </div>
     </div>
 
-    <div class="results-exec-header">
-      <div class="results-exec-title">Resultados</div>
-      <div class="results-exec-filters">
-        <select class="results-pill" id="results-period">
-          <option value="hoje">Hoje</option>
-          <option value="3d">Últimos 3 dias</option>
-          <option value="7d" selected>Últimos 7 dias</option>
-          <option value="30d">Últimos 30 dias</option>
-          <option value="tudo">Tudo</option>
-        </select>
-        <select class="results-pill" id="results-type">
-          <option value="all" selected>Todos</option>
-          <option value="delivery">Somente delivery</option>
-          <option value="local">Somente balcão</option>
-        </select>
+    <div id="roi-container" class="roi-card hidden">
+      <div class="roi-header">
+        <div class="roi-badge">EXECUTIVE</div>
+        <h3>Retorno sobre Investimento (ROI)</h3>
+      </div>
+      <div class="roi-grid">
+        <div class="roi-item">
+          <div class="roi-label">Vendas Totais</div>
+          <div id="roi-total-sales" class="roi-value">R$ 0,00</div>
+        </div>
+        <div class="roi-item">
+          <div class="roi-label">Multiplicador de Lucro</div>
+          <div id="roi-multiplier" class="roi-value">0x</div>
+          <div class="roi-subtext">O software já se pagou!</div>
+        </div>
+        <div class="roi-item">
+          <div class="roi-label">Receita via IA</div>
+          <div id="roi-ia-revenue" class="roi-value">R$ 0,00</div>
+        </div>
       </div>
     </div>
 
-    <div class="results-exec-chart">
-      <svg id="results-chart-svg" viewBox="0 0 1000 320" preserveAspectRatio="none" aria-label="Gráfico de pedidos"></svg>
-      <div class="results-exec-legend">
-        <span class="legend-item"><i class="legend-dot legend-total"></i>Total (barras)</span>
-        <span class="legend-item"><i class="legend-dot legend-delivery"></i>Delivery (linha)</span>
-        <span class="legend-item"><i class="legend-dot legend-local"></i>Balcão (linha)</span>
-      </div>
+    <div id="demand-alert" class="demand-alert hidden">
+      <div class="demand-icon">⚡</div>
+      <div id="demand-message" class="demand-text">Alta demanda prevista para as próximas horas!</div>
     </div>
 
-    <div class="results-exec-cards">
+    <div class="results-grid">
       <div class="metric-card">
-        <div class="metric-label">Total de pedidos</div>
+        <div class="metric-label">Total de Pedidos</div>
         <div class="metric-value" data-metric="total">0</div>
-        <div class="metric-sub" data-sub="total"></div>
       </div>
-
       <div class="metric-card">
-        <div class="metric-label">Clientes únicos</div>
+        <div class="metric-label">Clientes Únicos</div>
         <div class="metric-value" data-metric="unique">0</div>
-        <div class="metric-sub" data-sub="unique"></div>
       </div>
-
       <div class="metric-card">
-        <div class="metric-label">Pedidos de delivery</div>
+        <div class="metric-label">Delivery</div>
         <div class="metric-value" data-metric="delivery">0</div>
-        <div class="metric-sub" data-sub="delivery"></div>
       </div>
-
       <div class="metric-card">
-        <div class="metric-label">Pedidos de balcão</div>
+        <div class="metric-label">Local</div>
         <div class="metric-value" data-metric="local">0</div>
-        <div class="metric-sub" data-sub="local"></div>
       </div>
     </div>
 
-    <div class="results-exec-insights">
-      <div class="insights-head">
-        <div class="insights-title">Insights</div>
-        <div class="insights-subtitle">Comparado ao período anterior</div>
+    <div class="chart-section">
+      <div class="chart-header">
+        <h3>Volume de Pedidos</h3>
+        <div class="chart-legend">
+          <span class="legend-item"><i style="background: rgba(139,92,246,0.35)"></i> Total</span>
+          <span class="legend-item"><i style="background: #fff"></i> Delivery</span>
+          <span class="legend-item"><i style="background: #22c55e"></i> Local</span>
+        </div>
       </div>
+      <div class="chart-wrapper">
+        <svg id="results-chart-svg" viewBox="0 0 1000 320" preserveAspectRatio="none"></svg>
+      </div>
+    </div>
 
+    <div class="insights-section">
+      <h3>Insights do Período</h3>
       <div class="insights-grid">
         <div class="insight-card">
-          <div class="insight-label">Variação de pedidos</div>
+          <div class="insight-label">Crescimento</div>
           <div class="insight-value" data-insight="deltaTotal">0%</div>
-          <div class="insight-note" data-insight-note="deltaTotal"></div>
+          <div class="insight-note">vs período anterior</div>
         </div>
 
         <div class="insight-card">
-          <div class="insight-label">Picos de horário</div>
+          <div class="insight-label">Picos de Horário</div>
           <div class="insight-value" data-insight="peaks">—</div>
           <div class="insight-note" data-insight-note="peaks"></div>
         </div>
@@ -1013,16 +957,6 @@ function ensureResultsExecutiveUI() {
           <div class="insight-label">Cancelamentos</div>
           <div class="insight-value" data-insight="cancelRate">0%</div>
           <div class="insight-note" data-insight-note="cancelRate"></div>
-        </div>
-      </div>
-
-      <div class="insights-locked">
-        <div class="locked-title">Recursos avançados (Custom)</div>
-        <div class="locked-list">
-          <div class="locked-item">🔒 Relatorio detalhado de etapas</div>
-          <div class="locked-item">🔒 Alertas automáticos</div>
-          <div class="locked-item">🔒 Relatórios por unidade / multiunidade</div>
-          <div class="locked-item">🔒 Integrações sob demanda</div>
         </div>
       </div>
     </div>
@@ -1192,33 +1126,6 @@ async function renderResultsExecutive() {
   const range = getPeriodRange(resultsState.period);
   const type = resultsState.type;
 
-  // ROI & Demand (Executive)
-  if (features.roi) {
-    try {
-      const roiResp = await fetch(`${METRICS_URL}/${rid}`);
-      const m = await roiResp.json();
-      const roiCont = document.getElementById("roi-container");
-      if (roiCont) {
-        roiCont.classList.remove("hidden");
-        const revEl = document.getElementById("roi-ia-revenue");
-        const tktEl = document.getElementById("roi-ia-ticket");
-        if (revEl) revEl.textContent = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(m.ia_revenue || 0);
-        if (tktEl) tktEl.textContent = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(m.ticket_medio_ia || 0);
-      }
-    } catch (e) { console.error("ROI Error:", e); }
-
-    try {
-      const demandResp = await fetch(`${FORECAST_URL}/${rid}`);
-      const d = await demandResp.json();
-      const alertBox = document.getElementById("demand-alert");
-      if (alertBox) {
-        alertBox.classList.toggle("hidden", !d.is_high_demand);
-        const msgEl = document.getElementById("demand-message");
-        if (msgEl) msgEl.textContent = d.alert_message;
-      }
-    } catch (e) { console.error("Demand Error:", e); }
-  }
-
   // Filtragem local dos pedidos carregados
   const filtered = orders.filter((o) => {
     const ms = new Date(o.created_at).getTime();
@@ -1226,6 +1133,48 @@ async function renderResultsExecutive() {
     if (type !== "all" && o.service_type !== type) return false;
     return true;
   });
+
+  // Cálculo de ROI em Tempo Real (Executive)
+  if (features.roi) {
+    const roiCont = document.getElementById("roi-container");
+    if (roiCont) {
+      roiCont.classList.remove("hidden");
+      
+      // Soma total_price dos pedidos (considerando que o backend agora envia esse campo)
+      const totalSales = filtered.reduce((acc, o) => acc + (Number(o.total_price) || 0), 0);
+      const multiplier = totalSales / 4000;
+
+      const salesEl = document.getElementById("roi-total-sales");
+      const multEl = document.getElementById("roi-multiplier");
+      
+      if (salesEl) salesEl.textContent = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalSales);
+      if (multEl) multEl.textContent = `ROI de ${multiplier.toFixed(1)}x`;
+    }
+
+    // IA Metrics (Opcional se o backend suportar)
+    try {
+      const roiResp = await fetch(`${METRICS_URL}/${rid}`);
+      if (roiResp.ok) {
+        const m = await roiResp.json();
+        const revEl = document.getElementById("roi-ia-revenue");
+        if (revEl) revEl.textContent = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(m.ia_revenue || 0);
+      }
+    } catch (e) { console.error("ROI API Error:", e); }
+
+    // Demand Forecast
+    try {
+      const demandResp = await fetch(`${FORECAST_URL}/${rid}`);
+      if (demandResp.ok) {
+        const d = await demandResp.json();
+        const alertBox = document.getElementById("demand-alert");
+        if (alertBox) {
+          alertBox.classList.toggle("hidden", !d.is_high_demand);
+          const msgEl = document.getElementById("demand-message");
+          if (msgEl) msgEl.textContent = d.alert_message;
+        }
+      }
+    } catch (e) { console.error("Demand Error:", e); }
+  }
 
   const prevRange = {
     startMs: range.startMs - (range.endMs - range.startMs),
@@ -1401,6 +1350,7 @@ function init() {
   resultsBackBtn?.addEventListener("click", showBoard);
 
   tabAtivos?.addEventListener("click", () => changeView("ativos"));
+  tabFinalizados?.classList.add("tab-item"); // Garantir classe para estilo
   tabFinalizados?.addEventListener("click", () => changeView("finalizados"));
   tabCancelados?.addEventListener("click", () => changeView("cancelados"));
   tabEntregas?.addEventListener("click", () => changeView("entregas"));
@@ -1425,7 +1375,7 @@ function init() {
   logoutBtn?.addEventListener("click", logout);
   unauthClose?.addEventListener("click", () => closeBackdrop(unauthorizedModal));
 
-  // Polling
+  // Polling com tratamento de erro e trava de concorrência
   fetchOrders();
   setInterval(fetchOrders, 15000);
 }
