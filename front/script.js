@@ -9,6 +9,10 @@ const AUTH_URL = `${API_BASE}/auth/google`;
 // 🔹 CRM
 const CRM_URL = `${API_BASE}/crm`;
 
+// 🔹 NOVAS ROTAS V1 (ROI E DEMANDA) - AGREGADO
+const METRICS_URL = `${API_BASE}/api/v1/metrics`;
+const FORECAST_URL = `${API_BASE}/api/v1/demand-forecast`;
+
 // ===== STATUS MAP =====
 const STATUS_TO_BACKEND = {
   recebido: "pending",
@@ -146,7 +150,7 @@ let activeOrderId = null;
 
 // 🔹 plano/features
 let restaurantPlan = "basic";
-let features = { crm: false, results: false };
+let features = { crm: false, results: false, roi: false, forecast: false };
 
 // CRM state
 let crmClients = [];
@@ -225,7 +229,15 @@ function canUseCRM(plan) {
 }
 
 function canUseResults(plan) {
-  return plan === "advanced" || plan === "custom";
+  return plan === "advanced" || plan === "executive" || plan === "custom";
+}
+
+function canUseROI(plan) {
+  return plan === "executive" || plan === "custom";
+}
+
+function canUseForecast(plan) {
+  return plan === "executive" || plan === "custom";
 }
 
 function canUseOrders(plan) {
@@ -239,6 +251,8 @@ function applyAccessUI() {
   // Atualiza features baseado no plano
   features.crm = canUseCRM(plan);
   features.results = canUseResults(plan);
+  features.roi = canUseROI(plan);
+  features.forecast = canUseForecast(plan);
   
   // Controla visibilidade no menu lateral
   drawerCrmBtn?.classList.toggle("locked", !features.crm);
@@ -995,8 +1009,31 @@ function ensureResultsExecutiveUI() {
   root = document.createElement("div");
   root.className = "results-exec-root";
 
-  root.innerHTML = `
-    <div class="results-exec-head">
+root.innerHTML = `
+    <!-- NOVO: CARDS DE ROI (EXECUTIVE) -->
+    <div class="results-roi-grid hidden" id="roi-container">
+      <div class="roi-card premium">
+        <div class="roi-label">Lucro Gerado pela IA</div>
+        <div class="roi-value" id="roi-ia-revenue">R$ 0,00</div>
+        <div class="roi-sub">Vendas diretas via WhatsApp</div>
+      </div>
+      <div class="roi-card">
+        <div class="roi-label">Ticket Médio IA</div>
+        <div class="roi-value" id="roi-ia-ticket">R$ 0,00</div>
+        <div class="roi-sub">Média por pedido</div>
+      </div>
+    </div>
+
+    <!-- NOVO: ALERTA DE DEMANDA (EXECUTIVE) -->
+    <div class="demand-alert-box hidden" id="demand-alert">
+      <div class="demand-icon">🚀</div>
+      <div class="demand-content">
+        <div class="demand-title">Alta Demanda Detectada!</div>
+        <div class="demand-text" id="demand-message">O volume atual está 20% acima da média.</div>
+      </div>
+    </div>
+
+    <div class="results-exec-header">
       <div class="results-exec-title">Resultados</div>
       <div class="results-exec-filters">
         <select class="results-pill" id="results-period">
@@ -1244,8 +1281,44 @@ function computeTopItems(list) {
   return { text, note };
 }
 
+async function fetchROIMetrics() {
+  if (!features.roi) return;
+  const rid = getRestaurantId();
+  try {
+    const resp = await fetch(`${METRICS_URL}/${rid}`);
+    const data = await resp.json();
+    if (resp.ok) {
+      const roiContainer = document.getElementById("roi-container");
+      const iaRev = document.getElementById("roi-ia-revenue");
+      const iaTicket = document.getElementById("roi-ia-ticket");
+      if (roiContainer) roiContainer.classList.remove("hidden");
+      if (iaRev) iaRev.textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.ia_revenue);
+      if (iaTicket) iaTicket.textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.ticket_medio_ia);
+    }
+  } catch (e) { console.error("Erro ROI:", e); }
+}
+
+async function fetchDemandForecast() {
+  if (!features.forecast) return;
+  const rid = getRestaurantId();
+  try {
+    const resp = await fetch(`${FORECAST_URL}/${rid}`);
+    const data = await resp.json();
+    if (resp.ok && data.is_high_demand) {
+      const alertBox = document.getElementById("demand-alert");
+      const alertMsg = document.getElementById("demand-message");
+      if (alertBox) alertBox.classList.remove("hidden");
+      if (alertMsg) alertMsg.textContent = data.alert_message;
+    }
+  } catch (e) { console.error("Erro Forecast:", e); }
+}
+
 function renderResultsExecutive() {
   ensureResultsExecutiveUI();
+
+  // Busca dados em tempo real para ROI e Demanda (AGREGADO)
+  fetchROIMetrics();
+  fetchDemandForecast();
 
   const range = getPeriodRange(resultsState.period);
   const list = filterOrdersForResults(range, resultsState.type);
