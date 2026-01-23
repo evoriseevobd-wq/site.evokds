@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const HOST = '0.0.0.0'; // Necessário para deploy em containers/Easypanel
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -495,6 +496,6 @@ app.post("/auth/google", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Fluxon Backend rodando na porta ${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`Backend rodando em http://${HOST}:${PORT}`);
 });
