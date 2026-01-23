@@ -1,37 +1,61 @@
 import express from "express";
 import cors from "cors";
 import { createClient } from "@supabase/supabase-js";
-import "dotenv/config.js";
+import dotenv from "dotenv";
 import { v4 as uuidv4 } from 'uuid';
+
+// Carrega variáveis de ambiente
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const HOST = '0.0.0.0'; // Necessário para deploy em containers/Easypanel
+const HOST = '0.0.0.0';
 
+// ✅ VALIDAÇÃO DE VARIÁVEIS DE AMBIENTE
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.error("❌ ERRO: Variáveis SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórias!");
+  process.exit(1);
+}
+
+// ✅ CONFIGURAÇÃO DO SUPABASE
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-app.use(cors());
-app.use(express.json());
+// ✅ TESTE DE CONEXÃO COM SUPABASE
+(async () => {
+  try {
+    const { data, error } = await supabase.from("restaurants").select("id").limit(1);
+    if (error) throw error;
+    console.log("✅ Conexão com Supabase estabelecida com sucesso!");
+  } catch (err) {
+    console.error("❌ Erro ao conectar com Supabase:", err.message);
+  }
+})();
 
+// ✅ MIDDLEWARES
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use(express.json({ limit: '10mb' }));
+
+// ✅ STATUS PERMITIDOS
 const ALLOWED_STATUS = [
-  "draft",      // Rascunho / Conversa em andamento
-  "pending",    // Confirmado / Aguardando cozinha
-  "preparing",  // Em preparo
-  "mounting",   // Montagem
-  "delivering", // Saiu para entrega
-  "finished",   // Finalizado
-  "cancelled",  // Cancelado
-  "canceled",
+  "draft", "pending", "preparing", "mounting", 
+  "delivering", "finished", "cancelled", "canceled"
 ];
 
-const sendError = (res, status, message) =>
-  res.status(status).json({ error: message });
+// ✅ FUNÇÃO DE ERRO PADRONIZADA
+const sendError = (res, status, message) => {
+  console.error(`[${status}] ${message}`);
+  return res.status(status).json({ error: message });
+};
 
 /* =========================
-   FUNÇÕES AUXILIARES E ORIGINAIS
+   FUNÇÕES AUXILIARES
 ========================= */
 
 async function restaurantExists(restaurant_id) {
@@ -67,10 +91,10 @@ function normalizePhone(input) {
 }
 
 /* =========================
-   APIs V1 - INTELIGÊNCIA, PDV E CRM (ATUALIZADAS)
+   APIs V1 - INTELIGÊNCIA, PDV E CRM
 ========================= */
 
-// 1. Criar ou Atualizar Pedido (Suporta Recuperação de Carrinho, ROI e Rastreio)
+// ✅ 1. CRIAR OU ATUALIZAR PEDIDO
 app.post("/api/v1/pedidos", async (req, res) => {
   try {
     const {
@@ -83,10 +107,10 @@ app.post("/api/v1/pedidos", async (req, res) => {
       service_type,
       address,
       payment_method,
-      total_price,      // Para o ROI (Plano Executive)
-      origin,           // ia_whatsapp, pdv_balcao, front_kds
-      status,           // draft ou pending
-      order_id          // Se enviado, atualiza o pedido existente
+      total_price,
+      origin,
+      status,
+      order_id
     } = req.body || {};
 
     const normalizedItems = Array.isArray(items) ? items : Array.isArray(itens) ? itens : [];
@@ -104,7 +128,7 @@ app.post("/api/v1/pedidos", async (req, res) => {
     const now = new Date().toISOString();
     let resultData;
 
-    // Lógica de Base de Clientes (Sempre atualiza/cria o perfil do cliente)
+    // ✅ BASE DE CLIENTES (CRM)
     if (phone) {
       await supabase
         .from("base_clientes")
@@ -113,12 +137,12 @@ app.post("/api/v1/pedidos", async (req, res) => {
           telefone: phone,
           nome: client_name,
           ultima_interacao: now,
-          ia_ativa: true // Por padrão, ao interagir, a IA pode estar ativa (ajustável via N8N)
+          ia_ativa: true
         }, { onConflict: 'telefone, restaurant_id' });
     }
 
     if (order_id) {
-      // Atualiza pedido existente (Conversa em andamento)
+      // ✅ ATUALIZA PEDIDO EXISTENTE
       const { data, error } = await supabase
         .from("orders")
         .update({
@@ -134,7 +158,7 @@ app.post("/api/v1/pedidos", async (req, res) => {
       if (error) return sendError(res, 500, "Erro ao atualizar pedido");
       resultData = data;
     } else {
-      // Cria novo pedido (Gera Tracking ID)
+      // ✅ CRIA NOVO PEDIDO
       const tracking_id = uuidv4().substring(0, 8).toUpperCase();
       const { data: last } = await supabase
         .from("orders")
@@ -166,7 +190,7 @@ app.post("/api/v1/pedidos", async (req, res) => {
         }])
         .select().single();
 
-      if (error) return sendError(res, 500, "Erro ao criar pedido");
+      if (error) return sendError(res, 500, "Erro ao criar pedido: " + error.message);
       resultData = data;
     }
 
@@ -176,11 +200,12 @@ app.post("/api/v1/pedidos", async (req, res) => {
       order: resultData
     });
   } catch (err) {
+    console.error("Erro em /api/v1/pedidos:", err);
     return sendError(res, 500, "Erro interno no servidor");
   }
 });
 
-// 2. Salvar Mensagens (Suporta SessionID Composto e Desativação de IA via From Me)
+// ✅ 2. SALVAR MENSAGENS
 app.post("/api/v1/messages", async (req, res) => {
   try {
     let { restaurant_id, client_phone, sessionId, role, content, from_me } = req.body;
@@ -197,7 +222,7 @@ app.post("/api/v1/messages", async (req, res) => {
       return sendError(res, 400, "Dados insuficientes");
     }
 
-    // Se a mensagem for "from_me" (do dono), desativa a IA na base_clientes
+    // ✅ DESATIVA IA SE MENSAGEM FOR DO DONO
     if (from_me === true || role === "assistant_manual") {
       await supabase
         .from("base_clientes")
@@ -220,16 +245,16 @@ app.post("/api/v1/messages", async (req, res) => {
     if (error) return sendError(res, 500, "Erro ao salvar mensagem");
     return res.status(201).json(data);
   } catch (err) {
+    console.error("Erro em /api/v1/messages:", err);
     return sendError(res, 500, "Erro ao processar mensagem");
   }
 });
 
-// 3. Rota de Métricas e ROI (Para o Dashboard Executive)
+// ✅ 3. MÉTRICAS E ROI (EXECUTIVE)
 app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
     
-    // Busca todos os pedidos do restaurante
     const { data: orders, error } = await supabase
       .from("orders")
       .select("total_price, origin, created_at")
@@ -259,15 +284,18 @@ app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
       }
     });
 
-    metrics.ticket_medio_ia = metrics.ia_orders_count > 0 ? (metrics.ia_revenue / metrics.ia_orders_count) : 0;
+    metrics.ticket_medio_ia = metrics.ia_orders_count > 0 
+      ? (metrics.ia_revenue / metrics.ia_orders_count) 
+      : 0;
 
     return res.json(metrics);
   } catch (err) {
+    console.error("Erro em /api/v1/metrics:", err);
     return sendError(res, 500, "Erro ao processar métricas");
   }
 });
 
-// 4. Rota de Previsão de Demanda (Executive)
+// ✅ 4. PREVISÃO DE DEMANDA (EXECUTIVE)
 app.get("/api/v1/demand-forecast/:restaurant_id", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
@@ -275,7 +303,6 @@ app.get("/api/v1/demand-forecast/:restaurant_id", async (req, res) => {
     const dayOfWeek = now.getDay();
     const hour = now.getHours();
 
-    // Busca pedidos das últimas 4 semanas para o mesmo dia e hora
     const fourWeeksAgo = new Date();
     fourWeeksAgo.setDate(now.getDate() - 28);
 
@@ -287,32 +314,33 @@ app.get("/api/v1/demand-forecast/:restaurant_id", async (req, res) => {
 
     if (error) return sendError(res, 500, "Erro ao buscar histórico");
 
-    // Filtra pedidos históricos do mesmo dia da semana e mesma faixa de horário
     const similarOrders = history.filter(o => {
       const d = new Date(o.created_at);
       return d.getDay() === dayOfWeek && d.getHours() === hour;
     });
 
-    const averageHistory = similarOrders.length / 4; // Média por semana
+    const averageHistory = similarOrders.length / 4;
 
-    // Busca pedidos da última hora (hoje)
     const oneHourAgo = new Date(now.getTime() - (60 * 60 * 1000));
     const currentOrders = history.filter(o => new Date(o.created_at) >= oneHourAgo);
 
-    const isHighDemand = currentOrders.length > (averageHistory * 1.2); // 20% acima da média
+    const isHighDemand = currentOrders.length > (averageHistory * 1.2);
 
     return res.json({
       current_volume: currentOrders.length,
       average_history: averageHistory,
       is_high_demand: isHighDemand,
-      alert_message: isHighDemand ? "🚀 ALTA DEMANDA DETECTADA! Volume 20% acima da média." : "Volume dentro do normal."
+      alert_message: isHighDemand 
+        ? "🚀 ALTA DEMANDA DETECTADA! Volume 20% acima da média." 
+        : "Volume dentro do normal."
     });
   } catch (err) {
+    console.error("Erro em /api/v1/demand-forecast:", err);
     return sendError(res, 500, "Erro ao processar previsão");
   }
 });
 
-// 5. Bloquinho de Notas / Perfil do Cliente (CRM Inteligente)
+// ✅ 5. PERFIL DO CLIENTE (CRM)
 app.post("/api/v1/client-profiles", async (req, res) => {
   try {
     const { restaurant_id, client_phone, ai_notes, preferences } = req.body;
@@ -332,11 +360,12 @@ app.post("/api/v1/client-profiles", async (req, res) => {
     if (error) return sendError(res, 500, "Erro ao salvar perfil");
     return res.json(data);
   } catch (err) {
+    console.error("Erro em /api/v1/client-profiles:", err);
     return sendError(res, 500, "Erro ao processar perfil");
   }
 });
 
-// 6. Rota de Rastreio (Para o cliente final)
+// ✅ 6. RASTREIO DE PEDIDO
 app.get("/api/v1/rastreio/:tracking_id", async (req, res) => {
   try {
     const { tracking_id } = req.params;
@@ -349,19 +378,24 @@ app.get("/api/v1/rastreio/:tracking_id", async (req, res) => {
     if (error || !data) return sendError(res, 404, "Pedido não encontrado");
     return res.json(data);
   } catch (err) {
+    console.error("Erro em /api/v1/rastreio:", err);
     return sendError(res, 500, "Erro ao buscar rastreio");
   }
 });
 
 /* =========================
-   ROTAS ORIGINAIS (KDS, CRM, AUTH) - MANTIDAS INTEGRALMENTE
+   ROTAS ORIGINAIS (KDS, CRM, AUTH)
 ========================= */
 
+// ✅ ROTA ALTERNATIVA /orders (POST) - CORRIGIDA
 app.post("/orders", async (req, res) => {
+  // Redireciona para a rota V1
   req.url = "/api/v1/pedidos";
-  return app._router.handle(req, res);
+  req.body = { ...req.body };
+  return app.handle(req, res);
 });
 
+// ✅ LISTAR PEDIDOS
 app.get("/orders/:restaurant_id", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
@@ -374,10 +408,12 @@ app.get("/orders/:restaurant_id", async (req, res) => {
     if (error) return sendError(res, 500, "Erro ao listar pedidos");
     return res.json(data);
   } catch (err) {
+    console.error("Erro em GET /orders:", err);
     return sendError(res, 500, "Erro ao listar pedidos");
   }
 });
 
+// ✅ ATUALIZAR STATUS DO PEDIDO
 app.patch("/orders/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -395,15 +431,14 @@ app.patch("/orders/:id", async (req, res) => {
 
     if (error || !data) return sendError(res, 500, "Erro ao atualizar pedido");
 
-    // Lógica Executive: Se status for 'finished' ou 'delivered', poderia disparar baixa no PDV aqui
-    // (Implementar integração MarketUP conforme necessidade)
-
     return res.json(data);
   } catch (err) {
+    console.error("Erro em PATCH /orders:", err);
     return sendError(res, 500, "Erro ao atualizar pedido");
   }
 });
 
+// ✅ DELETAR PEDIDO
 app.delete("/orders/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -411,10 +446,12 @@ app.delete("/orders/:id", async (req, res) => {
     if (error) return sendError(res, 500, "Erro ao deletar pedido");
     return res.status(204).send();
   } catch (err) {
+    console.error("Erro em DELETE /orders:", err);
     return sendError(res, 500, "Erro ao deletar pedido");
   }
 });
 
+// ✅ CRM
 app.get("/crm/:restaurant_id", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
@@ -470,10 +507,12 @@ app.get("/crm/:restaurant_id", async (req, res) => {
 
     return res.json(result);
   } catch (err) {
+    console.error("Erro em /crm:", err);
     return sendError(res, 500, "Erro ao buscar CRM");
   }
 });
 
+// ✅ AUTENTICAÇÃO GOOGLE
 app.post("/auth/google", async (req, res) => {
   try {
     const { email } = req.body;
@@ -492,10 +531,24 @@ app.post("/auth/google", async (req, res) => {
       restaurant: data[0],
     });
   } catch (err) {
+    console.error("Erro em /auth/google:", err);
     return res.status(500).json({ error: "Erro inesperado" });
   }
 });
 
+// ✅ TRATAMENTO DE ERROS GLOBAL
+app.use((err, req, res, next) => {
+  console.error("❌ Erro não tratado:", err);
+  res.status(500).json({ error: "Erro interno do servidor" });
+});
+
+// ✅ ROTA 404
+app.use((req, res) => {
+  res.status(404).json({ error: "Rota não encontrada" });
+});
+
+// ✅ INICIA O SERVIDOR
 app.listen(PORT, HOST, () => {
-  console.log(`Backend rodando em http://${HOST}:${PORT}`);
+  console.log(`🚀 Backend rodando em http://${HOST}:${PORT}`);
+  console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
