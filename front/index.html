@@ -7,7 +7,7 @@
   <title>FluxON</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -112,7 +112,30 @@
     </div>
 
     <div class="results-content">
-      <!-- cards principais -->
+      <!-- NOVO: CARDS DE ROI (EXECUTIVE ELITE) -->
+      <div class="results-roi-grid hidden" id="roi-container">
+        <div class="roi-card premium">
+          <div class="roi-label">Lucro Gerado pela IA</div>
+          <div class="roi-value" id="roi-ia-revenue">R$ 0,00</div>
+          <div class="roi-sub">Vendas diretas via WhatsApp</div>
+        </div>
+        <div class="roi-card">
+          <div class="roi-label">Ticket Médio IA</div>
+          <div class="roi-value" id="roi-ia-ticket">R$ 0,00</div>
+          <div class="roi-sub">Média por pedido</div>
+        </div>
+      </div>
+
+      <!-- NOVO: ALERTA DE DEMANDA (EXECUTIVE ELITE) -->
+      <div class="demand-alert-box hidden" id="demand-alert">
+        <div class="demand-icon">🚀</div>
+        <div class="demand-content">
+          <div class="demand-title">Alta Demanda Detectada!</div>
+          <div class="demand-text" id="demand-message">O volume atual está 20% acima da média.</div>
+        </div>
+      </div>
+
+      <!-- cards principais (ORIGINAIS MANTIDOS) -->
       <div class="results-grid">
         <div class="result-card">
           <div class="result-label">Total de pedidos</div>
@@ -133,6 +156,11 @@
           <div class="result-label">Pedidos balcão</div>
           <div class="result-value" id="result-local-orders">0</div>
         </div>
+      </div>
+
+      <!-- NOVO: CONTAINER DE GRÁFICOS (ELITE) -->
+      <div class="results-exec-chart">
+        <svg id="results-chart-svg" viewBox="0 0 1000 320" preserveAspectRatio="none"></svg>
       </div>
 
       <!-- espaço para evoluir depois (sem PDV ainda) -->
@@ -194,7 +222,7 @@
 
       <div class="modal-actions">
         <button class="ghost-button" id="close-modal-secondary">Fechar</button>
-        <button class="danger-button" id="modal-cancel">>Cancelar Pedido</button>
+        <button class="danger-button" id="modal-cancel">Cancelar Pedido</button>
         <button class="ghost-button" id="modal-prev">Voltar etapa</button>
         <button class="primary-button" id="modal-next"></button>
       </div>
