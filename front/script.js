@@ -304,12 +304,12 @@ function showUpgradeModal(requiredPlan, featureName) {
   backdrop.className = "upgrade-modal-backdrop open";
 
   // Define features baseado no plano
-  let features = [];
+  let featuresList = [];
   let planDisplay = "";
   
   if (requiredPlan === "pro") {
     planDisplay = "PRO ou ADVANCED";
-    features = [
+    featuresList = [
       "CRM completo de clientes",
       "Histórico de pedidos por cliente",
       "Análise de frequência de compra",
@@ -317,12 +317,11 @@ function showUpgradeModal(requiredPlan, featureName) {
     ];
   } else if (requiredPlan === "advanced") {
     planDisplay = "ADVANCED";
-    features = [
+    featuresList = [
       "Relatórios executivos avançados",
       "Gráficos e insights detalhados",
       "Análise de picos e tendências",
-      "Exportação de dados",
-      "Suporte premium"
+      "Exportação de dados"
     ];
   }
 
@@ -343,7 +342,7 @@ function showUpgradeModal(requiredPlan, featureName) {
       <div class="upgrade-features">
         <div class="upgrade-features-title">O que você ganha:</div>
         <ul>
-          ${features.map(f => `<li>${f}</li>`).join("")}
+          ${featuresList.map(f => `<li>${f}</li>`).join("")}
         </ul>
       </div>
       
@@ -445,7 +444,7 @@ async function fetchOrders() {
     renderBoard();
   } catch (e) {
     console.error(e);
-    alert("Erro ao buscar pedidos.");
+    // alert("Erro ao buscar pedidos.");
   }
 }
 
@@ -538,6 +537,22 @@ function buildOrderCard(order) {
   return card;
 }
 
+function toggleNoOrdersBalloons() {
+  Object.keys(columns).forEach((k) => {
+    const col = columns[k];
+    if (!col) return;
+    const existing = col.querySelector(".empty-balloon");
+    if (col.children.length === 0 && !existing) {
+      const b = document.createElement("div");
+      b.className = "empty-balloon";
+      b.textContent = "Nenhum pedido aqui";
+      col.appendChild(b);
+    } else if (col.children.length > 1 && existing) {
+      existing.remove();
+    }
+  });
+}
+
 // ===== MODAL =====
 function openOrderModal(orderId) {
   const order = orders.find((o) => o.id === orderId);
@@ -584,8 +599,8 @@ function openOrderModal(orderId) {
     modalPayment.textContent = showPay ? String(order.payment_method || "") : "";
   }
 
-  modalPrevBtn?.classList.toggle("hidden", currentView === "cancelados");
-  modalCancelBtn?.classList.toggle("hidden", currentView === "cancelados");
+  modalPrevBtn?.classList.toggle("hidden", ["cancelado", "finalizado", "recebido"].includes(currentView));
+  modalCancelBtn?.classList.toggle("hidden", ["cancelado", "finalizado"].includes(currentView));
 
   if (modalNextBtn) {
     const s = getFrontStatus(orderId);
@@ -856,149 +871,32 @@ function getPeriodRange(periodKey) {
       bucket: "day",
       startMs: getLocalDayStartMs(start),
       endMs: nowMs,
-      label: `${n} dias`,
+      label: `Últimos ${n} dias`,
       days: n,
     };
   }
 
-  let min = nowMs;
-  for (const o of orders) {
-    const t = new Date(o.created_at).getTime();
-    if (!Number.isNaN(t) && t < min) min = t;
-  }
   return {
     bucket: "day",
-    startMs: Number.isFinite(min) ? min : nowMs,
+    startMs: 0,
     endMs: nowMs,
     label: "Tudo",
-    days: Math.max(1, Math.ceil((nowMs - min) / dayMs)),
+    days: 365,
   };
 }
 
-function filterOrdersForResults(range, typeKey) {
-  const filtered = orders.filter((o) => {
-    const t = new Date(o.created_at).getTime();
-    if (Number.isNaN(t)) return false;
-    if (t < range.startMs || t > range.endMs) return false;
-
-    const st = String(o.service_type || "").toLowerCase();
-    if (typeKey === "delivery") return st === "delivery";
-    if (typeKey === "local") return st !== "delivery";
-    return true;
-  });
-
-  return filtered;
-}
-
-function uniqueClientsCount(list) {
-  const set = new Set();
-  for (const o of list) {
-    const phone = normalizePhone(o.client_phone);
-    if (phone) set.add(`p:${phone}`);
-    else set.add(`anon:${o.id}`);
-  }
-  return set.size;
-}
-
-function computeSummary(list) {
-  const total = list.length;
-  const delivery = list.filter((o) => String(o.service_type || "").toLowerCase() === "delivery").length;
-  const local = total - delivery;
-  const unique = uniqueClientsCount(list);
-
-  const cancelled = list.filter((o) => {
-    const s = o._frontStatus || toFrontStatus(o.status);
-    return s === "cancelado";
-  }).length;
-
-  return { total, delivery, local, unique, cancelled };
-}
-
-function pctChange(curr, prev) {
-  const c = Number(curr) || 0;
-  const p = Number(prev) || 0;
-  if (p === 0 && c === 0) return 0;
-  if (p === 0) return 100;
-  return ((c - p) / p) * 100;
-}
-
-function formatPct(x) {
-  const n = Number(x);
-  if (!Number.isFinite(n)) return "0%";
-  const sign = n > 0 ? "+" : "";
-  return `${sign}${Math.round(n)}%`;
-}
-
-function bucketKeyDay(d) {
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-function buildSeries(range, list) {
-  const map = new Map();
-
-  if (range.bucket === "hour") {
-    for (let h = 0; h < 24; h++) map.set(String(h), { total: 0, delivery: 0, local: 0 });
-  } else {
-    const start = new Date(range.startMs);
-    const end = new Date(range.endMs);
-    const cur = new Date(getLocalDayStartMs(start));
-    const endDay = new Date(getLocalDayStartMs(end));
-
-    while (cur.getTime() <= endDay.getTime()) {
-      map.set(bucketKeyDay(cur), { total: 0, delivery: 0, local: 0 });
-      cur.setDate(cur.getDate() + 1);
-    }
-  }
-
-  for (const o of list) {
-    const t = new Date(o.created_at);
-    const st = String(o.service_type || "").toLowerCase();
-    const isDelivery = st === "delivery";
-
-    const key =
-      range.bucket === "hour" ? String(t.getHours()) : bucketKeyDay(t);
-
-    if (!map.has(key)) map.set(key, { total: 0, delivery: 0, local: 0 });
-
-    const b = map.get(key);
-    b.total += 1;
-    if (isDelivery) b.delivery += 1;
-    else b.local += 1;
-  }
-
-  const labels = Array.from(map.keys());
-  const total = labels.map((k) => map.get(k).total);
-  const delivery = labels.map((k) => map.get(k).delivery);
-  const local = labels.map((k) => map.get(k).local);
-
-  return { labels, total, delivery, local };
-}
-
-function niceStep(maxVal) {
-  const max = Math.max(1, Number(maxVal) || 1);
-  const pow = Math.pow(10, Math.floor(Math.log10(max)));
-  const n = max / pow;
-
-  let step = 1;
-  if (n <= 2) step = 0.5;
-  else if (n <= 5) step = 1;
-  else step = 2;
-
-  return step * pow;
+function niceStep(max) {
+  if (max <= 5) return 1;
+  if (max <= 10) return 2;
+  if (max <= 25) return 5;
+  if (max <= 50) return 10;
+  if (max <= 100) return 20;
+  return Math.ceil(max / 5);
 }
 
 function ensureResultsExecutiveUI() {
-  if (!resultsView) return;
-
-  let container = resultsView.querySelector(".results-content");
-  if (!container) {
-    container = document.createElement("div");
-    container.className = "results-content";
-    resultsView.appendChild(container);
-  }
+  const container = resultsView?.querySelector(".results-content");
+  if (!container) return;
 
   let root = container.querySelector(".results-exec-root");
   if (root) {
@@ -1009,7 +907,7 @@ function ensureResultsExecutiveUI() {
   root = document.createElement("div");
   root.className = "results-exec-root";
 
-root.innerHTML = `
+  root.innerHTML = `
     <!-- NOVO: CARDS DE ROI (EXECUTIVE) -->
     <div class="results-roi-grid hidden" id="roi-container">
       <div class="roi-card premium">
@@ -1178,6 +1076,7 @@ function renderChartSVG(svg, range, series) {
 
   const parts = [];
 
+  // Y Axis Ticks
   const ticks = 5;
   for (let i = 0; i <= ticks; i++) {
     const val = (maxY * i) / ticks;
@@ -1188,6 +1087,7 @@ function renderChartSVG(svg, range, series) {
     );
   }
 
+  // Bars (Total)
   const barW = Math.max(6, Math.min(26, plotW / Math.max(10, n)));
   for (let i = 0; i < n; i++) {
     const cx = x(i, n);
@@ -1200,6 +1100,7 @@ function renderChartSVG(svg, range, series) {
     );
   }
 
+  // Paths (Lines)
   function buildPath(values) {
     let d = "";
     for (let i = 0; i < n; i++) {
@@ -1218,6 +1119,7 @@ function renderChartSVG(svg, range, series) {
     `<path d="${buildPath(series.local)}" fill="none" stroke="rgba(34,197,94,0.85)" stroke-width="3" />`
   );
 
+  // X Axis Labels
   const labelEvery = range.bucket === "hour" ? 4 : Math.ceil(n / 7);
   for (let i = 0; i < n; i++) {
     if (i % Math.max(1, labelEvery) !== 0 && i !== n - 1) continue;
@@ -1281,323 +1183,252 @@ function computeTopItems(list) {
   return { text, note };
 }
 
-async function fetchROIMetrics() {
-  if (!features.roi) return;
+async function renderResultsExecutive() {
+  if (!resultsState.uiReady) return;
+
   const rid = getRestaurantId();
-  try {
-    const resp = await fetch(`${METRICS_URL}/${rid}`);
-    const data = await resp.json();
-    if (resp.ok) {
-      const roiContainer = document.getElementById("roi-container");
-      const iaRev = document.getElementById("roi-ia-revenue");
-      const iaTicket = document.getElementById("roi-ia-ticket");
-      if (roiContainer) roiContainer.classList.remove("hidden");
-      if (iaRev) iaRev.textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.ia_revenue);
-      if (iaTicket) iaTicket.textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.ticket_medio_ia);
-    }
-  } catch (e) { console.error("Erro ROI:", e); }
-}
-
-async function fetchDemandForecast() {
-  if (!features.forecast) return;
-  const rid = getRestaurantId();
-  try {
-    const resp = await fetch(`${FORECAST_URL}/${rid}`);
-    const data = await resp.json();
-    if (resp.ok && data.is_high_demand) {
-      const alertBox = document.getElementById("demand-alert");
-      const alertMsg = document.getElementById("demand-message");
-      if (alertBox) alertBox.classList.remove("hidden");
-      if (alertMsg) alertMsg.textContent = data.alert_message;
-    }
-  } catch (e) { console.error("Erro Forecast:", e); }
-}
-
-function renderResultsExecutive() {
-  ensureResultsExecutiveUI();
-
-  // Busca dados em tempo real para ROI e Demanda (AGREGADO)
-  fetchROIMetrics();
-  fetchDemandForecast();
+  if (!rid) return;
 
   const range = getPeriodRange(resultsState.period);
-  const list = filterOrdersForResults(range, resultsState.type);
+  const type = resultsState.type;
 
-  const curr = computeSummary(list);
+  // ROI & Demand (Executive)
+  if (features.roi) {
+    try {
+      const roiResp = await fetch(`${METRICS_URL}/${rid}`);
+      const m = await roiResp.json();
+      const roiCont = document.getElementById("roi-container");
+      if (roiCont) {
+        roiCont.classList.remove("hidden");
+        const revEl = document.getElementById("roi-ia-revenue");
+        const tktEl = document.getElementById("roi-ia-ticket");
+        if (revEl) revEl.textContent = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(m.ia_revenue || 0);
+        if (tktEl) tktEl.textContent = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(m.ticket_medio_ia || 0);
+      }
+    } catch (e) { console.error("ROI Error:", e); }
 
-  const span = Math.max(1, range.endMs - range.startMs);
-  const prevRange = {
-    ...range,
-    startMs: range.startMs - span,
-    endMs: range.startMs - 1,
-  };
-  const prevList = filterOrdersForResults(prevRange, resultsState.type);
-  const prev = computeSummary(prevList);
-
-  if (resultTotalOrdersEl) resultTotalOrdersEl.textContent = String(curr.total);
-  if (resultUniqueClientsEl) resultUniqueClientsEl.textContent = String(curr.unique);
-  if (resultDeliveryOrdersEl) resultDeliveryOrdersEl.textContent = String(curr.delivery);
-  if (resultLocalOrdersEl) resultLocalOrdersEl.textContent = String(curr.local);
-
-  const root = resultsView?.querySelector(".results-exec-root");
-  if (root) {
-    const setMetric = (key, val) => {
-      const el = root.querySelector(`[data-metric="${key}"]`);
-      if (el) el.textContent = String(val);
-    };
-
-    setMetric("total", curr.total);
-    setMetric("unique", curr.unique);
-    setMetric("delivery", curr.delivery);
-    setMetric("local", curr.local);
-
-    const subs = {
-      total: formatPct(pctChange(curr.total, prev.total)),
-      unique: formatPct(pctChange(curr.unique, prev.unique)),
-      delivery: formatPct(pctChange(curr.delivery, prev.delivery)),
-      local: formatPct(pctChange(curr.local, prev.local)),
-    };
-
-    Object.keys(subs).forEach((k) => {
-      const el = root.querySelector(`[data-sub="${k}"]`);
-      if (el) el.textContent = `Comparado ao período anterior: ${subs[k]}`;
-    });
-
-    const series = buildSeries(range, list);
-    const svg = root.querySelector("#results-chart-svg");
-    renderChartSVG(svg, range, series);
-
-    const deltaTotal = formatPct(pctChange(curr.total, prev.total));
-    const deltaTotalEl = root.querySelector(`[data-insight="deltaTotal"]`);
-    const deltaTotalNote = root.querySelector(`[data-insight-note="deltaTotal"]`);
-    if (deltaTotalEl) deltaTotalEl.textContent = deltaTotal;
-    if (deltaTotalNote) deltaTotalNote.textContent = `Total no período: ${curr.total} | Anterior: ${prev.total}`;
-
-    const peaks = computePeaks(list);
-    const peaksEl = root.querySelector(`[data-insight="peaks"]`);
-    const peaksNote = root.querySelector(`[data-insight-note="peaks"]`);
-    if (peaksEl) peaksEl.textContent = peaks.text;
-    if (peaksNote) peaksNote.textContent = peaks.note;
-
-    const topItems = computeTopItems(list);
-    const topItemsEl = root.querySelector(`[data-insight="topItems"]`);
-    const topItemsNote = root.querySelector(`[data-insight-note="topItems"]`);
-    if (topItemsEl) topItemsEl.textContent = topItems.text;
-    if (topItemsNote) topItemsNote.textContent = topItems.note;
-
-    const cancelRate = curr.total > 0 ? (curr.cancelled / curr.total) * 100 : 0;
-    const prevCancelRate = prev.total > 0 ? (prev.cancelled / prev.total) * 100 : 0;
-
-    const cancelEl = root.querySelector(`[data-insight="cancelRate"]`);
-    const cancelNote = root.querySelector(`[data-insight-note="cancelRate"]`);
-    if (cancelEl) cancelEl.textContent = `${Math.round(cancelRate)}%`;
-    if (cancelNote)
-      cancelNote.textContent = `Cancelados: ${curr.cancelled} (${formatPct(cancelRate - prevCancelRate)} em relação ao período anterior)`;
+    try {
+      const demandResp = await fetch(`${FORECAST_URL}/${rid}`);
+      const d = await demandResp.json();
+      const alertBox = document.getElementById("demand-alert");
+      if (alertBox) {
+        alertBox.classList.toggle("hidden", !d.is_high_demand);
+        const msgEl = document.getElementById("demand-message");
+        if (msgEl) msgEl.textContent = d.alert_message;
+      }
+    } catch (e) { console.error("Demand Error:", e); }
   }
+
+  // Filtragem local dos pedidos carregados
+  const filtered = orders.filter((o) => {
+    const ms = new Date(o.created_at).getTime();
+    if (ms < range.startMs || ms > range.endMs) return false;
+    if (type !== "all" && o.service_type !== type) return false;
+    return true;
+  });
+
+  const prevRange = {
+    startMs: range.startMs - (range.endMs - range.startMs),
+    endMs: range.startMs,
+  };
+  const prevList = orders.filter((o) => {
+    const ms = new Date(o.created_at).getTime();
+    return ms >= prevRange.startMs && ms < prevRange.endMs;
+  });
+
+  // Métricas Básicas
+  const metrics = {
+    total: filtered.length,
+    unique: new Set(filtered.map((o) => o.client_phone || o.client_name)).size,
+    delivery: filtered.filter((o) => o.service_type === "delivery").length,
+    local: filtered.filter((o) => o.service_type === "local").length,
+  };
+
+  // Atualiza cards
+  document.querySelectorAll("[data-metric]").forEach((el) => {
+    const k = el.dataset.metric;
+    if (metrics[k] !== undefined) el.textContent = metrics[k];
+  });
+
+  // Insights
+  const deltaTotal = prevList.length > 0 ? ((filtered.length - prevList.length) / prevList.length) * 100 : 0;
+  const deltaEl = document.querySelector('[data-insight="deltaTotal"]');
+  if (deltaEl) {
+    deltaEl.textContent = `${deltaTotal > 0 ? "+" : ""}${Math.round(deltaTotal)}%`;
+    deltaEl.style.color = deltaTotal >= 0 ? "#22c55e" : "#ef4444";
+  }
+
+  const peaks = computePeaks(filtered);
+  const peaksEl = document.querySelector('[data-insight="peaks"]');
+  if (peaksEl) peaksEl.textContent = peaks.text;
+  const peaksNote = document.querySelector('[data-insight-note="peaks"]');
+  if (peaksNote) peaksNote.textContent = peaks.note;
+
+  const tops = computeTopItems(filtered);
+  const topsEl = document.querySelector('[data-insight="topItems"]');
+  if (topsEl) topsEl.textContent = tops.text;
+  const topsNote = document.querySelector('[data-insight-note="topItems"]');
+  if (topsNote) topsNote.textContent = tops.note;
+
+  const cancels = filtered.filter((o) => o._frontStatus === "cancelado").length;
+  const cancelRate = filtered.length > 0 ? (cancels / filtered.length) * 100 : 0;
+  const cancelEl = document.querySelector('[data-insight="cancelRate"]');
+  if (cancelEl) cancelEl.textContent = `${Math.round(cancelRate)}%`;
+
+  // Gráfico
+  const series = { labels: [], total: [], delivery: [], local: [] };
+  if (range.bucket === "hour") {
+    for (let h = 0; h < 24; h++) {
+      series.labels.push(h);
+      const hList = filtered.filter((o) => new Date(o.created_at).getHours() === h);
+      series.total.push(hList.length);
+      series.delivery.push(hList.filter((o) => o.service_type === "delivery").length);
+      series.local.push(hList.filter((o) => o.service_type === "local").length);
+    }
+  } else {
+    const days = range.days;
+    for (let i = 0; i < days; i++) {
+      const d = new Date(range.startMs + i * 24 * 60 * 60 * 1000);
+      const iso = d.toISOString().split("T")[0];
+      series.labels.push(iso);
+      const dList = filtered.filter((o) => o.created_at?.startsWith(iso));
+      series.total.push(dList.length);
+      series.delivery.push(dList.filter((o) => o.service_type === "delivery").length);
+      series.local.push(dList.filter((o) => o.service_type === "local").length);
+    }
+  }
+
+  const svg = document.getElementById("results-chart-svg");
+  renderChartSVG(svg, range, series);
 }
 
-function renderResults() {
-  renderResultsExecutive();
-}
-
-function toggleNoOrdersBalloons() {
-  const col = columns?.caminho;
-  if (!col) return;
-
-  const existing = document.getElementById("no-deliveries-balloon");
-  if (existing) existing.remove();
-
-  if (currentView !== "entregas") return;
-
-  const hasDeliveries = orders.some((o) => o._frontStatus === "caminho");
-  if (hasDeliveries) return;
-
-  const balloon = document.createElement("div");
-  balloon.id = "no-deliveries-balloon";
-  balloon.className = "empty-balloon";
-  balloon.textContent = "Sem entregas no momento.";
-
-  col.appendChild(balloon);
-}
-
-// ===== GOOGLE AUTH =====
-function parseJwt(token) {
+// ===== AUTH & GOOGLE =====
+function decodeJwt(token) {
   try {
     const base64Url = token.split(".")[1];
     const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const json = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
-    );
-    return JSON.parse(json);
-  } catch {
-    return null;
-  }
+    return JSON.parse(window.atob(base64));
+  } catch (e) { return null; }
 }
 
-async function completeLogin(user) {
+async function handleCredentialResponse(response) {
+  const payload = decodeJwt(response.credential);
+  if (!payload || !payload.email) return;
+
   try {
     const resp = await fetch(AUTH_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: user.email, name: user.name }),
+      headers: buildHeaders(),
+      body: JSON.stringify({ email: payload.email }),
     });
 
-    const data = await resp.json().catch(() => ({}));
-    if (!resp.ok) {
-      alert(data.error || "Erro ao autenticar.");
-      return;
+    const data = await resp.json();
+    if (data.authorized && data.restaurant) {
+      localStorage.setItem("restaurant_id", data.restaurant.id);
+      localStorage.setItem("restaurant_name", data.restaurant.name);
+      localStorage.setItem("restaurant_plan", data.restaurant.plan || "basic");
+      localStorage.setItem("user_email", payload.email);
+      localStorage.setItem("user_name", payload.name);
+      localStorage.setItem("user_picture", payload.picture);
+
+      location.reload();
+    } else {
+      openBackdrop(unauthorizedModal);
     }
-
-    if (!data.authorized) {
-      if (unauthorizedModal) openBackdrop(unauthorizedModal);
-      return;
-    }
-
-    localStorage.setItem("restaurant_id", data.restaurant.id);
-    localStorage.setItem("user", JSON.stringify(user));
-
-    restaurantPlan = (data?.restaurant?.plan || "basic").toLowerCase();
-
-    applyAccessUI();
-
-    loginScreen?.classList.add("hidden");
-    showBoard();
-
-    if (userChip) userChip.hidden = false;
-    if (userNameEl) userNameEl.textContent = user.name || "Usuário";
-
-    if (userAvatar) {
-      if (user.picture) {
-        userAvatar.src = user.picture;
-        userAvatar.hidden = false;
-      } else {
-        userAvatar.hidden = true;
-      }
-    }
-
-    await fetchOrders();
   } catch (e) {
-    console.error(e);
-    alert("Erro ao fazer login.");
+    console.error("Auth Error:", e);
+    alert("Erro ao autenticar. Tente novamente.");
   }
 }
 
-function handleCredentialResponse(response) {
-  const payload = parseJwt(response.credential);
-  if (!payload?.email) {
-    alert("Falha no login.");
-    return;
-  }
-  const user = {
-    email: payload.email,
-    name: payload.name,
-    picture: payload.picture,
-  };
-  completeLogin(user);
-}
-
-function initGoogleButton(attempt = 0) {
-  if (!window.google || !googleBtnContainer) {
-    if (attempt < 15) setTimeout(() => initGoogleButton(attempt + 1), 250);
-    return;
-  }
-
-  google.accounts.id.initialize({
+function initGoogleLogin() {
+  if (!googleBtnContainer) return;
+  
+  window.google?.accounts.id.initialize({
     client_id: GOOGLE_CLIENT_ID,
     callback: handleCredentialResponse,
   });
 
-  google.accounts.id.renderButton(googleBtnContainer, {
-    theme: "filled_blue",
+  window.google?.accounts.id.renderButton(googleBtnContainer, {
+    theme: "outline",
     size: "large",
-    shape: "pill",
-    text: "continue_with",
-    width: 320,
+    width: 280,
   });
 }
 
-// ===== EVENTS =====
-
-closeModalBtn?.addEventListener("click", closeOrderModal);
-closeModalSecondaryBtn?.addEventListener("click", closeOrderModal);
-modalBackdrop?.addEventListener("click", (e) => {
-  if (e.target === modalBackdrop) closeOrderModal();
-});
-
-modalNextBtn?.addEventListener("click", () => {
-  if (activeOrderId) {
-    advanceStatus(activeOrderId);
-    closeOrderModal();
-  }
-});
-modalPrevBtn?.addEventListener("click", () => {
-  if (activeOrderId) {
-    regressStatus(activeOrderId);
-    closeOrderModal();
-  }
-});
-modalCancelBtn?.addEventListener("click", () => {
-  if (activeOrderId) cancelOrder(activeOrderId);
-});
-
-openCreateBtn?.addEventListener("click", openCreateModal);
-closeCreateBtn?.addEventListener("click", closeCreateModal);
-cancelCreateBtn?.addEventListener("click", closeCreateModal);
-saveCreateBtn?.addEventListener("click", saveNewOrder);
-
-createModal?.addEventListener("click", (e) => {
-  if (e.target === createModal) closeCreateModal();
-});
-
-newDelivery?.addEventListener("change", updateCreateDeliveryVisibility);
-
-tabAtivos?.addEventListener("click", () => changeView("ativos"));
-tabFinalizados?.addEventListener("click", () => changeView("finalizados"));
-tabCancelados?.addEventListener("click", () => changeView("cancelados"));
-tabEntregas?.addEventListener("click", () => changeView("entregas"));
-
-openDrawerBtn?.addEventListener("click", () => {
-  drawer?.classList.add("open");
-  drawerBackdrop?.classList.add("open");
-});
-closeDrawerBtn?.addEventListener("click", closeDrawer);
-drawerBackdrop?.addEventListener("click", closeDrawer);
-
-drawerOrdersBtn?.addEventListener("click", showBoard);
-drawerCrmBtn?.addEventListener("click", showCRM);
-drawerResultsBtn?.addEventListener("click", showResults);
-
-crmBackBtn?.addEventListener("click", showBoard);
-resultsBackBtn?.addEventListener("click", showBoard);
-
-unauthClose?.addEventListener("click", () => closeBackdrop(unauthorizedModal));
-
-logoutBtn?.addEventListener("click", () => {
-  localStorage.removeItem("restaurant_id");
-  localStorage.removeItem("user");
+function logout() {
+  localStorage.clear();
   location.reload();
-});
+}
 
-// ===== INIT =====
-window.addEventListener("load", async () => {
-  initGoogleButton();
-  updateCreateDeliveryVisibility();
+// ===== INITIALIZATION =====
+function init() {
+  const rid = getRestaurantId();
 
-  showBoard();
-  changeView("ativos");
-
-  const savedUserRaw = localStorage.getItem("user");
-  const savedUser = savedUserRaw ? JSON.parse(savedUserRaw) : null;
-
-  if (savedUser?.email) {
-    await completeLogin(savedUser);
-  } else {
-    crmView?.classList.add("hidden");
-    resultsView?.classList.add("hidden");
-    board?.classList.add("hidden");
+  if (!rid) {
     loginScreen?.classList.remove("hidden");
+    board?.classList.add("hidden");
+    initGoogleLogin();
+    return;
   }
-});
+
+  loginScreen?.classList.add("hidden");
+  board?.classList.remove("hidden");
+
+  restaurantPlan = localStorage.getItem("restaurant_plan") || "basic";
+  applyAccessUI();
+
+  // User UI
+  if (userChip) {
+    userChip.hidden = false;
+    if (userNameEl) userNameEl.textContent = localStorage.getItem("user_name") || "Usuário";
+    if (userAvatar) userAvatar.src = localStorage.getItem("user_picture") || "";
+  }
+
+  // Listeners
+  openDrawerBtn?.addEventListener("click", () => {
+    openBackdrop(drawer);
+    openBackdrop(drawerBackdrop);
+  });
+  closeDrawerBtn?.addEventListener("click", closeDrawer);
+  drawerBackdrop?.addEventListener("click", closeDrawer);
+
+  drawerOrdersBtn?.addEventListener("click", showBoard);
+  drawerCrmBtn?.addEventListener("click", showCRM);
+  drawerResultsBtn?.addEventListener("click", showResults);
+
+  crmBackBtn?.addEventListener("click", showBoard);
+  resultsBackBtn?.addEventListener("click", showBoard);
+
+  tabAtivos?.addEventListener("click", () => changeView("ativos"));
+  tabFinalizados?.addEventListener("click", () => changeView("finalizados"));
+  tabCancelados?.addEventListener("click", () => changeView("cancelados"));
+  tabEntregas?.addEventListener("click", () => changeView("entregas"));
+
+  openCreateBtn?.addEventListener("click", openCreateModal);
+  closeCreateBtn?.addEventListener("click", closeCreateModal);
+  cancelCreateBtn?.addEventListener("click", closeCreateModal);
+  saveCreateBtn?.addEventListener("click", saveNewOrder);
+  newDelivery?.addEventListener("change", updateCreateDeliveryVisibility);
+
+  closeModalBtn?.addEventListener("click", closeOrderModal);
+  closeModalSecondaryBtn?.addEventListener("click", closeOrderModal);
+  modalCancelBtn?.addEventListener("click", () => {
+    if (activeOrderId && confirm("Deseja realmente cancelar este pedido?")) {
+      cancelOrder(activeOrderId);
+      closeOrderModal();
+    }
+  });
+  modalPrevBtn?.addEventListener("click", () => activeOrderId && regressStatus(activeOrderId));
+  modalNextBtn?.addEventListener("click", () => activeOrderId && advanceStatus(activeOrderId));
+
+  logoutBtn?.addEventListener("click", logout);
+  unauthClose?.addEventListener("click", () => closeBackdrop(unauthorizedModal));
+
+  // Polling
+  fetchOrders();
+  setInterval(fetchOrders, 15000);
+}
+
+// Start
+document.addEventListener("DOMContentLoaded", init);
