@@ -51,12 +51,12 @@ async function getRestaurantPlan(restaurant_id) {
     .eq("id", restaurant_id)
     .single();
 
-  if (error) return "basic";
-  return (data?.plan || "basic").toLowerCase();
+  if (error) return "essential";
+  return (data?.plan || "essential").toLowerCase();
 }
 
 function canUseCRM(plan) {
-  return ["pro", "advanced", "custom"].includes(plan);
+  return ["advanced", "executive", "custom", "pro"].includes(plan);
 }
 
 function normalizePhone(input) {
@@ -66,7 +66,7 @@ function normalizePhone(input) {
 }
 
 /* =========================
-   APIs V1 - INTELIGÊNCIA, PDV E CRM (NOVAS)
+   APIs V1 - INTELIGÊNCIA, PDV E CRM (ATUALIZADAS)
 ========================= */
 
 // 1. Criar ou Atualizar Pedido (Suporta Recuperação de Carrinho, ROI e Rastreio)
@@ -102,6 +102,19 @@ app.post("/api/v1/pedidos", async (req, res) => {
 
     const now = new Date().toISOString();
     let resultData;
+
+    // Lógica de Base de Clientes (Sempre atualiza/cria o perfil do cliente)
+    if (phone) {
+      await supabase
+        .from("base_clientes")
+        .upsert({
+          restaurant_id,
+          telefone: phone,
+          nome: client_name,
+          ultima_interacao: now,
+          ia_ativa: true // Por padrão, ao interagir, a IA pode estar ativa (ajustável via N8N)
+        }, { onConflict: 'telefone, restaurant_id' });
+    }
 
     if (order_id) {
       // Atualiza pedido existente (Conversa em andamento)
@@ -166,27 +179,37 @@ app.post("/api/v1/pedidos", async (req, res) => {
   }
 });
 
-// 2. Salvar Mensagens (Suporta SessionID Composto: Telefone/ID_Restaurante)
+// 2. Salvar Mensagens (Suporta SessionID Composto e Desativação de IA via From Me)
 app.post("/api/v1/messages", async (req, res) => {
   try {
-    let { restaurant_id, client_phone, sessionId, role, content } = req.body;
+    let { restaurant_id, client_phone, sessionId, role, content, from_me } = req.body;
 
-    // Lógica para separar o SessionID (Telefone/ID_Restaurante)
     if (sessionId && sessionId.includes('/')) {
       const parts = sessionId.split('/');
       client_phone = parts[0];
       restaurant_id = parts[1];
     }
 
-    if (!restaurant_id || !client_phone || !content) {
-      return sendError(res, 400, "Dados insuficientes (restaurant_id e client_phone são necessários)");
+    const phone = normalizePhone(client_phone);
+
+    if (!restaurant_id || !phone || !content) {
+      return sendError(res, 400, "Dados insuficientes");
+    }
+
+    // Se a mensagem for "from_me" (do dono), desativa a IA na base_clientes
+    if (from_me === true || role === "assistant_manual") {
+      await supabase
+        .from("base_clientes")
+        .update({ ia_ativa: false })
+        .eq("telefone", phone)
+        .eq("restaurant_id", restaurant_id);
     }
 
     const { data, error } = await supabase
       .from("messages")
       .insert([{
         restaurant_id,
-        client_phone: normalizePhone(client_phone),
+        client_phone: phone,
         role: role || "user",
         content,
         created_at: new Date().toISOString()
@@ -200,7 +223,95 @@ app.post("/api/v1/messages", async (req, res) => {
   }
 });
 
-// 3. Bloquinho de Notas / Perfil do Cliente (CRM Inteligente)
+// 3. Rota de Métricas e ROI (Para o Dashboard Executive)
+app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    
+    // Busca todos os pedidos do restaurante
+    const { data: orders, error } = await supabase
+      .from("orders")
+      .select("total_price, origin, created_at")
+      .eq("restaurant_id", restaurant_id);
+
+    if (error) return sendError(res, 500, "Erro ao buscar métricas");
+
+    const metrics = {
+      total_revenue: 0,
+      ia_revenue: 0,
+      ia_orders_count: 0,
+      balcao_revenue: 0,
+      balcao_orders_count: 0,
+      ticket_medio_ia: 0
+    };
+
+    orders.forEach(order => {
+      const price = parseFloat(order.total_price) || 0;
+      metrics.total_revenue += price;
+
+      if (order.origin === "ia_whatsapp") {
+        metrics.ia_revenue += price;
+        metrics.ia_orders_count++;
+      } else {
+        metrics.balcao_revenue += price;
+        metrics.balcao_orders_count++;
+      }
+    });
+
+    metrics.ticket_medio_ia = metrics.ia_orders_count > 0 ? (metrics.ia_revenue / metrics.ia_orders_count) : 0;
+
+    return res.json(metrics);
+  } catch (err) {
+    return sendError(res, 500, "Erro ao processar métricas");
+  }
+});
+
+// 4. Rota de Previsão de Demanda (Executive)
+app.get("/api/v1/demand-forecast/:restaurant_id", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const hour = now.getHours();
+
+    // Busca pedidos das últimas 4 semanas para o mesmo dia e hora
+    const fourWeeksAgo = new Date();
+    fourWeeksAgo.setDate(now.getDate() - 28);
+
+    const { data: history, error } = await supabase
+      .from("orders")
+      .select("created_at")
+      .eq("restaurant_id", restaurant_id)
+      .gte("created_at", fourWeeksAgo.toISOString());
+
+    if (error) return sendError(res, 500, "Erro ao buscar histórico");
+
+    // Filtra pedidos históricos do mesmo dia da semana e mesma faixa de horário
+    const similarOrders = history.filter(o => {
+      const d = new Date(o.created_at);
+      return d.getDay() === dayOfWeek && d.getHours() === hour;
+    });
+
+    const averageHistory = similarOrders.length / 4; // Média por semana
+
+    // Busca pedidos da última hora (hoje)
+    const oneHourAgo = new Date(now.getTime() - (60 * 60 * 1000));
+    const currentOrders = history.filter(o => new Date(o.created_at) >= oneHourAgo);
+
+    const isHighDemand = currentOrders.length > (averageHistory * 1.2); // 20% acima da média
+
+    return res.json({
+      current_volume: currentOrders.length,
+      average_history: averageHistory,
+      is_high_demand: isHighDemand,
+      alert_message: isHighDemand ? "🚀 ALTA DEMANDA DETECTADA! Volume 20% acima da média." : "Volume dentro do normal."
+    });
+  } catch (err) {
+    return sendError(res, 500, "Erro ao processar previsão");
+  }
+});
+
+// 5. Bloquinho de Notas / Perfil do Cliente (CRM Inteligente)
 app.post("/api/v1/client-profiles", async (req, res) => {
   try {
     const { restaurant_id, client_phone, ai_notes, preferences } = req.body;
@@ -224,7 +335,7 @@ app.post("/api/v1/client-profiles", async (req, res) => {
   }
 });
 
-// 4. Rota de Rastreio (Para o cliente final)
+// 6. Rota de Rastreio (Para o cliente final)
 app.get("/api/v1/rastreio/:tracking_id", async (req, res) => {
   try {
     const { tracking_id } = req.params;
@@ -246,7 +357,6 @@ app.get("/api/v1/rastreio/:tracking_id", async (req, res) => {
 ========================= */
 
 app.post("/orders", async (req, res) => {
-  // Redireciona para a nova lógica de pedidos para manter compatibilidade total
   req.url = "/api/v1/pedidos";
   return app._router.handle(req, res);
 });
@@ -283,6 +393,10 @@ app.patch("/orders/:id", async (req, res) => {
       .select().single();
 
     if (error || !data) return sendError(res, 500, "Erro ao atualizar pedido");
+
+    // Lógica Executive: Se status for 'finished' ou 'delivered', poderia disparar baixa no PDV aqui
+    // (Implementar integração MarketUP conforme necessidade)
+
     return res.json(data);
   } catch (err) {
     return sendError(res, 500, "Erro ao atualizar pedido");
