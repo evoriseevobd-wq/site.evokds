@@ -42,7 +42,6 @@
     <button class="tab active" data-view="ativos" id="tab-ativos">Ativos</button>
     <button class="tab" data-view="finalizados" id="tab-finalizados">Finalizados</button>
     <button class="tab" data-view="cancelados" id="tab-cancelados">Cancelados</button>
-    <!-- IMPORTANTE: data-view="entregas" -->
     <button class="tab" data-view="entregas" id="tab-entregas">Entrega</button>
   </nav>
 
@@ -68,7 +67,6 @@
       <div class="column-body" id="col-pronto"></div>
     </section>
 
-    <!-- Vai aparecer só na aba Entrega -->
     <section class="column" data-status="caminho">
       <div class="column-header">
         <h2>A Caminho</h2>
@@ -91,7 +89,7 @@
     </section>
   </main>
 
-  <!-- 🔹 CRM VIEW (NOVO) -->
+  <!-- CRM VIEW -->
   <main class="crm-view hidden" id="crm-view">
     <div class="crm-header">
       <div class="crm-title">CRM de Clientes</div>
@@ -102,9 +100,8 @@
       <!-- O script.js vai renderizar a tabela aqui -->
     </div>
   </main>
-  <!-- 🔹 /CRM VIEW (NOVO) -->
 
-  <!-- ✅ RESULTADOS VIEW (NOVO) -->
+  <!-- RESULTS VIEW -->
   <main class="results-view hidden" id="results-view">
     <div class="results-header">
       <div class="results-title">Resultados</div>
@@ -112,65 +109,11 @@
     </div>
 
     <div class="results-content">
-      <!-- NOVO: CARDS DE ROI (EXECUTIVE ELITE) -->
-      <div class="results-roi-grid hidden" id="roi-container">
-        <div class="roi-card premium">
-          <div class="roi-label">Lucro Gerado pela IA</div>
-          <div class="roi-value" id="roi-ia-revenue">R$ 0,00</div>
-          <div class="roi-sub">Vendas diretas via WhatsApp</div>
-        </div>
-        <div class="roi-card">
-          <div class="roi-label">Ticket Médio IA</div>
-          <div class="roi-value" id="roi-ia-ticket">R$ 0,00</div>
-          <div class="roi-sub">Média por pedido</div>
-        </div>
-      </div>
-
-      <!-- NOVO: ALERTA DE DEMANDA (EXECUTIVE ELITE) -->
-      <div class="demand-alert-box hidden" id="demand-alert">
-        <div class="demand-icon">🚀</div>
-        <div class="demand-content">
-          <div class="demand-title">Alta Demanda Detectada!</div>
-          <div class="demand-text" id="demand-message">O volume atual está 20% acima da média.</div>
-        </div>
-      </div>
-
-      <!-- cards principais (ORIGINAIS MANTIDOS) -->
-      <div class="results-grid">
-        <div class="result-card">
-          <div class="result-label">Total de pedidos</div>
-          <div class="result-value" id="result-total-orders">0</div>
-        </div>
-
-        <div class="result-card">
-          <div class="result-label">Clientes únicos</div>
-          <div class="result-value" id="result-unique-clients">0</div>
-        </div>
-
-        <div class="result-card">
-          <div class="result-label">Pedidos delivery</div>
-          <div class="result-value" id="result-delivery-orders">0</div>
-        </div>
-
-        <div class="result-card">
-          <div class="result-label">Pedidos balcão</div>
-          <div class="result-value" id="result-local-orders">0</div>
-        </div>
-      </div>
-
-      <!-- NOVO: CONTAINER DE GRÁFICOS (ELITE) -->
-      <div class="results-exec-chart">
-        <svg id="results-chart-svg" viewBox="0 0 1000 320" preserveAspectRatio="none"></svg>
-      </div>
-
-      <!-- espaço para evoluir depois (sem PDV ainda) -->
-      <div class="results-note muted">
-        * Financeiro / ticket médio pode entrar depois via integração (PDV/Delivery). Por enquanto, o painel mostra volume e comportamento.
-      </div>
+      <!-- O JavaScript vai criar o conteúdo dinamicamente -->
     </div>
   </main>
-  <!-- ✅ /RESULTADOS VIEW (NOVO) -->
 
+  <!-- MODAL DE PEDIDO -->
   <div class="modal-backdrop" id="modal">
     <div class="modal">
       <div class="modal-header">
@@ -191,19 +134,16 @@
           <span id="modal-time"></span>
         </div>
 
-        <!-- ✅ NOVO: TELEFONE (só aparece se existir) -->
         <div class="modal-row" id="modal-phone-row" style="display:none;">
           <span class="muted">Telefone</span>
           <span id="modal-phone"></span>
         </div>
 
-        <!-- ✅ ENDEREÇO (só aparece se existir) -->
         <div class="modal-row" id="modal-address-row" style="display:none;">
           <span class="muted">Endereço</span>
           <span id="modal-address"></span>
         </div>
 
-        <!-- ✅ NOVO: FORMA DE PAGAMENTO (só aparece se existir) -->
         <div class="modal-row" id="modal-payment-row" style="display:none;">
           <span class="muted">Pagamento</span>
           <span id="modal-payment"></span>
@@ -229,6 +169,7 @@
     </div>
   </div>
 
+  <!-- MODAL DE CRIAÇÃO DE PEDIDO -->
   <div class="modal-backdrop" id="create-modal">
     <div class="modal">
       <div class="modal-header">
@@ -240,7 +181,6 @@
           <input id="new-customer" required />
         </label>
 
-        <!-- ✅ NOVO: TELEFONE (OPCIONAL) -->
         <label>Telefone (opcional)
           <input
             id="new-phone"
@@ -253,14 +193,12 @@
           <input id="new-items" required placeholder="Burger, Batata, Refrigerante" />
         </label>
 
-        <!-- CHECKBOX DELIVERY AQUI -->
         <label class="delivery-toggle">
           <input id="new-delivery" type="checkbox" />
           <span>Delivery</span>
         </label>
 
-        <!-- ✅ ENDEREÇO -->
-        <div class="delivery-address" id="delivery-address-wrap">
+        <div class="delivery-address hidden" id="delivery-address-wrap">
           <label>Endereço para entrega
             <input
               id="new-address"
@@ -270,8 +208,7 @@
           </label>
         </div>
 
-        <!-- ✅ NOVO: FORMA DE PAGAMENTO (mesmo processo do endereço) -->
-        <div class="payment-wrap" id="payment-wrap">
+        <div class="payment-wrap hidden" id="payment-wrap">
           <label>Forma de pagamento
             <select id="new-payment">
               <option value="">Selecione...</option>
@@ -294,13 +231,13 @@
     </div>
   </div>
 
+  <!-- DRAWER (MENU LATERAL) -->
   <aside class="drawer" id="drawer">
     <div class="drawer-header">
       <div class="brand">FLUX ON</div>
       <button class="icon-button" id="close-drawer" aria-label="Fechar menu">&times;</button>
     </div>
 
-    <!-- 🔹 MENU DO DRAWER (NOVO, mínimo necessário pro JS) -->
     <nav class="drawer-nav">
       <button type="button" class="drawer-item" id="drawer-orders">
         Gestão de pedidos
@@ -310,12 +247,10 @@
         CRM de clientes
       </button>
 
-      <!-- ✅ NOVO: RESULTADOS -->
       <button type="button" class="drawer-item" id="drawer-results">
         Resultados
       </button>
     </nav>
-    <!-- 🔹 /MENU DO DRAWER (NOVO) -->
 
     <div class="drawer-footer">
       <div class="user-chip" id="user-chip" hidden>
@@ -328,6 +263,7 @@
   </aside>
   <div class="drawer-backdrop" id="drawer-backdrop"></div>
 
+  <!-- MODAL DE NÃO AUTORIZADO -->
   <div id="unauthorized-modal" class="modal-backdrop">
     <div class="modal unauthorized-modal">
       <div class="modal-header">
