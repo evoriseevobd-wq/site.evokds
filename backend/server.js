@@ -14,19 +14,18 @@ const HOST = '0.0.0.0';
 // ✅ VALIDAÇÃO DE VARIÁVEIS DE AMBIENTE
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
   console.error("❌ ERRO: Variáveis SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórias!");
-  // Removido o process.exit(1) para evitar crash em builds parciais, mas mantido o log de erro crítico.
+  process.exit(1);
 }
 
 // ✅ CONFIGURAÇÃO DO SUPABASE
 const supabase = createClient(
-  process.env.SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 // ✅ TESTE DE CONEXÃO COM SUPABASE
 (async () => {
   try {
-    if (!process.env.SUPABASE_URL) return;
     const { data, error } = await supabase.from("restaurants").select("id").limit(1);
     if (error) throw error;
     console.log("✅ Conexão com Supabase estabelecida com sucesso!");
@@ -38,12 +37,12 @@ const supabase = createClient(
 // ✅ MIDDLEWARES
 app.use(cors({
   origin: '*',
-  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json({ limit: '10mb' }));
 
-// ✅ STATUS PERMITIDOS (Unificados para garantir consistência entre frontend/backend)
+// ✅ STATUS PERMITIDOS
 const ALLOWED_STATUS = [
   "draft", "pending", "preparing", "mounting", 
   "delivering", "finished", "cancelled", "canceled"
@@ -390,8 +389,9 @@ app.get("/api/v1/rastreio/:tracking_id", async (req, res) => {
 
 // ✅ ROTA ALTERNATIVA /orders (POST) - CORRIGIDA
 app.post("/orders", async (req, res) => {
-  // Redireciona para a rota V1 mantendo a lógica original
+  // Redireciona para a rota V1
   req.url = "/api/v1/pedidos";
+  req.body = { ...req.body };
   return app.handle(req, res);
 });
 
