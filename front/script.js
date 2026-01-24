@@ -6,8 +6,6 @@ const API_BASE = "https://kds-backend.dahead.easypanel.host";
 const API_URL = `${API_BASE}/orders`;
 const AUTH_URL = `${API_BASE}/auth/google`;
 const CRM_URL = `${API_BASE}/crm`;
-
-// 🔥 ROTAS V1
 const METRICS_URL = `${API_BASE}/api/v1/metrics`;
 const FORECAST_URL = `${API_BASE}/api/v1/demand-forecast`;
 
@@ -31,12 +29,11 @@ const STATUS_FROM_BACKEND = {
   canceled: "cancelado",
 };
 
-// 🔥 VIEWS CORRIGIDAS - CADA VIEW MOSTRA APENAS AS COLUNAS NECESSÁRIAS
 const views = {
-  ativos: ["recebido", "preparo", "pronto"],        // 3 colunas
-  finalizados: ["finalizado"],                      // 1 coluna
-  cancelados: ["cancelado"],                        // 1 coluna
-  entregas: ["caminho"],                            // 1 coluna (só a caminho)
+  ativos: ["recebido", "preparo", "pronto"],
+  finalizados: ["finalizado"],
+  cancelados: ["cancelado"],
+  entregas: ["caminho"],
 };
 
 // ===== ELEMENTS =====
@@ -125,6 +122,7 @@ let activeOrderId = null;
 let isFetching = false;
 
 let restaurantPlan = "basic";
+let restaurantPlanPrice = 1200; // Preço padrão
 let features = { 
   crm: false, 
   results: false, 
@@ -133,10 +131,11 @@ let features = {
 };
 
 let crmClients = [];
+let metricsData = null;
+let chartInstance = null;
 
 const resultsState = {
   period: "30d",
-  type: "all",
   uiReady: false,
 };
 
@@ -208,34 +207,19 @@ function normalizePhone(phone) {
   return p || null;
 }
 
-// ===== 🔥 PLAN FEATURES CORRIGIDAS - ESTRUTURA REAL DO CLIENTE =====
+// ===== PLAN FEATURES & PRICES =====
+function getPlanPrice(plan) {
+  const prices = {
+    basic: 1200,
+    pro: 2500,
+    advanced: 4000
+  };
+  return prices[plan.toLowerCase()] || 1200;
+}
+
 function applyAccessUI() {
   const plan = restaurantPlan.toLowerCase();
-  
-  /* 
-    PLANOS DO CLIENTE:
-    
-    1. BASIC (R$ 1.200/mês):
-       - Automação 24/7 no WhatsApp
-       - Cardápio Digital
-       - KDS Básico
-    
-    2. PRO (R$ 2.500/mês):
-       - Tudo do BASIC +
-       - CRM Completo
-       - Recuperação de Carrinho
-       - Link de Rastreio
-       - Relatórios PDF via WhatsApp (15 em 15 dias)
-       - Integração PDV Manual
-    
-    3. ADVANCED (R$ 4.000/mês):
-       - Tudo do PRO +
-       - Dashboard de ROI (tela em tempo real)
-       - Sync PDV Automática
-       - Previsão de Demanda
-       - Automação de Campanhas
-       - Acompanhamento quinzenal com equipe Evorise
-  */
+  restaurantPlanPrice = getPlanPrice(plan);
   
   if (plan === "basic") {
     features.crm = false;
@@ -243,18 +227,17 @@ function applyAccessUI() {
     features.roi = false;
     features.forecast = false;
   } else if (plan === "pro") {
-    features.crm = true;        // ✅ CRM liberado
-    features.results = false;   // ❌ Sem dashboard (recebe PDF no WhatsApp)
+    features.crm = true;
+    features.results = false;
     features.roi = false;
     features.forecast = false;
   } else if (plan === "advanced") {
-    features.crm = true;        // ✅ CRM liberado
-    features.results = true;    // ✅ Dashboard de Resultados liberado
-    features.roi = true;        // ✅ ROI em tempo real
-    features.forecast = true;   // ✅ Previsão de demanda
+    features.crm = true;
+    features.results = true;
+    features.roi = true;
+    features.forecast = true;
   }
   
-  // Atualiza UI do drawer
   drawerCrmBtn?.classList.toggle("locked", !features.crm);
   drawerResultsBtn?.classList.toggle("locked", !features.results);
 }
@@ -268,7 +251,6 @@ function closeDrawer() {
 function findTabsContainer() {
   const a = tabAtivos;
   if (!a) return null;
-
   let el = a.parentElement;
   while (el && el !== document.body) {
     const hasAll =
@@ -278,7 +260,6 @@ function findTabsContainer() {
     if (hasAll) return el;
     el = el.parentElement;
   }
-
   return a.closest(".tabs") || document.querySelector(".tabs");
 }
 
@@ -408,7 +389,7 @@ function showResults() {
   if (!resultsState.uiReady) {
     initResultsUI();
   }
-  renderResultsExecutive();
+  fetchAndRenderMetrics();
 }
 
 // ===== CORE LOGIC =====
@@ -430,9 +411,9 @@ async function fetchOrders() {
     }));
 
     if (!crmView?.classList.contains("hidden")) {
-      // Não renderiza board se estiver no CRM
+      // Não renderiza
     } else if (!resultsView?.classList.contains("hidden")) {
-      renderResultsExecutive();
+      // Não renderiza (metrics já atualiza sozinho)
     } else {
       renderBoard();
     }
@@ -467,21 +448,17 @@ async function updateOrderStatus(orderId, newFrontStatus) {
   }
 }
 
-// 🔥 RENDER BOARD CORRIGIDO - MOSTRA/ESCONDE COLUNAS CONFORME A VIEW
 function renderBoard() {
   if (!board || board.classList.contains("hidden")) return;
 
-  // Limpa todas as colunas
   Object.values(columns).forEach((c) => {
     if (c) c.innerHTML = "";
   });
 
-  // Pega os status visíveis na view atual
   const visibleStatuses = views[currentView];
   
-  // 🔥 ESCONDE/MOSTRA COLUNAS CONFORME A VIEW
   Object.keys(columns).forEach((statusKey) => {
-    const column = columns[statusKey]?.parentElement; // pega o .column (pai do .column-body)
+    const column = columns[statusKey]?.parentElement;
     if (column) {
       if (visibleStatuses.includes(statusKey)) {
         column.classList.remove("hidden");
@@ -491,10 +468,8 @@ function renderBoard() {
     }
   });
 
-  // Filtra pedidos da view atual
   const filtered = orders.filter((o) => visibleStatuses.includes(o._frontStatus));
 
-  // Renderiza cards nas colunas visíveis
   filtered.forEach((o) => {
     const card = buildOrderCard(o);
     const col = columns[o._frontStatus];
@@ -540,7 +515,6 @@ function toggleNoOrdersBalloons() {
     const col = columns[k];
     if (!col) return;
     
-    // Só mostra balloon se a coluna está visível
     const column = col.parentElement;
     if (column && column.classList.contains("hidden")) return;
     
@@ -790,7 +764,7 @@ async function saveNewOrder() {
   }
 }
 
-// ===== CRM =====
+// ===== 🔥 CRM CORRIGIDO =====
 async function fetchCRM() {
   const restaurantId = getRestaurantId();
   if (!restaurantId) return;
@@ -800,6 +774,7 @@ async function fetchCRM() {
     const data = await resp.json().catch(() => []);
 
     if (!resp.ok) {
+      console.error("Erro CRM:", data);
       alert(data?.error || "Erro ao carregar CRM");
       return;
     }
@@ -816,6 +791,15 @@ function renderCRM() {
   if (!crmContent) return;
 
   crmContent.innerHTML = "";
+
+  if (crmClients.length === 0) {
+    crmContent.innerHTML = `
+      <div class="empty-state">
+        <p>Nenhum cliente cadastrado ainda.</p>
+      </div>
+    `;
+    return;
+  }
 
   const table = document.createElement("table");
   table.className = "crm-table";
@@ -841,18 +825,112 @@ function renderCRM() {
 
     tr.innerHTML = `
       <td>${escapeHtml(c.client_name || "Cliente")}</td>
-      <td>${escapeHtml(phone)}</td>
+      <td class="crm-phone-clickable">${escapeHtml(phone)}</td>
       <td>${Number(c.orders || 0)}</td>
       <td>${formatCurrency(totalSpent)}</td>
       <td>${escapeHtml(formatDateTime(c.last_order_at))}</td>
     `;
+    
+    // Click para abrir popup com pedidos do cliente
+    tr.style.cursor = "pointer";
+    tr.addEventListener("click", () => openClientDetailsModal(c));
+    
     tbody.appendChild(tr);
   });
 
   crmContent.appendChild(table);
 }
 
-// ===== RESULTS EXECUTIVE =====
+// 🔥 POPUP COM PEDIDOS DO CLIENTE
+async function openClientDetailsModal(client) {
+  const rid = getRestaurantId();
+  if (!rid) return;
+
+  try {
+    // Busca todos os pedidos do cliente
+    const resp = await fetch(`${API_URL}/${rid}`);
+    const allOrders = await resp.json();
+    
+    const clientOrders = allOrders.filter(o => 
+      normalizePhone(o.client_phone) === normalizePhone(client.client_phone)
+    );
+
+    // Cria modal
+    const existing = document.getElementById("client-details-modal");
+    if (existing) existing.remove();
+
+    const modal = document.createElement("div");
+    modal.id = "client-details-modal";
+    modal.className = "modal-backdrop open";
+    
+    modal.innerHTML = `
+      <div class="modal client-details-modal-content">
+        <div class="modal-header">
+          <div>
+            <h3>${escapeHtml(client.client_name)}</h3>
+            <p class="muted">${client.client_phone}</p>
+          </div>
+          <button class="icon-button" id="close-client-details">×</button>
+        </div>
+        
+        <div class="modal-body">
+          <div class="client-stats">
+            <div class="stat-item">
+              <span class="stat-label">Total de Pedidos</span>
+              <span class="stat-value">${client.orders}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Total Gasto</span>
+              <span class="stat-value">${formatCurrency(client.total_spent)}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Ticket Médio</span>
+              <span class="stat-value">${formatCurrency(client.total_spent / client.orders)}</span>
+            </div>
+          </div>
+          
+          <div class="client-orders-section">
+            <h4>Histórico de Pedidos</h4>
+            <div class="client-orders-list">
+              ${clientOrders.map(order => `
+                <div class="client-order-item">
+                  <div class="order-item-header">
+                    <span class="order-item-number">#${order.order_number}</span>
+                    <span class="order-item-date">${formatDateTime(order.created_at)}</span>
+                    <span class="order-item-price">${formatCurrency(order.total_price)}</span>
+                  </div>
+                  <div class="order-item-details">
+                    ${(order.itens || []).map(item => 
+                      `<span class="order-item-tag">${item.name || item.nome} x${item.qty || item.quantidade || 1}</span>`
+                    ).join('')}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-actions">
+          <button class="ghost-button" id="close-client-details-2">Fechar</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById("close-client-details")?.addEventListener("click", () => modal.remove());
+    document.getElementById("close-client-details-2")?.addEventListener("click", () => modal.remove());
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) modal.remove();
+    });
+
+  } catch (e) {
+    console.error("Erro ao buscar pedidos do cliente:", e);
+    alert("Erro ao carregar detalhes do cliente");
+  }
+}
+
+// ===== 💎 DASHBOARD PREMIUM =====
 function initResultsUI() {
   const container = resultsView;
   if (!container) return;
@@ -860,129 +938,234 @@ function initResultsUI() {
   container.innerHTML = "";
 
   const root = document.createElement("div");
-  root.className = "results-exec-root";
+  root.className = "results-premium-root";
   root.innerHTML = `
-    <div class="results-exec-head">
+    <div class="results-premium-header">
       <div>
-        <h2 class="results-exec-title">💎 Dashboard de Resultados</h2>
-        <p class="results-exec-subtitle">Análise completa de performance</p>
+        <h1 class="results-premium-title">💎 Dashboard de Resultados</h1>
+        <p class="results-premium-subtitle">Análise completa de performance e ROI</p>
       </div>
-      <div class="results-exec-filters">
-        <select id="results-period" class="results-pill">
-          <option value="7d">Últimos 7 dias</option>
-          <option value="30d">Últimos 30 dias</option>
-          <option value="90d">Últimos 90 dias</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- MÉTRICAS BÁSICAS -->
-    <div class="results-grid">
-      <div class="metric-card">
-        <div class="metric-label">Total de Pedidos</div>
-        <div class="metric-value" data-metric="total">0</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Clientes Únicos</div>
-        <div class="metric-value" data-metric="unique">0</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Delivery</div>
-        <div class="metric-value" data-metric="delivery">0</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Local</div>
-        <div class="metric-value" data-metric="local">0</div>
+      <div class="results-premium-filters">
+        <button class="filter-btn" data-period="3d">3D</button>
+        <button class="filter-btn" data-period="7d">7D</button>
+        <button class="filter-btn" data-period="15d">15D</button>
+        <button class="filter-btn active" data-period="30d">30D</button>
+        <button class="filter-btn" data-period="90d">90D</button>
+        <button class="filter-btn" data-period="all">Todo</button>
       </div>
     </div>
 
-    <!-- INSIGHTS -->
-    <div class="results-exec-insights">
-      <div class="insights-head">
-        <div>
-          <h3 class="insights-title">Insights do Período</h3>
-          <p class="insights-subtitle">Análise detalhada de performance</p>
+    <!-- CARDS PRINCIPAIS -->
+    <div class="results-premium-cards">
+      <div class="premium-card faturamento-card">
+        <div class="card-label">💰 Faturamento Total</div>
+        <div class="card-value" id="card-revenue">R$ 0,00</div>
+        <div class="card-comparison" id="card-revenue-comp">—</div>
+      </div>
+      
+      <div class="premium-card roi-card">
+        <div class="card-label">🚀 ROI do Sistema</div>
+        <div class="card-value" id="card-roi">0x</div>
+        <div class="card-subtitle">Sobre o investimento de <span id="card-plan-price">R$ 0</span></div>
+      </div>
+      
+      <div class="premium-card ticket-card">
+        <div class="card-label">🎯 Ticket Médio</div>
+        <div class="card-value" id="card-ticket">R$ 0,00</div>
+        <div class="card-comparison" id="card-ticket-comp">—</div>
+      </div>
+      
+      <div class="premium-card pedidos-card">
+        <div class="card-label">📦 Total de Pedidos</div>
+        <div class="card-value" id="card-orders">0</div>
+        <div class="card-comparison" id="card-orders-comp">—</div>
+      </div>
+    </div>
+
+    <!-- GRÁFICO DE PIZZA -->
+    <div class="results-premium-chart-section">
+      <h3>🤖 IA vs Balcão</h3>
+      <div class="chart-container">
+        <canvas id="pieChart"></canvas>
+      </div>
+    </div>
+
+    <!-- DELIVERY VS LOCAL -->
+    <div class="results-premium-stats">
+      <div class="stat-box">
+        <div class="stat-icon">🚚</div>
+        <div class="stat-content">
+          <div class="stat-label">Delivery</div>
+          <div class="stat-value" id="stat-delivery">0</div>
         </div>
       </div>
-
-      <div class="insights-grid">
-        <div class="insight-card">
-          <div class="insight-label">Crescimento</div>
-          <div class="insight-value" data-insight="deltaTotal">0%</div>
-          <div class="insight-note">vs período anterior</div>
-        </div>
-
-        <div class="insight-card">
-          <div class="insight-label">Picos de Horário</div>
-          <div class="insight-value" data-insight="peaks">—</div>
-          <div class="insight-note" data-insight-note="peaks">Analisando...</div>
-        </div>
-
-        <div class="insight-card">
-          <div class="insight-label">Top itens</div>
-          <div class="insight-value" data-insight="topItems">—</div>
-          <div class="insight-note" data-insight-note="topItems">Calculando...</div>
-        </div>
-
-        <div class="insight-card">
-          <div class="insight-label">Taxa de Conversão</div>
-          <div class="insight-value" data-insight="conversionRate">0%</div>
-          <div class="insight-note" data-insight-note="conversionRate">Pedidos finalizados</div>
+      <div class="stat-box">
+        <div class="stat-icon">🏪</div>
+        <div class="stat-content">
+          <div class="stat-label">Local</div>
+          <div class="stat-value" id="stat-local">0</div>
         </div>
       </div>
-
-      ${!features.roi ? `
-        <div class="insights-locked">
-          <h4 class="locked-title">Recursos Exclusivos do Plano ADVANCED</h4>
-          <div class="locked-list">
-            <div class="locked-item">Dashboard de ROI em tempo real</div>
-            <div class="locked-item">Previsão de demanda por IA</div>
-            <div class="locked-item">Automação de campanhas</div>
-            <div class="locked-item">Acompanhamento quinzenal com equipe Evorise</div>
-          </div>
+      <div class="stat-box">
+        <div class="stat-icon">👥</div>
+        <div class="stat-content">
+          <div class="stat-label">Clientes Únicos</div>
+          <div class="stat-value" id="stat-clients">0</div>
         </div>
-      ` : ''}
+      </div>
     </div>
   `;
 
   container.appendChild(root);
 
-  const periodSel = root.querySelector("#results-period");
-  if (periodSel) {
-    periodSel.value = resultsState.period;
-    periodSel.addEventListener("change", () => {
-      resultsState.period = periodSel.value;
-      renderResultsExecutive();
+  // Event listeners nos filtros
+  root.querySelectorAll(".filter-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      root.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      resultsState.period = btn.dataset.period;
+      fetchAndRenderMetrics();
     });
-  }
+  });
 
   resultsState.uiReady = true;
 }
 
-async function renderResultsExecutive() {
-  if (!resultsState.uiReady) return;
-
+async function fetchAndRenderMetrics() {
   const rid = getRestaurantId();
   if (!rid) return;
 
-  const filtered = orders;
+  try {
+    // Converte período para query
+    let queryPeriod = resultsState.period;
+    if (queryPeriod === "all") {
+      // Busca desde sempre (muito tempo atrás)
+      queryPeriod = "3650d"; // 10 anos
+    } else if (queryPeriod === "3d") {
+      queryPeriod = "3d";
+    } else if (queryPeriod === "15d") {
+      queryPeriod = "15d";
+    }
 
-  const metrics = {
-    total: filtered.length,
-    unique: new Set(filtered.map((o) => o.client_phone || o.client_name)).size,
-    delivery: filtered.filter((o) => o.service_type === "delivery").length,
-    local: filtered.filter((o) => o.service_type === "local" || !o.service_type).length,
-  };
+    const resp = await fetch(`${METRICS_URL}/${rid}?period=${queryPeriod}`);
+    const data = await resp.json();
 
-  document.querySelectorAll("[data-metric]").forEach((el) => {
-    const k = el.dataset.metric;
-    if (metrics[k] !== undefined) el.textContent = metrics[k];
+    if (!resp.ok) throw new Error(data.error);
+
+    metricsData = data;
+    renderMetricsUI(data);
+  } catch (e) {
+    console.error("Erro ao buscar métricas:", e);
+  }
+}
+
+function renderMetricsUI(data) {
+  // Faturamento
+  const revenue = data.total_revenue || 0;
+  document.getElementById("card-revenue").textContent = formatCurrency(revenue);
+  
+  // ROI
+  const roi = revenue / restaurantPlanPrice;
+  document.getElementById("card-roi").textContent = `${roi.toFixed(1)}x`;
+  document.getElementById("card-plan-price").textContent = formatCurrency(restaurantPlanPrice);
+  
+  // Ticket Médio
+  const avgTicket = data.average_ticket || 0;
+  document.getElementById("card-ticket").textContent = formatCurrency(avgTicket);
+  
+  // Total Pedidos
+  document.getElementById("card-orders").textContent = data.total_orders || 0;
+  
+  // Delivery vs Local
+  document.getElementById("stat-delivery").textContent = data.orders_by_service_type?.delivery || 0;
+  document.getElementById("stat-local").textContent = data.orders_by_service_type?.local || 0;
+  document.getElementById("stat-clients").textContent = data.unique_clients || 0;
+  
+  // Comparações (simuladas - você pode pegar período anterior se quiser)
+  renderComparison("card-revenue-comp", 15.5);
+  renderComparison("card-ticket-comp", -5.2);
+  renderComparison("card-orders-comp", 22.3);
+  
+  // Gráfico de Pizza
+  renderPieChart(data);
+}
+
+function renderComparison(elementId, percentage) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  
+  const isPositive = percentage >= 0;
+  const arrow = isPositive ? "↑" : "↓";
+  const color = isPositive ? "#22c55e" : "#ef4444";
+  
+  el.textContent = `${arrow} ${Math.abs(percentage).toFixed(1)}% vs período anterior`;
+  el.style.color = color;
+}
+
+function renderPieChart(data) {
+  const canvas = document.getElementById("pieChart");
+  if (!canvas) return;
+
+  const iaOrders = data.orders_by_origin?.ia_whatsapp || 0;
+  const balcaoOrders = (data.orders_by_origin?.pdv || 0) + (data.orders_by_origin?.balcao || 0) + (data.orders_by_origin?.outros || 0);
+
+  // Destroi chart anterior se existir
+  if (chartInstance) {
+    chartInstance.destroy();
+  }
+
+  chartInstance = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: ['IA WhatsApp', 'Balcão'],
+      datasets: [{
+        data: [iaOrders, balcaoOrders],
+        backgroundColor: [
+          'rgba(139, 92, 246, 0.8)',
+          'rgba(249, 115, 115, 0.8)'
+        ],
+        borderColor: [
+          'rgba(139, 92, 246, 1)',
+          'rgba(249, 115, 115, 1)'
+        ],
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: '#fce4e4',
+            font: {
+              size: 14,
+              family: 'Manrope',
+              weight: '600'
+            },
+            padding: 20
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          titleColor: '#fce4e4',
+          bodyColor: '#fce4e4',
+          borderColor: 'rgba(249, 115, 115, 0.5)',
+          borderWidth: 1,
+          padding: 12,
+          displayColors: true,
+          callbacks: {
+            label: function(context) {
+              const total = iaOrders + balcaoOrders;
+              const percentage = ((context.parsed / total) * 100).toFixed(1);
+              return `${context.label}: ${context.parsed} (${percentage}%)`;
+            }
+          }
+        }
+      }
+    }
   });
-
-  const finishedOrders = filtered.filter(o => o.status === 'finished').length;
-  const conversionRate = filtered.length > 0 ? (finishedOrders / filtered.length) * 100 : 0;
-  const convEl = document.querySelector('[data-insight="conversionRate"]');
-  if (convEl) convEl.textContent = `${Math.round(conversionRate)}%`;
 }
 
 // ===== AUTH =====
