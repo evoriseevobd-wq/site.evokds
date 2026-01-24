@@ -9,19 +9,16 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const HOST = '0.0.0.0';
 
-// ✅ VALIDAÇÃO
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
   console.error("❌ ERRO: Variáveis SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórias!");
   process.exit(1);
 }
 
-// ✅ SUPABASE
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// ✅ TESTE DE CONEXÃO
 (async () => {
   try {
     const { data, error } = await supabase.from("restaurants").select("id").limit(1);
@@ -32,15 +29,9 @@ const supabase = createClient(
   }
 })();
 
-// ✅ MIDDLEWARES
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'], allowedHeaders: ['Content-Type', 'Authorization'] }));
 app.use(express.json({ limit: '10mb' }));
 
-// ✅ CONSTANTES
 const ALLOWED_STATUS = ["draft", "pending", "preparing", "mounting", "delivering", "finished", "cancelled", "canceled"];
 
 const sendError = (res, status, message) => {
@@ -48,44 +39,22 @@ const sendError = (res, status, message) => {
   return res.status(status).json({ error: message });
 };
 
-/* =========================
-   FUNÇÕES AUXILIARES
-========================= */
-
 async function restaurantExists(restaurant_id) {
   try {
-    const { data, error } = await supabase
-      .from("restaurants")
-      .select("id")
-      .eq("id", restaurant_id)
-      .limit(1);
-    if (error) {
-      console.error("❌ Erro ao validar restaurante:", error);
-      return false;
-    }
+    const { data, error } = await supabase.from("restaurants").select("id").eq("id", restaurant_id).limit(1);
+    if (error) return false;
     return data && data.length > 0;
   } catch (err) {
-    console.error("❌ Erro ao validar restaurante:", err);
     return false;
   }
 }
 
 async function getRestaurantPlan(restaurant_id) {
   try {
-    const { data, error } = await supabase
-      .from("restaurants")
-      .select("plan")
-      .eq("id", restaurant_id)
-      .single();
-    
-    if (error) {
-      console.error("❌ Erro ao buscar plano:", error);
-      return "basic";
-    }
-    
+    const { data, error } = await supabase.from("restaurants").select("plan").eq("id", restaurant_id).single();
+    if (error) return "basic";
     return (data?.plan || "basic").toLowerCase();
   } catch (err) {
-    console.error("❌ Erro ao buscar plano:", err);
     return "basic";
   }
 }
@@ -95,7 +64,6 @@ function canUseCRM(plan) {
 }
 
 function canUseResults(plan) {
-  // Dashboard APENAS para ADVANCED+, PRO não tem acesso
   return ["advanced", "executive", "custom"].includes(plan.toLowerCase());
 }
 
@@ -105,25 +73,22 @@ function normalizePhone(input) {
   return digits || null;
 }
 
-/* =========================
-   🔥 ROTA DE MÉTRICAS COMPLETA (COM FATURAMENTO)
-========================= */
+/* ========================================
+   🔥 ROTA DE MÉTRICAS COMPLETA
+======================================== */
 
 app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
     const { period = "30d" } = req.query;
     
-    console.log(`📊 Buscando métricas para restaurante: ${restaurant_id}, período: ${period}`);
+    console.log(`📊 Buscando métricas para: ${restaurant_id}, período: ${period}`);
     
     const exists = await restaurantExists(restaurant_id);
-    if (!exists) {
-      console.error(`❌ Restaurante não encontrado: ${restaurant_id}`);
-      return sendError(res, 404, "Restaurante não encontrado");
-    }
+    if (!exists) return sendError(res, 404, "Restaurante não encontrado");
     
     const plan = await getRestaurantPlan(restaurant_id);
-    console.log(`📋 Plano do restaurante: ${plan}`);
+    console.log(`📋 Plano: ${plan}`);
     
     if (!canUseResults(plan)) {
       return res.status(403).json({
@@ -133,47 +98,61 @@ app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
       });
     }
     
-    // Calcula data de início
-    let startDate = new Date();
-    if (period === "3d") {
-      startDate.setDate(startDate.getDate() - 3);
-    } else if (period === "7d") {
-      startDate.setDate(startDate.getDate() - 7);
-    } else if (period === "15d") {
-      startDate.setDate(startDate.getDate() - 15);
-    } else if (period === "30d") {
-      startDate.setDate(startDate.getDate() - 30);
-    } else if (period === "90d") {
-      startDate.setDate(startDate.getDate() - 90);
-    } else if (period.endsWith("d")) {
-      const days = parseInt(period);
-      if (!isNaN(days)) {
-        startDate.setDate(startDate.getDate() - days);
-      }
-    }
-
-    console.log(`📅 Buscando pedidos desde: ${startDate.toISOString()}`);
-
-    // Busca pedidos COM TOTAL_PRICE (SEM ORIGIN)
-    const { data: orders, error } = await supabase
-      .from("orders")
-      .select("id, client_phone, status, service_type, created_at, total_price")
-      .eq("restaurant_id", restaurant_id)
-      .gte("created_at", startDate.toISOString());
+    // Calcula datas
+    let days = 30;
+    if (period === "3d") days = 3;
+    else if (period === "7d") days = 7;
+    else if (period === "15d") days = 15;
+    else if (period === "30d") days = 30;
+    else if (period === "90d") days = 90;
+    else if (period.endsWith("d")) days = parseInt(period) || 30;
     
-    if (error) {
-      console.error("❌ Erro ao buscar pedidos:", error);
-      return sendError(res, 500, "Erro ao buscar pedidos do restaurante");
+    const currentStart = new Date();
+    currentStart.setDate(currentStart.getDate() - days);
+    
+    const previousStart = new Date(currentStart);
+    previousStart.setDate(previousStart.getDate() - days);
+    const previousEnd = new Date(currentStart);
+    
+    console.log(`📅 Período atual: ${currentStart.toISOString()}`);
+    console.log(`📅 Período anterior: ${previousStart.toISOString()} até ${previousEnd.toISOString()}`);
+
+    // Busca pedidos do período ATUAL
+    const { data: currentOrders, error: currentError } = await supabase
+      .from("orders")
+      .select("id, client_phone, origin, status, service_type, created_at, total_price")
+      .eq("restaurant_id", restaurant_id)
+      .gte("created_at", currentStart.toISOString());
+    
+    if (currentError) {
+      console.error("❌ Erro ao buscar pedidos:", currentError);
+      return sendError(res, 500, "Erro ao buscar pedidos");
     }
 
-    console.log(`✅ Pedidos encontrados: ${orders?.length || 0}`);
+    // Busca pedidos do período ANTERIOR
+    const { data: previousOrders, error: previousError } = await supabase
+      .from("orders")
+      .select("id, total_price, created_at")
+      .eq("restaurant_id", restaurant_id)
+      .gte("created_at", previousStart.toISOString())
+      .lt("created_at", previousEnd.toISOString());
 
-    // Inicializa métricas COM VALORES (SEM ORIGIN)
+    console.log(`✅ Pedidos atuais: ${currentOrders?.length || 0}`);
+    console.log(`✅ Pedidos anteriores: ${previousOrders?.length || 0}`);
+
+    // Inicializa métricas
     const metrics = {
       period,
-      total_orders: orders?.length || 0,
+      total_orders: currentOrders?.length || 0,
       total_revenue: 0,
       average_ticket: 0,
+      unique_clients: 0,
+      orders_by_origin: {
+        ia_whatsapp: 0,
+        pdv: 0,
+        balcao: 0,
+        outros: 0
+      },
       orders_by_status: {
         pending: 0,
         preparing: 0,
@@ -186,27 +165,61 @@ app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
         delivery: 0,
         local: 0
       },
-      unique_clients: 0
+      ia_performance: {
+        orders: 0,
+        revenue: 0,
+        percentage: 0
+      },
+      client_base: {
+        new_clients: 0,
+        recurring_clients: 0,
+        new_percentage: 0,
+        recurring_percentage: 0
+      },
+      comparison: {
+        orders: { current: 0, previous: 0, growth: 0 },
+        revenue: { current: 0, previous: 0, growth: 0 },
+        ticket: { current: 0, previous: 0, growth: 0 }
+      }
     };
 
-    // Processa pedidos
+    // Processa pedidos ATUAIS
     const uniquePhones = new Set();
+    const clientFirstOrders = {}; // telefone -> primeira data de pedido EVER
     
-    (orders || []).forEach(order => {
-      // Calcula faturamento
+    (currentOrders || []).forEach(order => {
+      // Faturamento
       const price = parseFloat(order.total_price) || 0;
       metrics.total_revenue += price;
       
+      // Clientes únicos
       if (order.client_phone) {
-        uniquePhones.add(normalizePhone(order.client_phone));
+        const phone = normalizePhone(order.client_phone);
+        if (phone) uniquePhones.add(phone);
       }
 
+      // Origem
+      const origin = (order.origin || "outros").toLowerCase();
+      if (metrics.orders_by_origin[origin] !== undefined) {
+        metrics.orders_by_origin[origin]++;
+        
+        // Performance IA
+        if (origin === "ia_whatsapp") {
+          metrics.ia_performance.orders++;
+          metrics.ia_performance.revenue += price;
+        }
+      } else {
+        metrics.orders_by_origin.outros++;
+      }
+
+      // Status
       const status = (order.status || "pending").toLowerCase();
       const mappedStatus = status === "cancelled" ? "canceled" : status;
       if (metrics.orders_by_status[mappedStatus] !== undefined) {
         metrics.orders_by_status[mappedStatus]++;
       }
 
+      // Tipo de serviço
       const serviceType = (order.service_type || "local").toLowerCase();
       if (metrics.orders_by_service_type[serviceType] !== undefined) {
         metrics.orders_by_service_type[serviceType]++;
@@ -214,16 +227,71 @@ app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
     });
 
     metrics.unique_clients = uniquePhones.size;
-    metrics.average_ticket = metrics.total_orders > 0 
-      ? metrics.total_revenue / metrics.total_orders 
+    metrics.average_ticket = metrics.total_orders > 0 ? metrics.total_revenue / metrics.total_orders : 0;
+
+    // Performance IA %
+    metrics.ia_performance.percentage = metrics.total_orders > 0 
+      ? (metrics.ia_performance.orders / metrics.total_orders) * 100 
       : 0;
 
-    console.log(`✅ Métricas calculadas:`, {
-      total_orders: metrics.total_orders,
-      total_revenue: metrics.total_revenue,
-      average_ticket: metrics.average_ticket,
-      unique_clients: metrics.unique_clients
+    // Base de clientes (novos vs recorrentes)
+    // Busca TODOS os pedidos do restaurante para identificar primeiro pedido
+    const { data: allOrders } = await supabase
+      .from("orders")
+      .select("client_phone, created_at")
+      .eq("restaurant_id", restaurant_id)
+      .order("created_at", { ascending: true });
+
+    const clientFirstOrderDate = {};
+    (allOrders || []).forEach(order => {
+      const phone = normalizePhone(order.client_phone);
+      if (phone && !clientFirstOrderDate[phone]) {
+        clientFirstOrderDate[phone] = new Date(order.created_at);
+      }
     });
+
+    // Classifica clientes
+    uniquePhones.forEach(phone => {
+      const firstOrderDate = clientFirstOrderDate[phone];
+      if (firstOrderDate && firstOrderDate >= currentStart) {
+        metrics.client_base.new_clients++;
+      } else {
+        metrics.client_base.recurring_clients++;
+      }
+    });
+
+    const totalClients = metrics.unique_clients;
+    metrics.client_base.new_percentage = totalClients > 0 ? (metrics.client_base.new_clients / totalClients) * 100 : 0;
+    metrics.client_base.recurring_percentage = totalClients > 0 ? (metrics.client_base.recurring_clients / totalClients) * 100 : 0;
+
+    // Comparação com período anterior
+    let previousRevenue = 0;
+    (previousOrders || []).forEach(order => {
+      previousRevenue += parseFloat(order.total_price) || 0;
+    });
+
+    const previousOrdersCount = previousOrders?.length || 0;
+    const previousTicket = previousOrdersCount > 0 ? previousRevenue / previousOrdersCount : 0;
+
+    metrics.comparison.orders.current = metrics.total_orders;
+    metrics.comparison.orders.previous = previousOrdersCount;
+    metrics.comparison.orders.growth = previousOrdersCount > 0 
+      ? ((metrics.total_orders - previousOrdersCount) / previousOrdersCount) * 100 
+      : 0;
+
+    metrics.comparison.revenue.current = metrics.total_revenue;
+    metrics.comparison.revenue.previous = previousRevenue;
+    metrics.comparison.revenue.growth = previousRevenue > 0 
+      ? ((metrics.total_revenue - previousRevenue) / previousRevenue) * 100 
+      : 0;
+
+    metrics.comparison.ticket.current = metrics.average_ticket;
+    metrics.comparison.ticket.previous = previousTicket;
+    metrics.comparison.ticket.growth = previousTicket > 0 
+      ? ((metrics.average_ticket - previousTicket) / previousTicket) * 100 
+      : 0;
+
+    console.log(`✅ Métricas calculadas com sucesso!`);
 
     return res.json(metrics);
   } catch (err) {
@@ -232,28 +300,21 @@ app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
   }
 });
 
-/* =========================
-   🔥 ROTA CRM COMPLETA (COM GASTOS)
-========================= */
+/* ========================================
+   🔥 ROTA CRM
+======================================== */
 
 app.get("/crm/:restaurant_id", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
+    console.log(`👥 Buscando CRM para: ${restaurant_id}`);
     
-    console.log(`👥 Buscando CRM para restaurante: ${restaurant_id}`);
-    
-    if (!restaurant_id) {
-      return sendError(res, 400, "restaurant_id é obrigatório");
-    }
+    if (!restaurant_id) return sendError(res, 400, "restaurant_id é obrigatório");
 
     const exists = await restaurantExists(restaurant_id);
-    if (!exists) {
-      console.error(`❌ Restaurante não encontrado: ${restaurant_id}`);
-      return sendError(res, 404, "Restaurante não encontrado");
-    }
+    if (!exists) return sendError(res, 404, "Restaurante não encontrado");
 
     const plan = await getRestaurantPlan(restaurant_id);
-    console.log(`📋 Plano do restaurante: ${plan}`);
     
     if (!canUseCRM(plan)) {
       return res.status(403).json({
@@ -263,7 +324,6 @@ app.get("/crm/:restaurant_id", async (req, res) => {
       });
     }
 
-    // Busca pedidos COM TOTAL_PRICE
     const { data, error } = await supabase
       .from("orders")
       .select("id, client_name, client_phone, created_at, total_price")
@@ -275,9 +335,6 @@ app.get("/crm/:restaurant_id", async (req, res) => {
       return sendError(res, 500, "Erro ao buscar dados do CRM");
     }
 
-    console.log(`✅ Pedidos encontrados para CRM: ${data?.length || 0}`);
-
-    // Agrupa clientes por telefone COM GASTOS
     const clients = Object.create(null);
     
     for (const o of data || []) {
@@ -298,9 +355,7 @@ app.get("/crm/:restaurant_id", async (req, res) => {
       clients[key].total_spent += parseFloat(o.total_price) || 0;
       
       const currTime = o.created_at ? new Date(o.created_at).getTime() : 0;
-      const prevTime = clients[key].last_order_at 
-        ? new Date(clients[key].last_order_at).getTime() 
-        : 0;
+      const prevTime = clients[key].last_order_at ? new Date(clients[key].last_order_at).getTime() : 0;
 
       if (currTime >= prevTime) {
         clients[key].last_order_at = o.created_at || clients[key].last_order_at;
@@ -312,15 +367,13 @@ app.get("/crm/:restaurant_id", async (req, res) => {
       }
     }
 
-    // Ordena por última compra
     const result = Object.values(clients).sort((a, b) => {
       const ta = a.last_order_at ? new Date(a.last_order_at).getTime() : 0;
       const tb = b.last_order_at ? new Date(b.last_order_at).getTime() : 0;
       return tb - ta;
     });
 
-    console.log(`✅ Clientes únicos no CRM: ${result.length}`);
-
+    console.log(`✅ Clientes únicos: ${result.length}`);
     return res.json(result);
   } catch (err) {
     console.error("❌ Erro em /crm:", err);
@@ -328,49 +381,30 @@ app.get("/crm/:restaurant_id", async (req, res) => {
   }
 });
 
-/* =========================
+/* ========================================
    ROTAS ORIGINAIS
-========================= */
+======================================== */
 
-// ✅ LISTAR PEDIDOS
 app.get("/orders/:restaurant_id", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
-    const { data, error } = await supabase
-      .from("orders")
-      .select("*")
-      .eq("restaurant_id", restaurant_id)
-      .order("created_at", { ascending: true });
-    
+    const { data, error } = await supabase.from("orders").select("*").eq("restaurant_id", restaurant_id).order("created_at", { ascending: true });
     if (error) return sendError(res, 500, "Erro ao listar pedidos");
     return res.json(data || []);
   } catch (err) {
-    console.error("❌ Erro em /orders:", err);
     return sendError(res, 500, "Erro ao listar pedidos");
   }
 });
 
-// ✅ ATUALIZAR STATUS
 app.patch("/orders/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body || {};
-    
-    if (!ALLOWED_STATUS.includes(status)) {
-      return sendError(res, 400, "status inválido");
-    }
-
-    const { data, error } = await supabase
-      .from("orders")
-      .update({ status, update_at: new Date().toISOString() })
-      .eq("id", id)
-      .select()
-      .single();
-    
+    if (!ALLOWED_STATUS.includes(status)) return sendError(res, 400, "status inválido");
+    const { data, error } = await supabase.from("orders").update({ status, update_at: new Date().toISOString() }).eq("id", id).select().single();
     if (error || !data) return sendError(res, 500, "Erro ao atualizar pedido");
     return res.json(data);
   } catch (err) {
-    console.error("❌ Erro em PATCH /orders:", err);
     return sendError(res, 500, "Erro ao atualizar pedido");
   }
 });
@@ -379,27 +413,15 @@ app.patch("/orders/:id/status", async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body || {};
-    
-    if (!ALLOWED_STATUS.includes(status)) {
-      return sendError(res, 400, "status inválido");
-    }
-
-    const { data, error } = await supabase
-      .from("orders")
-      .update({ status, update_at: new Date().toISOString() })
-      .eq("id", id)
-      .select()
-      .single();
-    
+    if (!ALLOWED_STATUS.includes(status)) return sendError(res, 400, "status inválido");
+    const { data, error } = await supabase.from("orders").update({ status, update_at: new Date().toISOString() }).eq("id", id).select().single();
     if (error || !data) return sendError(res, 500, "Erro ao atualizar pedido");
     return res.json(data);
   } catch (err) {
-    console.error("❌ Erro em PATCH /orders/status:", err);
     return sendError(res, 500, "Erro ao atualizar pedido");
   }
 });
 
-// ✅ DELETAR PEDIDO
 app.delete("/orders/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -407,22 +429,21 @@ app.delete("/orders/:id", async (req, res) => {
     if (error) return sendError(res, 500, "Erro ao deletar pedido");
     return res.status(204).send();
   } catch (err) {
-    console.error("❌ Erro em DELETE /orders:", err);
     return sendError(res, 500, "Erro ao deletar pedido");
   }
 });
 
-// ✅ CRIAR/ATUALIZAR PEDIDO (COM TOTAL_PRICE, USA "ITENS")
 app.post("/api/v1/pedidos", async (req, res) => {
   try {
     const {
       restaurant_id, client_name, client_phone, items, itens, notes,
-      service_type, address, payment_method, total_price,
+      service_type, address, payment_method, total_price, origin,
       status, order_id
     } = req.body || {};
 
     const normalizedItems = Array.isArray(items) ? items : Array.isArray(itens) ? itens : [];
     const phone = normalizePhone(client_phone);
+    const finalOrigin = origin || "outros";
     const finalStatus = status || "pending";
 
     if (!restaurant_id || !client_name) {
@@ -436,7 +457,6 @@ app.post("/api/v1/pedidos", async (req, res) => {
     let resultData;
 
     if (order_id) {
-      // ATUALIZA
       const { data, error } = await supabase
         .from("orders")
         .update({
@@ -453,7 +473,6 @@ app.post("/api/v1/pedidos", async (req, res) => {
       if (error) return sendError(res, 500, "Erro ao atualizar pedido");
       resultData = data;
     } else {
-      // CRIA
       const { data: last } = await supabase
         .from("orders")
         .select("order_number")
@@ -461,9 +480,7 @@ app.post("/api/v1/pedidos", async (req, res) => {
         .order("order_number", { ascending: false })
         .limit(1);
       
-      const nextNumber = last && last.length > 0 
-        ? Number(last[0].order_number) + 1 
-        : 1;
+      const nextNumber = last && last.length > 0 ? Number(last[0].order_number) + 1 : 1;
 
       const { data, error } = await supabase
         .from("orders")
@@ -479,6 +496,7 @@ app.post("/api/v1/pedidos", async (req, res) => {
           address: address || null,
           payment_method: payment_method || null,
           total_price: total_price || 0,
+          origin: finalOrigin,
           created_at: now,
           update_at: now
         }])
@@ -492,47 +510,32 @@ app.post("/api/v1/pedidos", async (req, res) => {
       resultData = data;
     }
 
-    return res.status(201).json({
-      success: true,
-      order: resultData
-    });
+    return res.status(201).json({ success: true, order: resultData });
   } catch (err) {
     console.error("❌ Erro em /api/v1/pedidos:", err);
     return sendError(res, 500, "Erro interno no servidor");
   }
 });
 
-// ✅ AUTH GOOGLE
 app.post("/auth/google", async (req, res) => {
   try {
     const { email } = req.body;
-    const { data, error } = await supabase
-      .from("restaurants")
-      .select("*")
-      .eq("email", email)
-      .limit(1);
-    
-    if (error || !data || data.length === 0) {
-      return res.status(403).json({ authorized: false });
-    }
-    
+    const { data, error } = await supabase.from("restaurants").select("*").eq("email", email).limit(1);
+    if (error || !data || data.length === 0) return res.status(403).json({ authorized: false });
     return res.json({ authorized: true, restaurant: data[0] });
   } catch (err) {
-    console.error("❌ Erro em /auth/google:", err);
     return res.status(500).json({ error: "Erro inesperado" });
   }
 });
 
-// ✅ HEALTH
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
     timestamp: new Date().toISOString(),
-    version: "3.0.0-complete"
+    version: "4.0.0-dashboard-completo"
   });
 });
 
-// ✅ ERROR HANDLING
 app.use((err, req, res, next) => {
   console.error("❌ Erro:", err);
   res.status(500).json({ error: "Erro interno do servidor" });
@@ -542,9 +545,9 @@ app.use((req, res) => {
   res.status(404).json({ error: "Rota não encontrada" });
 });
 
-// ✅ START
 app.listen(PORT, HOST, () => {
-  console.log(`🚀 Fluxon Backend v3.0 COMPLETE em http://${HOST}:${PORT}`);
-  console.log(`✅ Rotas: /crm, /api/v1/metrics (COM faturamento!)`);
-  console.log(`✅ Schema: usa "itens" e "total_price" (SEM coluna origin)`);
+  console.log(`🚀 Fluxon Backend v4.0 DASHBOARD COMPLETO em http://${HOST}:${PORT}`);
+  console.log(`✅ COM origin (IA/PDV/Balcão)`);
+  console.log(`✅ SEM tracking_id`);
+  console.log(`✅ Métricas avançadas: comparação, IA, clientes, status`);
 });
