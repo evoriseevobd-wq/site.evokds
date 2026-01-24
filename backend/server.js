@@ -92,10 +92,11 @@ async function getRestaurantPlan(restaurant_id) {
 }
 
 function canUseCRM(plan) {
-  return ["advanced", "executive", "custom", "pro"].includes(plan.toLowerCase());
+  return ["pro", "advanced", "executive", "custom"].includes(plan.toLowerCase());
 }
 
 function canUseResults(plan) {
+  // Dashboard APENAS para ADVANCED+, PRO não tem acesso
   return ["advanced", "executive", "custom"].includes(plan.toLowerCase());
 }
 
@@ -154,10 +155,10 @@ app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
 
     console.log(`📅 Buscando pedidos desde: ${startDate.toISOString()}`);
 
-    // Busca pedidos COM TOTAL_PRICE
+    // Busca pedidos COM TOTAL_PRICE (SEM ORIGIN)
     const { data: orders, error } = await supabase
       .from("orders")
-      .select("id, client_phone, origin, status, service_type, created_at, total_price")
+      .select("id, client_phone, status, service_type, created_at, total_price")
       .eq("restaurant_id", restaurant_id)
       .gte("created_at", startDate.toISOString());
     
@@ -168,18 +169,12 @@ app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
 
     console.log(`✅ Pedidos encontrados: ${orders?.length || 0}`);
 
-    // Inicializa métricas COM VALORES
+    // Inicializa métricas COM VALORES (SEM ORIGIN)
     const metrics = {
       period,
       total_orders: orders?.length || 0,
       total_revenue: 0,
       average_ticket: 0,
-      orders_by_origin: {
-        ia_whatsapp: 0,
-        pdv: 0,
-        balcao: 0,
-        outros: 0
-      },
       orders_by_status: {
         pending: 0,
         preparing: 0,
@@ -205,13 +200,6 @@ app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
       
       if (order.client_phone) {
         uniquePhones.add(normalizePhone(order.client_phone));
-      }
-
-      const origin = (order.origin || "outros").toLowerCase();
-      if (metrics.orders_by_origin[origin] !== undefined) {
-        metrics.orders_by_origin[origin]++;
-      } else {
-        metrics.orders_by_origin.outros++;
       }
 
       const status = (order.status || "pending").toLowerCase();
@@ -430,13 +418,12 @@ app.post("/api/v1/pedidos", async (req, res) => {
   try {
     const {
       restaurant_id, client_name, client_phone, items, itens, notes,
-      service_type, address, payment_method, total_price, origin,
+      service_type, address, payment_method, total_price,
       status, order_id
     } = req.body || {};
 
     const normalizedItems = Array.isArray(items) ? items : Array.isArray(itens) ? itens : [];
     const phone = normalizePhone(client_phone);
-    const finalOrigin = origin || "ia_whatsapp";
     const finalStatus = status || "pending";
 
     if (!restaurant_id || !client_name) {
@@ -494,7 +481,6 @@ app.post("/api/v1/pedidos", async (req, res) => {
           address: address || null,
           payment_method: payment_method || null,
           total_price: total_price || 0,
-          origin: finalOrigin,
           tracking_id,
           created_at: now,
           update_at: now
@@ -564,5 +550,5 @@ app.use((req, res) => {
 app.listen(PORT, HOST, () => {
   console.log(`🚀 Fluxon Backend v3.0 COMPLETE em http://${HOST}:${PORT}`);
   console.log(`✅ Rotas: /crm, /api/v1/metrics (COM faturamento!)`);
-  console.log(`✅ Schema: usa "itens" e "total_price"`);
+  console.log(`✅ Schema: usa "itens" e "total_price" (SEM coluna origin)`);
 });
