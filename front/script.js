@@ -208,14 +208,34 @@ function normalizePhone(phone) {
   return p || null;
 }
 
-// ===== 🔥 PLAN FEATURES CORRIGIDAS =====
+// ===== 🔥 PLAN FEATURES CORRIGIDAS - ESTRUTURA REAL DO CLIENTE =====
 function applyAccessUI() {
   const plan = restaurantPlan.toLowerCase();
   
-  // basic: só KDS
-  // pro: KDS + CRM
-  // advanced: KDS + CRM + Resultados
-  // custom: tudo
+  /* 
+    PLANOS DO CLIENTE:
+    
+    1. BASIC (R$ 1.200/mês):
+       - Automação 24/7 no WhatsApp
+       - Cardápio Digital
+       - KDS Básico
+    
+    2. PRO (R$ 2.500/mês):
+       - Tudo do BASIC +
+       - CRM Completo
+       - Recuperação de Carrinho
+       - Link de Rastreio
+       - Relatórios PDF via WhatsApp (15 em 15 dias)
+       - Integração PDV Manual
+    
+    3. ADVANCED (R$ 4.000/mês):
+       - Tudo do PRO +
+       - Dashboard de ROI (tela em tempo real)
+       - Sync PDV Automática
+       - Previsão de Demanda
+       - Automação de Campanhas
+       - Acompanhamento quinzenal com equipe Evorise
+  */
   
   if (plan === "basic") {
     features.crm = false;
@@ -224,19 +244,14 @@ function applyAccessUI() {
     features.forecast = false;
   } else if (plan === "pro") {
     features.crm = true;        // ✅ CRM liberado
-    features.results = false;
+    features.results = false;   // ❌ Sem dashboard (recebe PDF no WhatsApp)
     features.roi = false;
     features.forecast = false;
   } else if (plan === "advanced") {
     features.crm = true;        // ✅ CRM liberado
-    features.results = true;    // ✅ Resultados liberado
-    features.roi = false;
-    features.forecast = false;
-  } else if (plan === "custom") {
-    features.crm = true;
-    features.results = true;
-    features.roi = true;
-    features.forecast = true;
+    features.results = true;    // ✅ Dashboard de Resultados liberado
+    features.roi = true;        // ✅ ROI em tempo real
+    features.forecast = true;   // ✅ Previsão de demanda
   }
   
   // Atualiza UI do drawer
@@ -292,32 +307,24 @@ function showUpgradeModal(requiredPlan, featureName) {
   
   if (requiredPlan === "pro") {
     planDisplay = "PRO";
-    planPrice = "R$ 1.500/mês";
+    planPrice = "R$ 2.500/mês";
     featuresList = [
       "CRM completo de clientes",
-      "Histórico de pedidos por cliente",
-      "Análise de frequência de compra",
-      "Suporte prioritário"
+      "Recuperação de carrinho abandonado",
+      "Link de rastreio em tempo real",
+      "Relatórios PDF via WhatsApp (quinzenais)",
+      "Integração PDV manual"
     ];
   } else if (requiredPlan === "advanced") {
     planDisplay = "ADVANCED";
-    planPrice = "R$ 2.500/mês";
+    planPrice = "R$ 4.000/mês";
     featuresList = [
       "Tudo do plano PRO",
-      "Relatórios executivos avançados",
-      "Gráficos e insights detalhados",
-      "Análise de picos e tendências",
-      "Exportação de dados"
-    ];
-  } else if (requiredPlan === "custom") {
-    planDisplay = "CUSTOM";
-    planPrice = "Sob consulta";
-    featuresList = [
-      "Tudo do plano ADVANCED",
-      "Cálculo de ROI em tempo real",
+      "Dashboard de ROI em tempo real",
+      "Sincronização PDV automática",
       "Previsão de demanda por IA",
-      "Dashboard de inteligência financeira",
-      "Recursos personalizados"
+      "Automação de campanhas",
+      "Acompanhamento quinzenal com equipe Evorise"
     ];
   }
 
@@ -339,7 +346,7 @@ function showUpgradeModal(requiredPlan, featureName) {
       </div>
       
       <div class="upgrade-actions">
-        <button class="upgrade-btn" onclick="window.open('https://wa.me/5514997194089?text=Quero fazer upgrade para o plano ${requiredPlan}!', '_blank')">
+        <button class="upgrade-btn" onclick="window.open('https://wa.me/5514997194089?text=Quero fazer upgrade para o plano ${requiredPlan.toUpperCase()}!', '_blank')">
           🚀 Fazer Upgrade Agora
         </button>
         <button class="upgrade-close-btn" onclick="document.getElementById('upgrade-modal-backdrop').remove()">
@@ -389,7 +396,7 @@ function showCRM() {
 
 function showResults() {
   if (!features.results) {
-    showUpgradeModal("advanced", "Módulo de Resultados");
+    showUpgradeModal("advanced", "Dashboard de Resultados");
     return;
   }
   board?.classList.add("hidden");
@@ -926,12 +933,12 @@ function initResultsUI() {
 
       ${!features.roi ? `
         <div class="insights-locked">
-          <h4 class="locked-title">Recursos Exclusivos do Plano Custom</h4>
+          <h4 class="locked-title">Recursos Exclusivos do Plano ADVANCED</h4>
           <div class="locked-list">
             <div class="locked-item">Dashboard de ROI em tempo real</div>
             <div class="locked-item">Previsão de demanda por IA</div>
-            <div class="locked-item">Análise financeira detalhada</div>
-            <div class="locked-item">Recursos personalizados</div>
+            <div class="locked-item">Automação de campanhas</div>
+            <div class="locked-item">Acompanhamento quinzenal com equipe Evorise</div>
           </div>
         </div>
       ` : ''}
