@@ -9,7 +9,7 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;600;700;800&display=swap" rel="stylesheet">
   
   <!-- Chart.js CDN - ESSENCIAL PARA O DASHBOARD -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -110,9 +110,127 @@
     </div>
   </main>
 
-  <!-- RESULTS VIEW -->
+  <!-- ========================================
+       🔥 RESULTS VIEW - DASHBOARD COMPLETO
+  ======================================== -->
   <main class="results-view hidden" id="results-view">
-    <!-- O JavaScript vai criar o conteúdo dinamicamente -->
+    <div class="results-header">
+      <h2>Dashboard de Resultados</h2>
+      <p class="results-subtitle">Análise completa de performance e ROI</p>
+    </div>
+
+    <!-- FILTROS DE PERÍODO -->
+    <div class="results-period-selector">
+      <button class="period-btn" data-period="3d">3D</button>
+      <button class="period-btn" data-period="7d">7D</button>
+      <button class="period-btn" data-period="15d">15D</button>
+      <button class="period-btn active" data-period="30d">30D</button>
+      <button class="period-btn" data-period="90d">90D</button>
+      <button class="period-btn" data-period="all">Todo</button>
+    </div>
+
+    <!-- CARDS PREMIUM COM COMPARAÇÃO -->
+    <div class="results-premium-cards">
+      <!-- Card Faturamento -->
+      <div class="premium-card faturamento-card">
+        <div class="card-icon">💰</div>
+        <div class="card-content">
+          <div class="card-label">FATURAMENTO TOTAL</div>
+          <div class="card-value" id="card-revenue">R$ 0,00</div>
+          <div class="card-comparison" id="card-revenue-comp">—</div>
+        </div>
+      </div>
+
+      <!-- Card ROI -->
+      <div class="premium-card roi-card">
+        <div class="card-icon">📊</div>
+        <div class="card-content">
+          <div class="card-label">ROI DO SISTEMA</div>
+          <div class="card-value" id="card-roi">0x</div>
+          <div class="card-sublabel">Sobre <span id="card-plan-price">R$ 0</span></div>
+          <div class="card-comparison" id="card-roi-comp">—</div>
+        </div>
+      </div>
+
+      <!-- Card Ticket Médio -->
+      <div class="premium-card ticket-card">
+        <div class="card-icon">💳</div>
+        <div class="card-content">
+          <div class="card-label">TICKET MÉDIO</div>
+          <div class="card-value" id="card-ticket">R$ 0,00</div>
+          <div class="card-comparison" id="card-ticket-comp">—</div>
+        </div>
+      </div>
+
+      <!-- Card Total Pedidos -->
+      <div class="premium-card pedidos-card">
+        <div class="card-icon">📦</div>
+        <div class="card-content">
+          <div class="card-label">TOTAL DE PEDIDOS</div>
+          <div class="card-value" id="card-orders">0</div>
+          <div class="card-comparison" id="card-orders-comp">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GRID DE GRÁFICOS (2x2) -->
+    <div class="results-charts-grid">
+      
+      <!-- GRÁFICO 1: ORIGEM DOS PEDIDOS -->
+      <div class="results-premium-chart-section">
+        <h3>📊 Origem dos Pedidos</h3>
+        <div class="chart-container">
+          <canvas id="originChart"></canvas>
+        </div>
+      </div>
+
+      <!-- GRÁFICO 2: DELIVERY VS LOCAL -->
+      <div class="results-premium-chart-section">
+        <h3>🚚 Tipo de Serviço</h3>
+        <div class="chart-container">
+          <canvas id="serviceChart"></canvas>
+        </div>
+      </div>
+
+      <!-- GRÁFICO 3: PERFORMANCE IA (CARD) -->
+      <div class="results-premium-chart-section performance-ia-card">
+        <h3>🤖 Performance da IA</h3>
+        <div class="chart-container">
+          <div class="ia-stats">
+            <div class="ia-stat-item">
+              <div class="ia-stat-label">Pedidos da IA</div>
+              <div class="ia-stat-value" id="ia-orders">0</div>
+            </div>
+            <div class="ia-stat-item">
+              <div class="ia-stat-label">Faturamento IA</div>
+              <div class="ia-stat-value" id="ia-revenue">R$ 0,00</div>
+            </div>
+            <div class="ia-stat-item">
+              <div class="ia-stat-label">% do Total</div>
+              <div class="ia-stat-value ia-percentage" id="ia-percentage">0%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GRÁFICO 4: BASE DE CLIENTES -->
+      <div class="results-premium-chart-section">
+        <h3>👥 Base de Clientes</h3>
+        <div class="chart-container">
+          <canvas id="clientsChart"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- STATUS OPERACIONAL (FULL WIDTH) -->
+    <div class="results-premium-chart-section chart-full-width">
+      <h3>⚡ Status Operacional</h3>
+      <div class="chart-container chart-container-large">
+        <canvas id="statusChart"></canvas>
+      </div>
+    </div>
+
   </main>
 
   <!-- MODAL DE PEDIDO -->
