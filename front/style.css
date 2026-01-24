@@ -970,7 +970,7 @@ body {
   box-shadow: 0 4px 12px rgba(249, 115, 115, 0.35);
 }
 
-/* 🔥 CARDS PRINCIPAIS - LUXO TOTAL */
+/* 🔥 CARDS PRINCIPAIS - LUXO TOTAL COM GLOW */
 .results-premium-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -979,14 +979,16 @@ body {
 }
 
 .premium-card {
-  background: linear-gradient(145deg, rgba(59, 16, 16, 0.65), rgba(42, 11, 11, 0.85));
+  background: linear-gradient(145deg, rgba(59, 16, 16, 0.75), rgba(42, 11, 11, 0.95));
   border: 2px solid transparent;
   border-radius: 24px;
   padding: 28px 24px;
   position: relative;
   overflow: hidden;
   transition: all 0.3s ease;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 
+    0 10px 30px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(249, 115, 115, 0.15);
 }
 
 .premium-card::before {
@@ -996,7 +998,7 @@ body {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  background: linear-gradient(90deg, transparent, rgba(249, 115, 115, 0.12), transparent);
   transition: left 0.6s ease;
 }
 
@@ -1005,24 +1007,55 @@ body {
 }
 
 .premium-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  transform: translateY(-8px);
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.5),
+    0 0 60px rgba(249, 115, 115, 0.35),
+    inset 0 0 30px rgba(249, 115, 115, 0.08);
 }
 
 .faturamento-card {
   border-image: linear-gradient(135deg, #22c55e, #16a34a) 1;
 }
 
+.faturamento-card:hover {
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.5),
+    0 0 60px rgba(34, 197, 94, 0.4),
+    inset 0 0 30px rgba(34, 197, 94, 0.08);
+}
+
 .roi-card {
   border-image: linear-gradient(135deg, #8b5cf6, #6d28d9) 1;
+}
+
+.roi-card:hover {
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.5),
+    0 0 60px rgba(139, 92, 246, 0.4),
+    inset 0 0 30px rgba(139, 92, 246, 0.08);
 }
 
 .ticket-card {
   border-image: linear-gradient(135deg, #fbbf24, #d97706) 1;
 }
 
+.ticket-card:hover {
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.5),
+    0 0 60px rgba(251, 191, 36, 0.4),
+    inset 0 0 30px rgba(251, 191, 36, 0.08);
+}
+
 .pedidos-card {
   border-image: linear-gradient(135deg, #f97373, #b91c1c) 1;
+}
+
+.pedidos-card:hover {
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.5),
+    0 0 80px rgba(249, 115, 115, 0.5),
+    inset 0 0 40px rgba(249, 115, 115, 0.12);
 }
 
 .card-label {
@@ -1056,14 +1089,45 @@ body {
   margin-top: 8px;
 }
 
-/* 🔥 GRÁFICO DE PIZZA PREMIUM */
+/* 🔥 GRÁFICO DE PIZZA PREMIUM COM EFEITOS */
 .results-premium-chart-section {
-  background: rgba(59, 16, 16, 0.55);
-  border: 1px solid rgba(91, 28, 28, 0.85);
+  background: linear-gradient(145deg, rgba(59, 16, 16, 0.65), rgba(42, 11, 11, 0.85));
+  border: 2px solid rgba(249, 115, 115, 0.25);
   border-radius: 24px;
   padding: 32px;
   margin-bottom: 32px;
-  box-shadow: var(--shadow);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    0 0 60px rgba(249, 115, 115, 0.15),
+    inset 0 0 40px rgba(249, 115, 115, 0.05);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.results-premium-chart-section::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(249, 115, 115, 0.08) 0%, transparent 70%);
+  animation: rotateGlow 20s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes rotateGlow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.results-premium-chart-section:hover {
+  border-color: rgba(249, 115, 115, 0.45);
+  box-shadow: 
+    0 16px 50px rgba(0, 0, 0, 0.5),
+    0 0 80px rgba(249, 115, 115, 0.25),
+    inset 0 0 50px rgba(249, 115, 115, 0.08);
 }
 
 .results-premium-chart-section h3 {
@@ -1071,15 +1135,32 @@ body {
   font-size: 22px;
   font-weight: 800;
   color: rgba(252, 228, 228, 0.95);
+  position: relative;
+  z-index: 1;
 }
 
 .chart-container {
   max-width: 500px;
   margin: 0 auto;
   position: relative;
+  z-index: 1;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
 }
 
-/* 🔥 STATS BOXES */
+.chart-container::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(249, 115, 115, 0.2), rgba(139, 92, 246, 0.2));
+  z-index: -1;
+  opacity: 0.5;
+}
+
+/* 🔥 STATS BOXES COM GLOW */
 .results-premium-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -1087,20 +1168,42 @@ body {
 }
 
 .stat-box {
-  background: rgba(46, 8, 8, 0.45);
-  border: 1px solid rgba(91, 28, 28, 0.65);
+  background: linear-gradient(145deg, rgba(46, 8, 8, 0.55), rgba(42, 11, 11, 0.75));
+  border: 2px solid rgba(91, 28, 28, 0.65);
   border-radius: 20px;
   padding: 24px;
   display: flex;
   align-items: center;
   gap: 20px;
   transition: all 0.3s ease;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    0 0 30px rgba(249, 115, 115, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-box::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(249, 115, 115, 0.08) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.stat-box:hover::before {
+  opacity: 1;
 }
 
 .stat-box:hover {
-  background: rgba(59, 16, 16, 0.65);
-  transform: translateY(-4px);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(145deg, rgba(59, 16, 16, 0.75), rgba(42, 11, 11, 0.85));
+  transform: translateY(-6px);
+  box-shadow: 
+    0 16px 40px rgba(0, 0, 0, 0.4),
+    0 0 50px rgba(249, 115, 115, 0.2),
+    inset 0 0 30px rgba(249, 115, 115, 0.06);
+  border-color: rgba(249, 115, 115, 0.45);
 }
 
 .stat-icon {
@@ -1113,6 +1216,18 @@ body {
   justify-content: center;
   font-size: 32px;
   flex-shrink: 0;
+  box-shadow: 
+    0 8px 20px rgba(249, 115, 115, 0.3),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.stat-box:hover .stat-icon {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 
+    0 12px 30px rgba(249, 115, 115, 0.5),
+    0 0 40px rgba(249, 115, 115, 0.3),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .stat-content {
@@ -1374,4 +1489,389 @@ body {
   .card-value { font-size: 32px; }
   .results-premium-header { flex-direction: column; align-items: stretch; }
   .results-premium-filters { justify-content: center; }
+}
+/* ========================================
+   🎨 DASHBOARD COMPLETO - CSS PREMIUM
+======================================== */
+
+/* GRID DE GRÁFICOS (2x2) */
+.results-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+@media (max-width: 1024px) {
+  .results-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* SEÇÃO DE GRÁFICO PREMIUM */
+.results-premium-chart-section {
+  background: linear-gradient(145deg, rgba(59, 16, 16, 0.65), rgba(42, 11, 11, 0.85));
+  border: 2px solid rgba(249, 115, 115, 0.25);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    0 0 60px rgba(249, 115, 115, 0.15),
+    inset 0 0 40px rgba(249, 115, 115, 0.05);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.results-premium-chart-section::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(249, 115, 115, 0.08) 0%, transparent 70%);
+  animation: rotateGlow 20s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes rotateGlow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.results-premium-chart-section:hover {
+  border-color: rgba(249, 115, 115, 0.45);
+  box-shadow: 
+    0 16px 50px rgba(0, 0, 0, 0.5),
+    0 0 80px rgba(249, 115, 115, 0.25),
+    inset 0 0 50px rgba(249, 115, 115, 0.08);
+  transform: translateY(-4px);
+}
+
+.results-premium-chart-section h3 {
+  margin: 0 0 24px 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: rgba(252, 228, 228, 0.95);
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* CONTAINER DE GRÁFICO */
+.chart-container {
+  position: relative;
+  z-index: 1;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-container::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(249, 115, 115, 0.2), rgba(139, 92, 246, 0.2));
+  z-index: -1;
+  opacity: 0.5;
+}
+
+/* CONTAINER GRANDE (Status Operacional) */
+.chart-container-large {
+  height: 400px;
+}
+
+/* FULL WIDTH */
+.chart-full-width {
+  grid-column: 1 / -1;
+}
+
+/* CANVAS RESPONSIVO */
+.chart-container canvas {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* ========================================
+   🤖 PERFORMANCE IA (CARD)
+======================================== */
+
+.performance-ia-card .chart-container {
+  height: auto;
+  padding: 0;
+  background: transparent;
+}
+
+.performance-ia-card .chart-container::before {
+  display: none;
+}
+
+.ia-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.ia-stat-item {
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(139, 92, 246, 0.3);
+  border-radius: 16px;
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+.ia-stat-item:hover {
+  border-color: rgba(139, 92, 246, 0.6);
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.2);
+  transform: translateX(8px);
+}
+
+.ia-stat-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(252, 228, 228, 0.7);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.ia-stat-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: rgba(252, 228, 228, 0.95);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.ia-percentage {
+  color: rgba(139, 92, 246, 1);
+  text-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+}
+
+/* ========================================
+   💎 CARDS PREMIUM (4 cards principais)
+======================================== */
+
+.results-premium-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.premium-card {
+  background: linear-gradient(145deg, rgba(59, 16, 16, 0.65), rgba(42, 11, 11, 0.85));
+  border: 2px solid rgba(249, 115, 115, 0.25);
+  border-radius: 24px;
+  padding: 28px;
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(249, 115, 115, 0.15);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.premium-card::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(249, 115, 115, 0.3), transparent);
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.premium-card:hover::before {
+  opacity: 1;
+}
+
+.premium-card:hover {
+  border-color: rgba(249, 115, 115, 0.45);
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.5),
+    0 0 60px rgba(249, 115, 115, 0.35);
+  transform: translateY(-8px);
+}
+
+.card-icon {
+  font-size: 48px;
+  opacity: 0.9;
+  flex-shrink: 0;
+}
+
+.card-content {
+  flex: 1;
+}
+
+.card-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(252, 228, 228, 0.6);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.card-value {
+  font-size: 36px;
+  font-weight: 800;
+  color: rgba(252, 228, 228, 0.95);
+  margin-bottom: 4px;
+  font-family: 'Space Grotesk', sans-serif;
+  line-height: 1;
+}
+
+.card-sublabel {
+  font-size: 11px;
+  color: rgba(252, 228, 228, 0.5);
+  margin-bottom: 8px;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.card-comparison {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* GLOWS ESPECÍFICOS POR CARD */
+
+.faturamento-card:hover {
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.5),
+    0 0 60px rgba(34, 197, 94, 0.35);
+}
+
+.roi-card:hover {
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.5),
+    0 0 60px rgba(139, 92, 246, 0.35);
+}
+
+.ticket-card:hover {
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.5),
+    0 0 60px rgba(251, 191, 36, 0.35);
+}
+
+.pedidos-card:hover {
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.5),
+    0 0 80px rgba(249, 115, 115, 0.4);
+}
+
+/* ========================================
+   ✨ ANIMAÇÕES
+======================================== */
+
+@keyframes chartFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.results-premium-chart-section,
+.premium-card {
+  animation: chartFadeIn 0.5s ease-out;
+}
+
+.results-premium-cards .premium-card:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.results-premium-cards .premium-card:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.results-premium-cards .premium-card:nth-child(3) {
+  animation-delay: 0.15s;
+}
+
+.results-premium-cards .premium-card:nth-child(4) {
+  animation-delay: 0.2s;
+}
+
+.results-charts-grid .results-premium-chart-section:nth-child(1) {
+  animation-delay: 0.25s;
+}
+
+.results-charts-grid .results-premium-chart-section:nth-child(2) {
+  animation-delay: 0.3s;
+}
+
+.results-charts-grid .results-premium-chart-section:nth-child(3) {
+  animation-delay: 0.35s;
+}
+
+.results-charts-grid .results-premium-chart-section:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+.chart-full-width {
+  animation-delay: 0.45s;
+}
+
+/* ========================================
+   📱 RESPONSIVO
+======================================== */
+
+@media (max-width: 768px) {
+  .results-premium-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .premium-card {
+    padding: 20px;
+  }
+  
+  .card-value {
+    font-size: 28px;
+  }
+  
+  .card-icon {
+    font-size: 36px;
+  }
+  
+  .results-charts-grid {
+    gap: 20px;
+  }
+  
+  .results-premium-chart-section {
+    padding: 24px 16px;
+  }
+  
+  .chart-container {
+    height: 240px;
+  }
+  
+  .chart-container-large {
+    height: 320px;
+  }
+  
+  .ia-stat-value {
+    font-size: 24px;
+  }
 }
