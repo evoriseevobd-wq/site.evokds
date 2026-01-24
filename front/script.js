@@ -675,32 +675,51 @@ function closeCreateModal() {
 
 function parseItems(raw) {
   const s = String(raw || "").trim();
-  if (!s) return null;
+  if (!s) return [];
 
   try {
     const obj = JSON.parse(s);
-    return Array.isArray(obj) ? obj : null;
+    if (Array.isArray(obj)) return obj;
+    return [];
   } catch {
+    // Separa por vírgula
     if (s.includes(",")) {
       const parts = s
         .split(",")
         .map((x) => x.trim())
         .filter(Boolean);
 
-      if (parts.length) return parts.map((name) => ({ name, qty: 1 }));
+      if (parts.length) {
+        return parts.map((name) => ({ 
+          name: name, 
+          qty: 1,
+          quantidade: 1
+        }));
+      }
     }
 
+    // Separa por linha
     const lines = s
       .split("\n")
       .map((x) => x.trim())
       .filter(Boolean);
 
-    if (!lines.length) return null;
+    if (lines.length === 0) return [];
 
     return lines.map((ln) => {
       const m = ln.match(/(.+?)\s*x\s*(\d+)$/i);
-      if (m) return { name: m[1].trim(), qty: Number(m[2]) };
-      return { name: ln, qty: 1 };
+      if (m) {
+        return { 
+          name: m[1].trim(), 
+          qty: Number(m[2]),
+          quantidade: Number(m[2])
+        };
+      }
+      return { 
+        name: ln, 
+        qty: 1,
+        quantidade: 1
+      };
     });
   }
 }
@@ -718,8 +737,13 @@ async function saveNewOrder() {
   const phoneRaw = String(newPhone?.value || "").trim();
   const client_phone = phoneRaw ? phoneRaw : null;
 
-  if (!rid || !client || !itens) {
-    alert("Preencha cliente e itens.");
+  if (!rid || !client) {
+    alert("Preencha o nome do cliente.");
+    return;
+  }
+
+  if (!itens || itens.length === 0) {
+    alert("Preencha os itens do pedido.");
     return;
   }
 
@@ -753,37 +777,87 @@ async function saveNewOrder() {
     });
 
     const data = await resp.json().catch(() => ({}));
-    if (!resp.ok) throw new Error(data?.error || "Erro ao criar pedido");
+    if (!resp.ok) {
+      console.error("Erro ao criar pedido:", data);
+      throw new Error(data?.error || "Erro ao criar pedido");
+    }
 
     orders.push({ ...data.order, _frontStatus: toFrontStatus(data.order.status) });
     closeCreateModal();
     renderBoard();
   } catch (e) {
-    console.error(e);
-    alert("Erro ao criar pedido.");
+    console.error("Erro em saveNewOrder:", e);
+    alert(`Erro ao criar pedido: ${e.message}`);
   }
 }
 
 // ===== 🔥 CRM CORRIGIDO =====
 async function fetchCRM() {
   const restaurantId = getRestaurantId();
-  if (!restaurantId) return;
+  if (!restaurantId) {
+    console.error("❌ Restaurant ID não encontrado");
+    return;
+  }
 
   try {
+    console.log("🔍 Buscando CRM para:", restaurantId);
+    
     const resp = await fetch(`${CRM_URL}/${restaurantId}`);
-    const data = await resp.json().catch(() => []);
-
+    
+    console.log("📡 Status da resposta CRM:", resp.status);
+    
     if (!resp.ok) {
-      console.error("Erro CRM:", data);
-      alert(data?.error || "Erro ao carregar CRM");
+      const errorData = await resp.json().catch(() => ({ error: "Erro desconhecido" }));
+      console.error("❌ Erro CRM:", errorData);
+      
+      if (resp.status === 403) {
+        alert("Seu plano não permite acesso ao CRM. Faça upgrade para PRO ou ADVANCED.");
+      } else if (resp.status === 404) {
+        alert("Restaurante não encontrado no sistema.");
+      } else if (resp.status === 500) {
+        alert("Erro no servidor ao buscar CRM. Tente novamente mais tarde.");
+      } else {
+        alert(errorData?.error || "Erro ao carregar CRM");
+      }
+      
+      crmContent.innerHTML = `
+        <div class="empty-state">
+          <p style="color: #ef4444;">❌ ${errorData?.error || "Erro ao carregar CRM"}</p>
+          <p style="font-size: 14px; color: var(--muted);">Status: ${resp.status}</p>
+        </div>
+      `;
       return;
     }
 
-    crmClients = Array.isArray(data) ? data : [];
+    const data = await resp.json();
+    console.log("✅ Dados CRM recebidos:", data);
+
+    if (!Array.isArray(data)) {
+      console.error("❌ Resposta CRM não é um array:", data);
+      crmContent.innerHTML = `
+        <div class="empty-state">
+          <p style="color: #ef4444;">Erro: Resposta inválida do servidor</p>
+        </div>
+      `;
+      return;
+    }
+
+    crmClients = data;
     renderCRM();
   } catch (e) {
-    console.error("Erro CRM:", e);
-    alert("Erro ao carregar CRM");
+    console.error("❌ Erro fatal ao buscar CRM:", e);
+    
+    if (crmContent) {
+      crmContent.innerHTML = `
+        <div class="empty-state">
+          <p style="color: #ef4444;">❌ Erro de conexão ao buscar CRM</p>
+          <p style="font-size: 14px; color: var(--muted);">${e.message}</p>
+          <button class="primary-button" onclick="fetchCRM()" style="margin-top: 16px;">
+            Tentar Novamente
+          </button>
+        </div>
+      `;
+    }
   }
 }
 
