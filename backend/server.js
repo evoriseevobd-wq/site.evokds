@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
-import { v4 as uuidv4 } from 'uuid';
 
 dotenv.config();
 
@@ -455,7 +454,6 @@ app.post("/api/v1/pedidos", async (req, res) => {
       resultData = data;
     } else {
       // CRIA
-      const tracking_id = uuidv4().substring(0, 8).toUpperCase();
       const { data: last } = await supabase
         .from("orders")
         .select("order_number")
@@ -481,7 +479,6 @@ app.post("/api/v1/pedidos", async (req, res) => {
           address: address || null,
           payment_method: payment_method || null,
           total_price: total_price || 0,
-          tracking_id,
           created_at: now,
           update_at: now
         }])
@@ -497,7 +494,6 @@ app.post("/api/v1/pedidos", async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      tracking_url: `https://fluxon.evoriseai.com.br/rastreio?id=${resultData.tracking_id}`,
       order: resultData
     });
   } catch (err) {
