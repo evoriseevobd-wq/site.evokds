@@ -1133,36 +1133,6 @@ async function fetchAndRenderMetrics() {
   }
 }
 
-function renderMetricsUI(data) {
-  // Faturamento
-  const revenue = data.total_revenue || 0;
-  document.getElementById("card-revenue").textContent = formatCurrency(revenue);
-  
-  // ROI
-  const roi = revenue / restaurantPlanPrice;
-  document.getElementById("card-roi").textContent = `${roi.toFixed(1)}x`;
-  document.getElementById("card-plan-price").textContent = formatCurrency(restaurantPlanPrice);
-  
-  // Ticket Médio
-  const avgTicket = data.average_ticket || 0;
-  document.getElementById("card-ticket").textContent = formatCurrency(avgTicket);
-  
-  // Total Pedidos
-  document.getElementById("card-orders").textContent = data.total_orders || 0;
-  
-  // Delivery vs Local
-  document.getElementById("stat-delivery").textContent = data.orders_by_service_type?.delivery || 0;
-  document.getElementById("stat-local").textContent = data.orders_by_service_type?.local || 0;
-  document.getElementById("stat-clients").textContent = data.unique_clients || 0;
-  
-  // Comparações (simuladas - você pode pegar período anterior se quiser)
-  renderComparison("card-revenue-comp", 15.5);
-  renderComparison("card-ticket-comp", -5.2);
-  renderComparison("card-orders-comp", 22.3);
-  
-  // Gráfico de Pizza
-  renderPieChart(data);
-}
 
 function renderComparison(elementId, percentage) {
   const el = document.getElementById(elementId);
@@ -1176,71 +1146,6 @@ function renderComparison(elementId, percentage) {
   el.style.color = color;
 }
 
-function renderPieChart(data) {
-  const canvas = document.getElementById("pieChart");
-  if (!canvas) return;
-
-  const iaOrders = data.orders_by_origin?.ia_whatsapp || 0;
-  const balcaoOrders = (data.orders_by_origin?.pdv || 0) + (data.orders_by_origin?.balcao || 0) + (data.orders_by_origin?.outros || 0);
-
-  // Destroi chart anterior se existir
-  if (chartInstance) {
-    chartInstance.destroy();
-  }
-
-  chartInstance = new Chart(canvas, {
-    type: 'doughnut',
-    data: {
-      labels: ['IA WhatsApp', 'Balcão'],
-      datasets: [{
-        data: [iaOrders, balcaoOrders],
-        backgroundColor: [
-          'rgba(139, 92, 246, 0.8)',
-          'rgba(249, 115, 115, 0.8)'
-        ],
-        borderColor: [
-          'rgba(139, 92, 246, 1)',
-          'rgba(249, 115, 115, 1)'
-        ],
-        borderWidth: 2
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: {
-            color: '#fce4e4',
-            font: {
-              size: 14,
-              family: 'Manrope',
-              weight: '600'
-            },
-            padding: 20
-          }
-        },
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          titleColor: '#fce4e4',
-          bodyColor: '#fce4e4',
-          borderColor: 'rgba(249, 115, 115, 0.5)',
-          borderWidth: 1,
-          padding: 12,
-          displayColors: true,
-          callbacks: {
-            label: function(context) {
-              const total = iaOrders + balcaoOrders;
-              const percentage = ((context.parsed / total) * 100).toFixed(1);
-              return `${context.label}: ${context.parsed} (${percentage}%)`;
-            }
-          }
-        }
-      }
-    }
-  });
-}
 
 // ===== AUTH =====
 function decodeJwt(token) {
@@ -1370,3 +1275,369 @@ function init() {
 }
 
 document.addEventListener("DOMContentLoaded", init);
+// ========================================
+// 🎨 DASHBOARD COMPLETO - 4 GRÁFICOS
+// ========================================
+
+// Variáveis globais para os gráficos
+let originChartInstance = null;
+let serviceChartInstance = null;
+let clientsChartInstance = null;
+let statusChartInstance = null;
+
+// Função principal para renderizar TODOS os gráficos
+function renderAllCharts(data) {
+  renderOriginChart(data);
+  renderServiceChart(data);
+  renderClientsChart(data);
+  renderStatusChart(data);
+}
+
+// ========================================
+// 📊 GRÁFICO 1: ORIGEM DOS PEDIDOS (Pizza)
+// ========================================
+function renderOriginChart(data) {
+  const canvas = document.getElementById("originChart");
+  if (!canvas) return;
+
+  const iaOrders = data.orders_by_origin?.ia_whatsapp || 0;
+  const pdvOrders = data.orders_by_origin?.pdv || 0;
+  const balcaoOrders = data.orders_by_origin?.balcao || 0;
+  const outrosOrders = data.orders_by_origin?.outros || 0;
+
+  if (originChartInstance) {
+    originChartInstance.destroy();
+  }
+
+  originChartInstance = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: ['🤖 IA WhatsApp', '💻 PDV', '🏪 Balcão', '📦 Outros'],
+      datasets: [{
+        data: [iaOrders, pdvOrders, balcaoOrders, outrosOrders],
+        backgroundColor: [
+          'rgba(139, 92, 246, 0.9)',  // Roxo - IA
+          'rgba(34, 197, 94, 0.9)',   // Verde - PDV
+          'rgba(249, 115, 115, 0.9)', // Vermelho - Balcão
+          'rgba(156, 163, 175, 0.9)'  // Cinza - Outros
+        ],
+        borderColor: [
+          'rgba(139, 92, 246, 1)',
+          'rgba(34, 197, 94, 1)',
+          'rgba(249, 115, 115, 1)',
+          'rgba(156, 163, 175, 1)'
+        ],
+        borderWidth: 3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: 'rgba(252, 228, 228, 0.9)',
+            font: { size: 13, family: 'Space Grotesk', weight: '600' },
+            padding: 15
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(17, 24, 39, 0.95)',
+          titleColor: 'rgba(252, 228, 228, 0.95)',
+          bodyColor: 'rgba(252, 228, 228, 0.8)',
+          borderColor: 'rgba(249, 115, 115, 0.5)',
+          borderWidth: 1,
+          padding: 12,
+          callbacks: {
+            label: function(context) {
+              const label = context.label || '';
+              const value = context.parsed || 0;
+              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+              return `${label}: ${value} pedidos (${percentage}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ========================================
+// 📊 GRÁFICO 2: DELIVERY VS LOCAL (Barras)
+// ========================================
+function renderServiceChart(data) {
+  const canvas = document.getElementById("serviceChart");
+  if (!canvas) return;
+
+  const deliveryOrders = data.orders_by_service_type?.delivery || 0;
+  const localOrders = data.orders_by_service_type?.local || 0;
+
+  if (serviceChartInstance) {
+    serviceChartInstance.destroy();
+  }
+
+  serviceChartInstance = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: ['🚚 Delivery', '🏪 Local'],
+      datasets: [{
+        label: 'Pedidos',
+        data: [deliveryOrders, localOrders],
+        backgroundColor: [
+          'rgba(251, 191, 36, 0.8)',  // Dourado - Delivery
+          'rgba(249, 115, 115, 0.8)'  // Vermelho - Local
+        ],
+        borderColor: [
+          'rgba(251, 191, 36, 1)',
+          'rgba(249, 115, 115, 1)'
+        ],
+        borderWidth: 3,
+        borderRadius: 10
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(17, 24, 39, 0.95)',
+          titleColor: 'rgba(252, 228, 228, 0.95)',
+          bodyColor: 'rgba(252, 228, 228, 0.8)',
+          borderColor: 'rgba(249, 115, 115, 0.5)',
+          borderWidth: 1,
+          padding: 12,
+          callbacks: {
+            label: function(context) {
+              const value = context.parsed.y || 0;
+              const total = deliveryOrders + localOrders;
+              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+              return `${value} pedidos (${percentage}%)`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: 'rgba(252, 228, 228, 0.7)',
+            font: { family: 'Space Grotesk' }
+          },
+          grid: { color: 'rgba(249, 115, 115, 0.1)' }
+        },
+        x: {
+          ticks: {
+            color: 'rgba(252, 228, 228, 0.9)',
+            font: { size: 14, family: 'Space Grotesk', weight: 'bold' }
+          },
+          grid: { display: false }
+        }
+      }
+    }
+  });
+}
+
+// ========================================
+// 📊 GRÁFICO 3: BASE DE CLIENTES (Pizza)
+// ========================================
+function renderClientsChart(data) {
+  const canvas = document.getElementById("clientsChart");
+  if (!canvas) return;
+
+  const newClients = data.client_base?.new_clients || 0;
+  const recurringClients = data.client_base?.recurring_clients || 0;
+
+  if (clientsChartInstance) {
+    clientsChartInstance.destroy();
+  }
+
+  clientsChartInstance = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: ['🆕 Novos', '🔄 Recorrentes'],
+      datasets: [{
+        data: [newClients, recurringClients],
+        backgroundColor: [
+          'rgba(34, 197, 94, 0.9)',   // Verde - Novos
+          'rgba(139, 92, 246, 0.9)'   // Roxo - Recorrentes
+        ],
+        borderColor: [
+          'rgba(34, 197, 94, 1)',
+          'rgba(139, 92, 246, 1)'
+        ],
+        borderWidth: 3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: 'rgba(252, 228, 228, 0.9)',
+            font: { size: 13, family: 'Space Grotesk', weight: '600' },
+            padding: 15
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(17, 24, 39, 0.95)',
+          titleColor: 'rgba(252, 228, 228, 0.95)',
+          bodyColor: 'rgba(252, 228, 228, 0.8)',
+          borderColor: 'rgba(249, 115, 115, 0.5)',
+          borderWidth: 1,
+          padding: 12,
+          callbacks: {
+            label: function(context) {
+              const label = context.label || '';
+              const value = context.parsed || 0;
+              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+              return `${label}: ${value} clientes (${percentage}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ========================================
+// 📊 GRÁFICO 4: STATUS OPERACIONAL (Pizza GRANDE)
+// ========================================
+function renderStatusChart(data) {
+  const canvas = document.getElementById("statusChart");
+  if (!canvas) return;
+
+  const pending = data.orders_by_status?.pending || 0;
+  const preparing = data.orders_by_status?.preparing || 0;
+  const mounting = data.orders_by_status?.mounting || 0;
+  const delivering = data.orders_by_status?.delivering || 0;
+  const finished = data.orders_by_status?.finished || 0;
+  const canceled = data.orders_by_status?.canceled || 0;
+
+  if (statusChartInstance) {
+    statusChartInstance.destroy();
+  }
+
+  statusChartInstance = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: [
+        '⏳ Aguardando',
+        '👨‍🍳 Em Preparo',
+        '📦 Montando',
+        '🚚 Entregando',
+        '✅ Finalizados',
+        '❌ Cancelados'
+      ],
+      datasets: [{
+        data: [pending, preparing, mounting, delivering, finished, canceled],
+        backgroundColor: [
+          'rgba(251, 191, 36, 0.9)',  // Amarelo - Pendente
+          'rgba(249, 115, 115, 0.9)', // Vermelho - Preparo
+          'rgba(139, 92, 246, 0.9)',  // Roxo - Montando
+          'rgba(59, 130, 246, 0.9)',  // Azul - Entregando
+          'rgba(34, 197, 94, 0.9)',   // Verde - Finalizado
+          'rgba(107, 114, 128, 0.9)'  // Cinza - Cancelado
+        ],
+        borderColor: [
+          'rgba(251, 191, 36, 1)',
+          'rgba(249, 115, 115, 1)',
+          'rgba(139, 92, 246, 1)',
+          'rgba(59, 130, 246, 1)',
+          'rgba(34, 197, 94, 1)',
+          'rgba(107, 114, 128, 1)'
+        ],
+        borderWidth: 3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: 'rgba(252, 228, 228, 0.9)',
+            font: { size: 13, family: 'Space Grotesk', weight: '600' },
+            padding: 15,
+            boxWidth: 15,
+            boxHeight: 15
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(17, 24, 39, 0.95)',
+          titleColor: 'rgba(252, 228, 228, 0.95)',
+          bodyColor: 'rgba(252, 228, 228, 0.8)',
+          borderColor: 'rgba(249, 115, 115, 0.5)',
+          borderWidth: 1,
+          padding: 12,
+          callbacks: {
+            label: function(context) {
+              const label = context.label || '';
+              const value = context.parsed || 0;
+              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+              return `${label}: ${value} pedidos (${percentage}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ========================================
+// 🎨 FUNÇÃO PARA ATUALIZAR A UI COMPLETA
+// ========================================
+function renderMetricsUI(data) {
+  // Cards principais
+  const revenue = data.total_revenue || 0;
+  document.getElementById("card-revenue").textContent = formatCurrency(revenue);
+  
+  const roi = revenue / restaurantPlanPrice;
+  document.getElementById("card-roi").textContent = `${roi.toFixed(1)}x`;
+  
+  const avgTicket = data.average_ticket || 0;
+  document.getElementById("card-ticket").textContent = formatCurrency(avgTicket);
+  
+  document.getElementById("card-orders").textContent = data.total_orders || 0;
+  
+  // Comparações
+  renderComparison("card-revenue-comp", data.comparison?.revenue?.growth || 0);
+  renderComparison("card-roi-comp", data.comparison?.revenue?.growth || 0); // ROI segue revenue
+  renderComparison("card-ticket-comp", data.comparison?.ticket?.growth || 0);
+  renderComparison("card-orders-comp", data.comparison?.orders?.growth || 0);
+  
+  // Performance IA
+  document.getElementById("ia-orders").textContent = data.ia_performance?.orders || 0;
+  document.getElementById("ia-revenue").textContent = formatCurrency(data.ia_performance?.revenue || 0);
+  document.getElementById("ia-percentage").textContent = `${(data.ia_performance?.percentage || 0).toFixed(1)}%`;
+  
+  // Gráficos
+  renderAllCharts(data);
+}
+
+function renderComparison(elementId, percentage) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  
+  const isPositive = percentage >= 0;
+  const arrow = isPositive ? "↑" : "↓";
+  const color = isPositive ? "#22c55e" : "#ef4444";
+  
+  el.textContent = `${arrow} ${Math.abs(percentage).toFixed(1)}%`;
+  el.style.color = color;
+  el.style.fontWeight = '700';
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(value);
+}
