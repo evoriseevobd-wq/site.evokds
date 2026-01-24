@@ -7,11 +7,9 @@ const API_URL = `${API_BASE}/orders`;
 const AUTH_URL = `${API_BASE}/auth/google`;
 const CRM_URL = `${API_BASE}/crm`;
 
-// 🔥 NOVAS ROTAS V1 - MELHORADAS
-const METRICS_URL = `${API_BASE}/api/v1/analytics/roi`;
-const FORECAST_URL = `${API_BASE}/api/v1/analytics/demand-forecast`;
-const CART_RECOVERY_URL = `${API_BASE}/api/v1/cart-recovery/pending`;
-const PDV_ORDERS_URL = `${API_BASE}/api/v1/pdv/orders`;
+// 🔥 ROTAS V1
+const METRICS_URL = `${API_BASE}/api/v1/metrics`;
+const FORECAST_URL = `${API_BASE}/api/v1/demand-forecast`;
 
 // ===== STATUS MAP =====
 const STATUS_TO_BACKEND = {
@@ -33,11 +31,12 @@ const STATUS_FROM_BACKEND = {
   canceled: "cancelado",
 };
 
+// 🔥 VIEWS CORRIGIDAS - CADA VIEW MOSTRA APENAS AS COLUNAS NECESSÁRIAS
 const views = {
-  ativos: ["recebido", "preparo", "pronto"],
-  finalizados: ["finalizado"],
-  cancelados: ["cancelado"],
-  entregas: ["caminho"],
+  ativos: ["recebido", "preparo", "pronto"],        // 3 colunas
+  finalizados: ["finalizado"],                      // 1 coluna
+  cancelados: ["cancelado"],                        // 1 coluna
+  entregas: ["caminho"],                            // 1 coluna (só a caminho)
 };
 
 // ===== ELEMENTS =====
@@ -125,14 +124,12 @@ let orders = [];
 let activeOrderId = null;
 let isFetching = false;
 
-let restaurantPlan = "essential";
+let restaurantPlan = "basic";
 let features = { 
   crm: false, 
   results: false, 
   roi: false, 
-  forecast: false,
-  pdv_sync: false,
-  cart_recovery: false
+  forecast: false
 };
 
 let crmClients = [];
@@ -211,21 +208,38 @@ function normalizePhone(phone) {
   return p || null;
 }
 
-// ===== PLAN FEATURES =====
+// ===== 🔥 PLAN FEATURES CORRIGIDAS =====
 function applyAccessUI() {
   const plan = restaurantPlan.toLowerCase();
   
-  // Essential: nada bloqueado, mas recursos limitados
-  // Advanced: CRM, Results, Cart Recovery, PDV Manual
-  // Executive: Tudo + ROI, Forecast, PDV Auto
+  // basic: só KDS
+  // pro: KDS + CRM
+  // advanced: KDS + CRM + Resultados
+  // custom: tudo
   
-  features.crm = ["advanced", "executive", "custom"].includes(plan);
-  features.results = ["advanced", "executive", "custom"].includes(plan);
-  features.roi = ["executive", "custom"].includes(plan);
-  features.forecast = ["executive", "custom"].includes(plan);
-  features.pdv_sync = ["advanced", "executive", "custom"].includes(plan);
-  features.cart_recovery = ["advanced", "executive", "custom"].includes(plan);
+  if (plan === "basic") {
+    features.crm = false;
+    features.results = false;
+    features.roi = false;
+    features.forecast = false;
+  } else if (plan === "pro") {
+    features.crm = true;        // ✅ CRM liberado
+    features.results = false;
+    features.roi = false;
+    features.forecast = false;
+  } else if (plan === "advanced") {
+    features.crm = true;        // ✅ CRM liberado
+    features.results = true;    // ✅ Resultados liberado
+    features.roi = false;
+    features.forecast = false;
+  } else if (plan === "custom") {
+    features.crm = true;
+    features.results = true;
+    features.roi = true;
+    features.forecast = true;
+  }
   
+  // Atualiza UI do drawer
   drawerCrmBtn?.classList.toggle("locked", !features.crm);
   drawerResultsBtn?.classList.toggle("locked", !features.results);
 }
@@ -276,25 +290,34 @@ function showUpgradeModal(requiredPlan, featureName) {
   let planDisplay = "";
   let planPrice = "";
   
-  if (requiredPlan === "advanced") {
+  if (requiredPlan === "pro") {
+    planDisplay = "PRO";
+    planPrice = "R$ 1.500/mês";
+    featuresList = [
+      "CRM completo de clientes",
+      "Histórico de pedidos por cliente",
+      "Análise de frequência de compra",
+      "Suporte prioritário"
+    ];
+  } else if (requiredPlan === "advanced") {
     planDisplay = "ADVANCED";
     planPrice = "R$ 2.500/mês";
     featuresList = [
-      "CRM completo de clientes",
-      "Recuperação de carrinho abandonado",
-      "Link de rastreio em tempo real",
-      "Integração PDV manual (MarketUP)",
-      "Relatórios executivos"
+      "Tudo do plano PRO",
+      "Relatórios executivos avançados",
+      "Gráficos e insights detalhados",
+      "Análise de picos e tendências",
+      "Exportação de dados"
     ];
-  } else if (requiredPlan === "executive") {
-    planDisplay = "EXECUTIVE";
-    planPrice = "R$ 4.500/mês";
+  } else if (requiredPlan === "custom") {
+    planDisplay = "CUSTOM";
+    planPrice = "Sob consulta";
     featuresList = [
-      "Dashboard de ROI em tempo real",
+      "Tudo do plano ADVANCED",
+      "Cálculo de ROI em tempo real",
       "Previsão de demanda por IA",
-      "Sincronização PDV 100% automática",
-      "Campanhas ativas automatizadas",
-      "Análise financeira completa"
+      "Dashboard de inteligência financeira",
+      "Recursos personalizados"
     ];
   }
 
@@ -353,7 +376,7 @@ function showBoard() {
 
 function showCRM() {
   if (!features.crm) {
-    showUpgradeModal("advanced", "CRM de Clientes");
+    showUpgradeModal("pro", "CRM de Clientes");
     return;
   }
   board?.classList.add("hidden");
@@ -437,16 +460,34 @@ async function updateOrderStatus(orderId, newFrontStatus) {
   }
 }
 
+// 🔥 RENDER BOARD CORRIGIDO - MOSTRA/ESCONDE COLUNAS CONFORME A VIEW
 function renderBoard() {
   if (!board || board.classList.contains("hidden")) return;
 
+  // Limpa todas as colunas
   Object.values(columns).forEach((c) => {
     if (c) c.innerHTML = "";
   });
 
-  const visible = views[currentView];
-  const filtered = orders.filter((o) => visible.includes(o._frontStatus));
+  // Pega os status visíveis na view atual
+  const visibleStatuses = views[currentView];
+  
+  // 🔥 ESCONDE/MOSTRA COLUNAS CONFORME A VIEW
+  Object.keys(columns).forEach((statusKey) => {
+    const column = columns[statusKey]?.parentElement; // pega o .column (pai do .column-body)
+    if (column) {
+      if (visibleStatuses.includes(statusKey)) {
+        column.classList.remove("hidden");
+      } else {
+        column.classList.add("hidden");
+      }
+    }
+  });
 
+  // Filtra pedidos da view atual
+  const filtered = orders.filter((o) => visibleStatuses.includes(o._frontStatus));
+
+  // Renderiza cards nas colunas visíveis
   filtered.forEach((o) => {
     const card = buildOrderCard(o);
     const col = columns[o._frontStatus];
@@ -465,7 +506,6 @@ function buildOrderCard(order) {
   const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
   const paymentText = isDelivery && order.payment_method ? order.payment_method : "";
   
-  // Exibe valor do pedido se disponível
   const priceTag = order.total_price 
     ? `<div class="order-price-tag">${formatCurrency(order.total_price)}</div>` 
     : "";
@@ -492,6 +532,11 @@ function toggleNoOrdersBalloons() {
   Object.keys(columns).forEach((k) => {
     const col = columns[k];
     if (!col) return;
+    
+    // Só mostra balloon se a coluna está visível
+    const column = col.parentElement;
+    if (column && column.classList.contains("hidden")) return;
+    
     const existing = col.querySelector(".empty-balloon");
     if (col.children.length === 0 && !existing) {
       const b = document.createElement("div");
@@ -553,8 +598,8 @@ function openOrderModal(orderId) {
     modalPayment.textContent = showPay ? String(order.payment_method || "") : "";
   }
 
-  modalPrevBtn?.classList.toggle("hidden", ["cancelado", "finalizado", "recebido"].includes(currentView));
-  modalCancelBtn?.classList.toggle("hidden", ["cancelado", "finalizado"].includes(currentView));
+  modalPrevBtn?.classList.toggle("hidden", ["cancelado", "finalizado", "recebido"].includes(order._frontStatus));
+  modalCancelBtn?.classList.toggle("hidden", ["cancelado", "finalizado"].includes(order._frontStatus));
 
   if (modalNextBtn) {
     const s = getFrontStatus(orderId);
@@ -812,8 +857,8 @@ function initResultsUI() {
   root.innerHTML = `
     <div class="results-exec-head">
       <div>
-        <h2 class="results-exec-title">💎 Inteligência Financeira Executive</h2>
-        <p class="results-exec-subtitle">Dashboard completo de performance e ROI</p>
+        <h2 class="results-exec-title">💎 Dashboard de Resultados</h2>
+        <p class="results-exec-subtitle">Análise completa de performance</p>
       </div>
       <div class="results-exec-filters">
         <select id="results-period" class="results-pill">
@@ -821,55 +866,6 @@ function initResultsUI() {
           <option value="30d">Últimos 30 dias</option>
           <option value="90d">Últimos 90 dias</option>
         </select>
-      </div>
-    </div>
-
-    <!-- 🔥 ROI CARD (EXECUTIVE) -->
-    <div id="roi-container" class="roi-grid ${!features.roi ? 'hidden' : ''}">
-      <div class="roi-card premium">
-        <div class="roi-label">💰 Faturamento Total</div>
-        <div id="roi-total-sales" class="roi-value">R$ 0,00</div>
-        <div class="roi-sub">Receita do período</div>
-      </div>
-      
-      <div class="roi-card premium">
-        <div class="roi-label">📈 ROI do Sistema</div>
-        <div id="roi-multiplier" class="roi-value">0x</div>
-        <div id="roi-message" class="roi-sub">Calculando...</div>
-      </div>
-      
-      <div class="roi-card premium">
-        <div class="roi-label">🤖 Receita via IA</div>
-        <div id="roi-ia-revenue" class="roi-value">R$ 0,00</div>
-        <div class="roi-sub" id="roi-ia-percent">0% do total</div>
-      </div>
-      
-      <div class="roi-card premium">
-        <div class="roi-label">🎯 Ticket Médio</div>
-        <div id="roi-avg-ticket" class="roi-value">R$ 0,00</div>
-        <div class="roi-sub">Por pedido</div>
-      </div>
-    </div>
-
-    <!-- 🔥 ALERTA DE DEMANDA (EXECUTIVE) -->
-    <div id="demand-alert" class="demand-alert-box hidden">
-      <div>
-        <div class="demand-icon">⚡</div>
-      </div>
-      <div>
-        <div class="demand-title" id="demand-title">Alta Demanda Detectada!</div>
-        <div class="demand-text" id="demand-message">Volume acima da média histórica.</div>
-      </div>
-    </div>
-
-    <!-- 🔥 RECUPERAÇÃO DE CARRINHO (ADVANCED/EXECUTIVE) -->
-    <div id="cart-recovery-box" class="cart-recovery-box ${!features.cart_recovery ? 'hidden' : ''}">
-      <div class="cart-recovery-header">
-        <h3>🛒 Carrinhos Abandonados</h3>
-        <button id="refresh-cart-btn" class="ghost-button small">Atualizar</button>
-      </div>
-      <div id="cart-recovery-content">
-        <p class="muted">Carregando...</p>
       </div>
     </div>
 
@@ -890,21 +886,6 @@ function initResultsUI() {
       <div class="metric-card">
         <div class="metric-label">Local</div>
         <div class="metric-value" data-metric="local">0</div>
-      </div>
-    </div>
-
-    <!-- GRÁFICO -->
-    <div class="results-exec-chart">
-      <div class="chart-header">
-        <h3>Volume de Pedidos no Período</h3>
-        <div class="results-exec-legend">
-          <span class="legend-item"><span class="legend-dot legend-total"></span> Total</span>
-          <span class="legend-item"><span class="legend-dot legend-delivery"></span> Delivery</span>
-          <span class="legend-item"><span class="legend-dot legend-local"></span> Local</span>
-        </div>
-      </div>
-      <div class="chart-wrapper">
-        <svg id="results-chart-svg" viewBox="0 0 1000 320" preserveAspectRatio="none"></svg>
       </div>
     </div>
 
@@ -945,12 +926,12 @@ function initResultsUI() {
 
       ${!features.roi ? `
         <div class="insights-locked">
-          <h4 class="locked-title">Recursos Exclusivos do Plano Executive</h4>
+          <h4 class="locked-title">Recursos Exclusivos do Plano Custom</h4>
           <div class="locked-list">
             <div class="locked-item">Dashboard de ROI em tempo real</div>
             <div class="locked-item">Previsão de demanda por IA</div>
-            <div class="locked-item">Sincronização automática com PDV</div>
-            <div class="locked-item">Campanhas ativas automatizadas</div>
+            <div class="locked-item">Análise financeira detalhada</div>
+            <div class="locked-item">Recursos personalizados</div>
           </div>
         </div>
       ` : ''}
@@ -968,67 +949,15 @@ function initResultsUI() {
     });
   }
 
-  const refreshCartBtn = root.querySelector("#refresh-cart-btn");
-  if (refreshCartBtn) {
-    refreshCartBtn.addEventListener("click", fetchCartRecovery);
-  }
-
   resultsState.uiReady = true;
 }
 
-// ===== CART RECOVERY =====
-async function fetchCartRecovery() {
-  if (!features.cart_recovery) return;
-  
-  const rid = getRestaurantId();
-  if (!rid) return;
-
-  try {
-    const resp = await fetch(`${CART_RECOVERY_URL}/${rid}`);
-    const data = await resp.json();
-
-    const container = document.getElementById("cart-recovery-content");
-    if (!container) return;
-
-    if (!data.abandoned_carts || data.abandoned_carts.length === 0) {
-      container.innerHTML = `
-        <p class="muted">✅ Nenhum carrinho abandonado no momento!</p>
-      `;
-      return;
-    }
-
-    container.innerHTML = `
-      <div class="cart-stats">
-        <div class="cart-stat">
-          <strong>${data.total_abandoned}</strong> carrinho(s) abandonado(s)
-        </div>
-        <div class="cart-stat">
-          <strong>${formatCurrency(data.recovery_opportunity)}</strong> em oportunidade de recuperação
-        </div>
-      </div>
-      <div class="cart-list">
-        ${data.abandoned_carts.map(cart => `
-          <div class="cart-item">
-            <div class="cart-phone">${cart.client_phone}</div>
-            <div class="cart-time">${formatDateTime(cart.last_interaction)}</div>
-            <div class="cart-messages">${cart.message_count} mensagens</div>
-          </div>
-        `).join('')}
-      </div>
-    `;
-  } catch (e) {
-    console.error("Erro ao buscar carrinhos:", e);
-  }
-}
-
-// ===== RENDER RESULTS =====
 async function renderResultsExecutive() {
   if (!resultsState.uiReady) return;
 
   const rid = getRestaurantId();
   if (!rid) return;
 
-  // Métricas básicas locais
   const filtered = orders;
 
   const metrics = {
@@ -1043,79 +972,10 @@ async function renderResultsExecutive() {
     if (metrics[k] !== undefined) el.textContent = metrics[k];
   });
 
-  // ROI Executive
-  if (features.roi) {
-    try {
-      const roiResp = await fetch(`${METRICS_URL}/${rid}?period=${resultsState.period}`);
-      if (roiResp.ok) {
-        const roi = await roiResp.json();
-        
-        const salesEl = document.getElementById("roi-total-sales");
-        const multEl = document.getElementById("roi-multiplier");
-        const msgEl = document.getElementById("roi-message");
-        const iaRevEl = document.getElementById("roi-ia-revenue");
-        const iaPercentEl = document.getElementById("roi-ia-percent");
-        const avgTicketEl = document.getElementById("roi-avg-ticket");
-        
-        if (salesEl) salesEl.textContent = formatCurrency(roi.total_revenue);
-        if (multEl) multEl.textContent = `${roi.multiplier}x`;
-        if (msgEl) msgEl.textContent = roi.message;
-        if (iaRevEl) iaRevEl.textContent = formatCurrency(roi.ia_revenue);
-        if (avgTicketEl) avgTicketEl.textContent = formatCurrency(roi.avg_ticket_overall);
-        
-        if (iaPercentEl) {
-          const percent = roi.total_revenue > 0 
-            ? ((roi.ia_revenue / roi.total_revenue) * 100).toFixed(1) 
-            : 0;
-          iaPercentEl.textContent = `${percent}% do total`;
-        }
-      }
-    } catch (e) {
-      console.error("ROI Error:", e);
-    }
-
-    // Demand Forecast
-    try {
-      const demandResp = await fetch(`${FORECAST_URL}/${rid}`);
-      if (demandResp.ok) {
-        const demand = await demandResp.json();
-        const alertBox = document.getElementById("demand-alert");
-        const titleEl = document.getElementById("demand-title");
-        const msgEl = document.getElementById("demand-message");
-        
-        if (alertBox && demand.is_high_demand) {
-          alertBox.classList.remove("hidden");
-          if (titleEl) titleEl.textContent = "🚀 Alta Demanda Detectada!";
-          if (msgEl) msgEl.textContent = demand.alert_message;
-        } else if (alertBox) {
-          alertBox.classList.add("hidden");
-        }
-      }
-    } catch (e) {
-      console.error("Demand Error:", e);
-    }
-  }
-
-  // Cart Recovery
-  if (features.cart_recovery) {
-    fetchCartRecovery();
-  }
-
-  // Insights
   const finishedOrders = filtered.filter(o => o.status === 'finished').length;
   const conversionRate = filtered.length > 0 ? (finishedOrders / filtered.length) * 100 : 0;
   const convEl = document.querySelector('[data-insight="conversionRate"]');
   if (convEl) convEl.textContent = `${Math.round(conversionRate)}%`;
-
-  // Simples gráfico (placeholder - você pode melhorar)
-  const svg = document.getElementById("results-chart-svg");
-  if (svg) {
-    svg.innerHTML = `
-      <text x="500" y="160" text-anchor="middle" font-size="14" fill="rgba(255,255,255,0.6)">
-        Gráfico será renderizado com dados reais
-      </text>
-    `;
-  }
 }
 
 // ===== AUTH =====
@@ -1142,7 +1002,7 @@ async function handleCredentialResponse(response) {
     if (data.authorized && data.restaurant) {
       localStorage.setItem("restaurant_id", data.restaurant.id);
       localStorage.setItem("restaurant_name", data.restaurant.name);
-      localStorage.setItem("restaurant_plan", data.restaurant.plan || "essential");
+      localStorage.setItem("restaurant_plan", data.restaurant.plan || "basic");
       localStorage.setItem("user_email", payload.email);
       localStorage.setItem("user_name", payload.name);
       localStorage.setItem("user_picture", payload.picture);
@@ -1191,7 +1051,7 @@ function init() {
   loginScreen?.classList.add("hidden");
   board?.classList.remove("hidden");
 
-  restaurantPlan = localStorage.getItem("restaurant_plan") || "essential";
+  restaurantPlan = localStorage.getItem("restaurant_plan") || "basic";
   applyAccessUI();
 
   if (userChip) {
