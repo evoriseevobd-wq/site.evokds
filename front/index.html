@@ -5,11 +5,20 @@
   <link rel="icon" type="image/png" href="fenix-logo-png.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FluxON</title>
+  
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Chart.js CDN - ESSENCIAL PARA O DASHBOARD -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  
+  <!-- Google Identity -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+  
+  <!-- Seu CSS -->
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <!-- TELA DE LOGIN -->
@@ -103,19 +112,7 @@
 
   <!-- RESULTS VIEW -->
   <main class="results-view hidden" id="results-view">
-    <div class="results-header">
-      <div class="results-title">Resultados</div>
-      <button class="ghost-button" type="button" id="results-back-btn">Voltar</button>
-    </div>
-
-    <div class="results-content">
-      <!-- O JavaScript vai criar o conteúdo dinamicamente -->
-      <!-- Adicionando IDs que o script.js pode precisar para métricas básicas -->
-      <div id="result-total-orders" class="hidden"></div>
-      <div id="result-unique-clients" class="hidden"></div>
-      <div id="result-delivery-orders" class="hidden"></div>
-      <div id="result-local-orders" class="hidden"></div>
-    </div>
+    <!-- O JavaScript vai criar o conteúdo dinamicamente -->
   </main>
 
   <!-- MODAL DE PEDIDO -->
@@ -304,6 +301,7 @@
     </div>
   </div>
 
+  <!-- Seu JavaScript -->
   <script src="script.js"></script>
 </body>
 </html>
