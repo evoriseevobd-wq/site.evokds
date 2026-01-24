@@ -1595,31 +1595,46 @@ function renderStatusChart(data) {
 // 🎨 FUNÇÃO PARA ATUALIZAR A UI COMPLETA
 // ========================================
 function renderMetricsUI(data) {
+  console.log("📊 Renderizando métricas:", data);
+  
+  // Helper function para definir texto com segurança
+  const safeSetText = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = value;
+    } else {
+      console.warn(`⚠️ Elemento não encontrado: ${id}`);
+    }
+  };
+  
   // Cards principais
   const revenue = data.total_revenue || 0;
-  document.getElementById("card-revenue").textContent = formatCurrency(revenue);
+  safeSetText("card-revenue", formatCurrency(revenue));
   
   const roi = revenue / restaurantPlanPrice;
-  document.getElementById("card-roi").textContent = `${roi.toFixed(1)}x`;
+  safeSetText("card-roi", `${roi.toFixed(1)}x`);
   
   const avgTicket = data.average_ticket || 0;
-  document.getElementById("card-ticket").textContent = formatCurrency(avgTicket);
+  safeSetText("card-ticket", formatCurrency(avgTicket));
   
-  document.getElementById("card-orders").textContent = data.total_orders || 0;
+  safeSetText("card-orders", data.total_orders || 0);
+  safeSetText("card-plan-price", formatCurrency(restaurantPlanPrice));
   
   // Comparações
   renderComparison("card-revenue-comp", data.comparison?.revenue?.growth || 0);
-  renderComparison("card-roi-comp", data.comparison?.revenue?.growth || 0); // ROI segue revenue
+  renderComparison("card-roi-comp", data.comparison?.revenue?.growth || 0);
   renderComparison("card-ticket-comp", data.comparison?.ticket?.growth || 0);
   renderComparison("card-orders-comp", data.comparison?.orders?.growth || 0);
   
   // Performance IA
-  document.getElementById("ia-orders").textContent = data.ia_performance?.orders || 0;
-  document.getElementById("ia-revenue").textContent = formatCurrency(data.ia_performance?.revenue || 0);
-  document.getElementById("ia-percentage").textContent = `${(data.ia_performance?.percentage || 0).toFixed(1)}%`;
+  safeSetText("ia-orders", data.ia_performance?.orders || 0);
+  safeSetText("ia-revenue", formatCurrency(data.ia_performance?.revenue || 0));
+  safeSetText("ia-percentage", `${(data.ia_performance?.percentage || 0).toFixed(1)}%`);
   
   // Gráficos
+  console.log("🎨 Renderizando gráficos...");
   renderAllCharts(data);
+  console.log("✅ Métricas renderizadas com sucesso!");
 }
 
 function renderComparison(elementId, percentage) {
