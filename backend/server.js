@@ -37,7 +37,7 @@ const supabase = createClient(
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-PDV-Token']
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json({ limit: '10mb' }));
 
@@ -106,7 +106,7 @@ function normalizePhone(input) {
 }
 
 /* =========================
-   🔥 ROTA DE MÉTRICAS (CORRIGIDA)
+   🔥 ROTA DE MÉTRICAS COMPLETA (COM FATURAMENTO)
 ========================= */
 
 app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
@@ -116,14 +116,12 @@ app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
     
     console.log(`📊 Buscando métricas para restaurante: ${restaurant_id}, período: ${period}`);
     
-    // Verifica se o restaurante existe
     const exists = await restaurantExists(restaurant_id);
     if (!exists) {
       console.error(`❌ Restaurante não encontrado: ${restaurant_id}`);
       return sendError(res, 404, "Restaurante não encontrado");
     }
     
-    // Verifica plano
     const plan = await getRestaurantPlan(restaurant_id);
     console.log(`📋 Plano do restaurante: ${plan}`);
     
@@ -156,10 +154,10 @@ app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
 
     console.log(`📅 Buscando pedidos desde: ${startDate.toISOString()}`);
 
-    // Busca pedidos
+    // Busca pedidos COM TOTAL_PRICE
     const { data: orders, error } = await supabase
       .from("orders")
-      .select("*")
+      .select("id, client_phone, origin, status, service_type, created_at, total_price")
       .eq("restaurant_id", restaurant_id)
       .gte("created_at", startDate.toISOString());
     
@@ -170,7 +168,7 @@ app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
 
     console.log(`✅ Pedidos encontrados: ${orders?.length || 0}`);
 
-    // Inicializa métricas
+    // Inicializa métricas COM VALORES
     const metrics = {
       period,
       total_orders: orders?.length || 0,
@@ -201,6 +199,7 @@ app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
     const uniquePhones = new Set();
     
     (orders || []).forEach(order => {
+      // Calcula faturamento
       const price = parseFloat(order.total_price) || 0;
       metrics.total_revenue += price;
       
@@ -235,6 +234,7 @@ app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
     console.log(`✅ Métricas calculadas:`, {
       total_orders: metrics.total_orders,
       total_revenue: metrics.total_revenue,
+      average_ticket: metrics.average_ticket,
       unique_clients: metrics.unique_clients
     });
 
@@ -246,7 +246,7 @@ app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
 });
 
 /* =========================
-   🔥 ROTA CRM (CORRIGIDA)
+   🔥 ROTA CRM COMPLETA (COM GASTOS)
 ========================= */
 
 app.get("/crm/:restaurant_id", async (req, res) => {
@@ -259,14 +259,12 @@ app.get("/crm/:restaurant_id", async (req, res) => {
       return sendError(res, 400, "restaurant_id é obrigatório");
     }
 
-    // Verifica se o restaurante existe
     const exists = await restaurantExists(restaurant_id);
     if (!exists) {
       console.error(`❌ Restaurante não encontrado: ${restaurant_id}`);
       return sendError(res, 404, "Restaurante não encontrado");
     }
 
-    // Verifica plano
     const plan = await getRestaurantPlan(restaurant_id);
     console.log(`📋 Plano do restaurante: ${plan}`);
     
@@ -278,7 +276,7 @@ app.get("/crm/:restaurant_id", async (req, res) => {
       });
     }
 
-    // Busca pedidos
+    // Busca pedidos COM TOTAL_PRICE
     const { data, error } = await supabase
       .from("orders")
       .select("id, client_name, client_phone, created_at, total_price")
@@ -292,7 +290,7 @@ app.get("/crm/:restaurant_id", async (req, res) => {
 
     console.log(`✅ Pedidos encontrados para CRM: ${data?.length || 0}`);
 
-    // Agrupa clientes por telefone
+    // Agrupa clientes por telefone COM GASTOS
     const clients = Object.create(null);
     
     for (const o of data || []) {
@@ -427,13 +425,13 @@ app.delete("/orders/:id", async (req, res) => {
   }
 });
 
-// ✅ CRIAR/ATUALIZAR PEDIDO
+// ✅ CRIAR/ATUALIZAR PEDIDO (COM TOTAL_PRICE, USA "ITENS")
 app.post("/api/v1/pedidos", async (req, res) => {
   try {
     const {
       restaurant_id, client_name, client_phone, items, itens, notes,
       service_type, address, payment_method, total_price, origin,
-      status, order_id, pdv_order_id, discount, subtotal, delivery_fee
+      status, order_id
     } = req.body || {};
 
     const normalizedItems = Array.isArray(items) ? items : Array.isArray(itens) ? itens : [];
@@ -451,23 +449,15 @@ app.post("/api/v1/pedidos", async (req, res) => {
     const now = new Date().toISOString();
     let resultData;
 
-    // CRM - Base de clientes
-    if (phone) {
-      await supabase.from("base_clientes").upsert({
-        restaurant_id, telefone: phone, nome: client_name,
-        ultima_interacao: now, ia_ativa: true
-      }, { onConflict: 'telefone, restaurant_id' });
-    }
-
     if (order_id) {
       // ATUALIZA
       const { data, error } = await supabase
         .from("orders")
         .update({
-          itens: normalizedItems, notes: notes || "",
-          status: finalStatus, total_price: total_price || 0,
-          subtotal: subtotal || 0, discount: discount || 0,
-          delivery_fee: delivery_fee || 0, pdv_order_id,
+          itens: normalizedItems,
+          notes: notes || "",
+          status: finalStatus,
+          total_price: total_price || 0,
           update_at: now
         })
         .eq("id", order_id)
@@ -493,20 +483,29 @@ app.post("/api/v1/pedidos", async (req, res) => {
       const { data, error } = await supabase
         .from("orders")
         .insert([{
-          restaurant_id, client_name, client_phone: phone,
-          order_number: nextNumber, itens: normalizedItems,
-          notes: notes || "", status: finalStatus,
+          restaurant_id,
+          client_name,
+          client_phone: phone,
+          order_number: nextNumber,
+          itens: normalizedItems,
+          notes: notes || "",
+          status: finalStatus,
           service_type: service_type || "local",
-          address: address || null, payment_method: payment_method || null,
-          total_price: total_price || 0, subtotal: subtotal || 0,
-          discount: discount || 0, delivery_fee: delivery_fee || 0,
-          origin: finalOrigin, tracking_id, pdv_order_id,
-          pdv_synced: false, created_at: now, update_at: now
+          address: address || null,
+          payment_method: payment_method || null,
+          total_price: total_price || 0,
+          origin: finalOrigin,
+          tracking_id,
+          created_at: now,
+          update_at: now
         }])
         .select()
         .single();
       
-      if (error) return sendError(res, 500, "Erro ao criar pedido: " + error.message);
+      if (error) {
+        console.error("❌ Erro ao criar pedido:", error);
+        return sendError(res, 500, "Erro ao criar pedido: " + error.message);
+      }
       resultData = data;
     }
 
@@ -547,7 +546,7 @@ app.get("/health", (req, res) => {
   res.json({
     status: "ok",
     timestamp: new Date().toISOString(),
-    version: "3.0.0-fixed"
+    version: "3.0.0-complete"
   });
 });
 
@@ -563,6 +562,7 @@ app.use((req, res) => {
 
 // ✅ START
 app.listen(PORT, HOST, () => {
-  console.log(`🚀 Fluxon Backend v3.0 FIXED em http://${HOST}:${PORT}`);
-  console.log(`✅ Rotas corrigidas: /api/v1/metrics, /crm`);
+  console.log(`🚀 Fluxon Backend v3.0 COMPLETE em http://${HOST}:${PORT}`);
+  console.log(`✅ Rotas: /crm, /api/v1/metrics (COM faturamento!)`);
+  console.log(`✅ Schema: usa "itens" e "total_price"`);
 });
