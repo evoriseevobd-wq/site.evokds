@@ -2,231 +2,308 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="fenix-logo-png.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FluxON - Dashboard Premium</title>
-  
-  <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  
-  <!-- Google Identity -->
+  <title>FluxON</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  
-  <!-- Seu CSS -->
-  <link rel="stylesheet" href="style-PREMIUM.css">
 </head>
 <body>
-  <!-- Seu HTML completo aqui -->
-  
-  <!-- LOGIN SCREEN -->
-  <div id="login-screen" class="login-screen hidden">
+  <!-- TELA DE LOGIN -->
+  <div class="login-screen" id="login-screen">
     <div class="login-card">
       <div class="login-badge">
-        <img src="logo.png" alt="FluxON" class="login-logo">
+        <img
+          src="fenix-logo-png.png"
+          alt="Logo Fênix"
+          class="login-logo"
+        />
       </div>
-      <h1>Bem-vindo ao FluxON</h1>
-      <p>Sistema de gestão de pedidos com IA</p>
+
+      <h1>FluxON</h1>
+      <p class="muted">Use sua conta Google para continuar</p>
       <div id="googleLoginBtn" class="google-btn"></div>
     </div>
   </div>
 
-  <!-- UNAUTHORIZED MODAL -->
-  <div id="unauthorized-modal" class="modal-backdrop">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Acesso Negado</h3>
-        <button id="unauth-close" class="icon-button">×</button>
-      </div>
-      <div class="modal-body">
-        <p>Você não tem permissão para acessar este sistema.</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- APP HEADER -->
+  <!-- HEADER DEPOIS DO LOGIN -->
   <header class="app-header">
-    <button id="open-drawer" class="icon-button">☰</button>
-    <div class="brand">FLUXON</div>
+    <button class="icon-button menu-button" id="open-drawer" aria-label="Abrir menu">&#9776;</button>
+    <div class="brand">FluxON</div>
     <div class="header-right">
-      <div id="user-chip" class="user-chip" hidden>
-        <img id="user-avatar" src="" alt="User">
-        <span id="user-name">Usuário</span>
-        <div class="dot"></div>
-      </div>
+      <button class="primary-button ghost" id="open-create">Criar Pedido</button>
     </div>
   </header>
 
-  <!-- DRAWER -->
-  <div id="drawer-backdrop" class="drawer-backdrop"></div>
-  <div id="drawer" class="drawer">
-    <div class="drawer-header">
-      <h3>Menu</h3>
-      <button id="close-drawer" class="icon-button">×</button>
-    </div>
-    <nav class="drawer-nav">
-      <button id="drawer-orders" class="drawer-item">📦 Pedidos</button>
-      <button id="drawer-crm" class="drawer-item">👥 CRM</button>
-      <button id="drawer-results" class="drawer-item">📊 Resultados</button>
-    </nav>
-    <div class="drawer-footer">
-      <button id="logout-btn" class="ghost-button" style="width: 100%;">Sair</button>
-    </div>
-  </div>
+  <nav class="tabs">
+    <button class="tab active" data-view="ativos" id="tab-ativos">Ativos</button>
+    <button class="tab" data-view="finalizados" id="tab-finalizados">Finalizados</button>
+    <button class="tab" data-view="cancelados" id="tab-cancelados">Cancelados</button>
+    <button class="tab" data-view="entregas" id="tab-entregas">Entrega</button>
+  </nav>
 
-  <!-- TABS -->
-  <div class="tabs">
-    <button id="tab-ativos" class="tab active">Ativos</button>
-    <button id="tab-finalizados" class="tab">Finalizados</button>
-    <button id="tab-cancelados" class="tab">Cancelados</button>
-    <button id="tab-entregas" class="tab">Entregas</button>
-  </div>
+  <main class="board hidden" id="board">
+    <section class="column" data-status="recebido">
+      <div class="column-header">
+        <h2>Pedidos Recebidos</h2>
+      </div>
+      <div class="column-body" id="col-recebido"></div>
+    </section>
 
-  <!-- BOARD -->
-  <div id="board" class="board">
-    <!-- Colunas aqui -->
-    <div class="column">
-      <div class="column-header"><h2>Recebidos</h2></div>
-      <div id="col-recebido" class="column-body"></div>
-    </div>
-    <div class="column">
-      <div class="column-header"><h2>Em Preparo</h2></div>
-      <div id="col-preparo" class="column-body"></div>
-    </div>
-    <div class="column">
-      <div class="column-header"><h2>Prontos</h2></div>
-      <div id="col-pronto" class="column-body"></div>
-    </div>
-    <div class="column hidden">
-      <div class="column-header"><h2>A Caminho</h2></div>
-      <div id="col-caminho" class="column-body"></div>
-    </div>
-    <div class="column hidden">
-      <div class="column-header"><h2>Finalizados</h2></div>
-      <div id="col-finalizado" class="column-body"></div>
-    </div>
-    <div class="column hidden">
-      <div class="column-header"><h2>Cancelados</h2></div>
-      <div id="col-cancelado" class="column-body"></div>
-    </div>
-  </div>
+    <section class="column" data-status="preparo">
+      <div class="column-header">
+        <h2>Em Preparo</h2>
+      </div>
+      <div class="column-body" id="col-preparo"></div>
+    </section>
+
+    <section class="column" data-status="pronto">
+      <div class="column-header">
+        <h2>Prontos</h2>
+      </div>
+      <div class="column-body" id="col-pronto"></div>
+    </section>
+
+    <section class="column" data-status="caminho">
+      <div class="column-header">
+        <h2>A Caminho</h2>
+      </div>
+      <div class="column-body" id="col-caminho"></div>
+    </section>
+
+    <section class="column hidden" data-status="finalizado">
+      <div class="column-header">
+        <h2>Pedidos Finalizados</h2>
+      </div>
+      <div class="column-body" id="col-finalizado"></div>
+    </section>
+
+    <section class="column hidden" data-status="cancelado">
+      <div class="column-header">
+        <h2>Pedidos Cancelados</h2>
+      </div>
+      <div class="column-body" id="col-cancelado"></div>
+    </section>
+  </main>
 
   <!-- CRM VIEW -->
-  <div id="crm-view" class="crm-view hidden">
+  <main class="crm-view hidden" id="crm-view">
     <div class="crm-header">
-      <h2 class="crm-title">👥 CRM de Clientes</h2>
-      <button id="crm-back-btn" class="ghost-button">← Voltar</button>
+      <div class="crm-title">CRM de Clientes</div>
+      <button class="ghost-button" type="button" id="crm-back-btn">Voltar</button>
     </div>
-    <div class="crm-content"></div>
-  </div>
+
+    <div class="crm-content">
+      <!-- O script.js vai renderizar a tabela aqui -->
+    </div>
+  </main>
 
   <!-- RESULTS VIEW -->
-  <div id="results-view" class="results-view hidden">
-    <button id="results-back-btn" class="ghost-button" style="margin-bottom: 20px;">← Voltar</button>
-    <!-- Conteúdo será gerado dinamicamente -->
-  </div>
+  <main class="results-view hidden" id="results-view">
+    <div class="results-header">
+      <div class="results-title">Resultados</div>
+      <button class="ghost-button" type="button" id="results-back-btn">Voltar</button>
+    </div>
 
-  <!-- ORDER MODAL -->
-  <div id="modal" class="modal-backdrop">
+    <div class="results-content">
+      <!-- O JavaScript vai criar o conteúdo dinamicamente -->
+      <!-- Adicionando IDs que o script.js pode precisar para métricas básicas -->
+      <div id="result-total-orders" class="hidden"></div>
+      <div id="result-unique-clients" class="hidden"></div>
+      <div id="result-delivery-orders" class="hidden"></div>
+      <div id="result-local-orders" class="hidden"></div>
+    </div>
+  </main>
+
+  <!-- MODAL DE PEDIDO -->
+  <div class="modal-backdrop" id="modal">
     <div class="modal">
       <div class="modal-header">
         <div>
-          <h3 id="modal-id">#123</h3>
-          <p id="modal-customer" class="muted">Cliente</p>
+          <p class="modal-label">Pedido</p>
+          <h3 id="modal-id"></h3>
         </div>
-        <button id="close-modal" class="icon-button">×</button>
+        <button class="icon-button" id="close-modal" aria-label="Fechar modal">&times;</button>
       </div>
+
       <div class="modal-body">
         <div class="modal-row">
-          <span class="modal-label">Horário</span>
-          <span id="modal-time">--:--</span>
+          <span class="muted">Cliente</span>
+          <span id="modal-customer"></span>
         </div>
-        <div id="modal-phone-row" class="modal-row">
-          <span class="modal-label">Telefone</span>
-          <span id="modal-phone">—</span>
+        <div class="modal-row">
+          <span class="muted">Horário</span>
+          <span id="modal-time"></span>
         </div>
-        <div id="modal-address-row" class="modal-row" style="display:none;">
-          <span class="modal-label">Endereço</span>
-          <span id="modal-address">—</span>
+
+        <div class="modal-row" id="modal-phone-row" style="display:none;">
+          <span class="muted">Telefone</span>
+          <span id="modal-phone"></span>
         </div>
-        <div id="modal-payment-row" class="modal-row" style="display:none;">
-          <span class="modal-label">Pagamento</span>
-          <span id="modal-payment">—</span>
+
+        <div class="modal-row" id="modal-address-row" style="display:none;">
+          <span class="muted">Endereço</span>
+          <span id="modal-address"></span>
         </div>
+
+        <div class="modal-row" id="modal-payment-row" style="display:none;">
+          <span class="muted">Pagamento</span>
+          <span id="modal-payment"></span>
+        </div>
+
         <div class="modal-section">
-          <h4 class="modal-label">Itens</h4>
+          <p class="modal-label">Itens</p>
           <ul id="modal-items" class="item-list"></ul>
         </div>
+
         <div class="modal-section">
-          <h4 class="modal-label">Observações</h4>
-          <div id="modal-notes" class="notes">—</div>
+          <p class="modal-label">Observações</p>
+          <p id="modal-notes" class="notes"></p>
         </div>
       </div>
+
       <div class="modal-actions">
-        <button id="modal-prev" class="ghost-button">← Voltar</button>
-        <button id="modal-cancel" class="danger-button">Cancelar</button>
-        <button id="modal-next" class="primary-button">Avançar →</button>
-        <button id="close-modal-secondary" class="ghost-button">Fechar</button>
+        <button class="ghost-button" id="close-modal-secondary">Fechar</button>
+        <button class="danger-button" id="modal-cancel">Cancelar Pedido</button>
+        <button class="ghost-button" id="modal-prev">Voltar etapa</button>
+        <button class="primary-button" id="modal-next"></button>
       </div>
     </div>
   </div>
 
-  <!-- CREATE MODAL -->
-  <div id="create-modal" class="modal-backdrop">
+  <!-- MODAL DE CRIAÇÃO DE PEDIDO -->
+  <div class="modal-backdrop" id="create-modal">
     <div class="modal">
       <div class="modal-header">
         <h3>Novo Pedido</h3>
-        <button id="close-create" class="icon-button">×</button>
+        <button class="icon-button" id="close-create" aria-label="Fechar criação">&times;</button>
       </div>
       <div class="modal-body form-body">
-        <label>
-          Cliente *
-          <input type="text" id="new-customer" placeholder="Nome do cliente" required>
+        <label>Cliente
+          <input id="new-customer" required />
         </label>
-        <label>
-          Telefone
-          <input type="tel" id="new-phone" placeholder="(14) 99999-9999">
+
+        <label>Telefone (opcional)
+          <input
+            id="new-phone"
+            type="tel"
+            placeholder="(11) 99999-9999 ou 5511999999999"
+          />
         </label>
-        <label>
-          Itens * (um por linha ou JSON)
-          <textarea id="new-items" placeholder="Pizza Margherita x2
-Refrigerante x1" required></textarea>
+
+        <label>Itens (separe por vírgula)
+          <input id="new-items" required placeholder="Burger, Batata, Refrigerante" />
         </label>
-        <div class="delivery-toggle">
-          <input type="checkbox" id="new-delivery">
-          <span>É delivery?</span>
-        </div>
-        <div id="delivery-address-wrap" class="delivery-address hidden">
-          <label>
-            Endereço de Entrega *
-            <input type="text" id="new-address" placeholder="Rua, número, bairro">
+
+        <label class="delivery-toggle">
+          <input id="new-delivery" type="checkbox" />
+          <span>Delivery</span>
+        </label>
+
+        <div class="delivery-address hidden" id="delivery-address-wrap">
+          <label>Endereço para entrega
+            <input
+              id="new-address"
+              type="text"
+              placeholder="Rua, número, bairro, complemento..."
+            />
           </label>
         </div>
-        <div id="payment-wrap" class="payment-wrap hidden">
-          <label>
-            Forma de Pagamento *
+
+        <div class="payment-wrap hidden" id="payment-wrap">
+          <label>Forma de pagamento
             <select id="new-payment">
               <option value="">Selecione...</option>
-              <option value="Dinheiro">Dinheiro</option>
-              <option value="Cartão">Cartão</option>
-              <option value="PIX">PIX</option>
+              <option value="pix">PIX</option>
+              <option value="credito">Cartão de crédito</option>
+              <option value="debito">Cartão de débito</option>
+              <option value="dinheiro">Dinheiro</option>
             </select>
           </label>
         </div>
-        <label>
-          Observações
-          <textarea id="new-notes" placeholder="Observações adicionais..."></textarea>
+
+        <label>Observações
+          <textarea id="new-notes" placeholder="Sem cebola, bebida sem gelo"></textarea>
         </label>
       </div>
       <div class="modal-actions">
-        <button id="cancel-create" class="ghost-button">Cancelar</button>
-        <button id="save-create" class="primary-button">Criar Pedido</button>
+        <button class="ghost-button" id="cancel-create">Cancelar</button>
+        <button class="primary-button" id="save-create">Salvar</button>
       </div>
     </div>
   </div>
 
-  <!-- FAB -->
-  <button id="open-create" class="primary-button" style="position: fixed; bottom: 24px; right: 24px; border-radius: 999px; width: 60px; height: 60px; font-size: 28px; box-shadow: 0 8px 24px rgba(249, 115, 115, 0.4);">+</button>
+  <!-- DRAWER (MENU LATERAL) -->
+  <aside class="drawer" id="drawer">
+    <div class="drawer-header">
+      <div class="brand">FLUX ON</div>
+      <button class="icon-button" id="close-drawer" aria-label="Fechar menu">&times;</button>
+    </div>
 
-  <!-- Seu JavaScript -->
-  <script src="script-PREMIUM.js"></script>
+    <nav class="drawer-nav">
+      <button type="button" class="drawer-item" id="drawer-orders">
+        Gestão de pedidos
+      </button>
+
+      <button type="button" class="drawer-item" id="drawer-crm">
+        CRM de clientes
+      </button>
+
+      <button type="button" class="drawer-item" id="drawer-results">
+        Resultados
+      </button>
+    </nav>
+
+    <div class="drawer-footer">
+      <div class="user-chip" id="user-chip" hidden>
+        <span class="dot"></span>
+        <img id="user-avatar" alt="Avatar" />
+        <span id="user-name">Usuário</span>
+        <button class="ghost-button small" id="logout-btn">Sair</button>
+      </div>
+    </div>
+  </aside>
+  <div class="drawer-backdrop" id="drawer-backdrop"></div>
+
+  <!-- MODAL DE NÃO AUTORIZADO -->
+  <div id="unauthorized-modal" class="modal-backdrop">
+    <div class="modal unauthorized-modal">
+      <div class="modal-header">
+        <h2>Você não tem acesso a este painel</h2>
+      </div>
+
+      <div class="modal-body">
+        <p>
+          Este painel é exclusivo para estabelecimentos que utilizam a plataforma da
+          <strong>Evorise</strong>.
+        </p>
+        <p>
+          Para saber mais sobre os serviços da Evorise e como implementar esse sistema
+          no seu negócio, acesse o site oficial:
+        </p>
+
+        <p class="unauth-link-text">
+          <a
+            href="https://evoriseai.com.br"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            https://evoriseai.com.br
+          </a>
+        </p>
+      </div>
+
+      <div class="modal-footer">
+        <button id="unauth-close" class="btn-secondary">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
