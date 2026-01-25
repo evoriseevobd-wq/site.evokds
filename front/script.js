@@ -1238,9 +1238,7 @@ function init() {
 
   closeModalBtn?.addEventListener("click", closeOrderModal);
   closeModalSecondaryBtn?.addEventListener("click", closeOrderModal);
- modalCancelBtn?.addEventListener("click", () => {
-  if (activeOrderId) {
-   modalCancelBtn?.addEventListener("click", () => {
+  modalCancelBtn?.addEventListener("click", () => {
   if (activeOrderId) {
     showConfirmModal("Deseja realmente cancelar este pedido?", () => {
       cancelOrder(activeOrderId);
