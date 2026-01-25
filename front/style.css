@@ -2236,3 +2236,93 @@ body {
 .confirm-modal .danger-button {
   flex: 1;
 }
+/* ========================================
+   💡 GRÁFICO DE INSIGHTS INTERATIVO
+======================================== */
+
+.insights-chart-section {
+  margin-bottom: 32px;
+  animation: chartFadeIn 0.5s ease-out;
+  animation-delay: 0.3s;
+  animation-fill-mode: backwards;
+}
+
+.insights-legend {
+  margin-top: 8px;
+}
+
+/* Cards agora são clicáveis */
+.premium-card {
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Card ativo (quando clicado) */
+.premium-card.active-metric {
+  border-color: rgba(249, 115, 115, 0.9) !important;
+  box-shadow: 
+    0 24px 60px rgba(0, 0, 0, 0.7),
+    0 0 100px rgba(249, 115, 115, 0.6),
+    inset 0 0 50px rgba(249, 115, 115, 0.2) !important;
+  transform: translateY(-6px) scale(1.03) !important;
+  z-index: 10;
+}
+
+/* Efeito ao clicar */
+.premium-card:active {
+  transform: translateY(-3px) scale(0.99);
+}
+
+/* Animação de pulso sutil no card ativo */
+@keyframes cardPulse {
+  0%, 100% {
+    box-shadow: 
+      0 24px 60px rgba(0, 0, 0, 0.7),
+      0 0 100px rgba(249, 115, 115, 0.6),
+      inset 0 0 50px rgba(249, 115, 115, 0.2);
+  }
+  50% {
+    box-shadow: 
+      0 24px 60px rgba(0, 0, 0, 0.7),
+      0 0 120px rgba(249, 115, 115, 0.8),
+      inset 0 0 60px rgba(249, 115, 115, 0.3);
+  }
+}
+
+.premium-card.active-metric {
+  animation: cardPulse 3s ease-in-out infinite;
+}
+
+/* Específico para cada card quando ativo */
+.faturamento-card.active-metric {
+  border-color: rgba(251, 191, 36, 0.9) !important;
+  box-shadow: 
+    0 24px 60px rgba(0, 0, 0, 0.7),
+    0 0 100px rgba(251, 191, 36, 0.6),
+    inset 0 0 50px rgba(251, 191, 36, 0.2) !important;
+}
+
+.roi-card.active-metric {
+  border-color: rgba(139, 92, 246, 0.9) !important;
+  box-shadow: 
+    0 24px 60px rgba(0, 0, 0, 0.7),
+    0 0 100px rgba(139, 92, 246, 0.6),
+    inset 0 0 50px rgba(139, 92, 246, 0.2) !important;
+}
+
+.ticket-card.active-metric {
+  border-color: rgba(34, 197, 94, 0.9) !important;
+  box-shadow: 
+    0 24px 60px rgba(0, 0, 0, 0.7),
+    0 0 100px rgba(34, 197, 94, 0.6),
+    inset 0 0 50px rgba(34, 197, 94, 0.2) !important;
+}
+
+.pedidos-card.active-metric {
+  border-color: rgba(249, 115, 115, 0.9) !important;
+  box-shadow: 
+    0 24px 60px rgba(0, 0, 0, 0.7),
+    0 0 100px rgba(249, 115, 115, 0.6),
+    inset 0 0 50px rgba(249, 115, 115, 0.2) !important;
+}
