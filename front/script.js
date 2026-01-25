@@ -133,6 +133,8 @@ let features = {
 let crmClients = [];
 let metricsData = null;
 let chartInstance = null;
+let insightsChartInstance = null; // 🔥 NOVO
+const insightsState = { activeMetric: 'revenue', timelineData: null }; // 🔥 NOVO
 
 const resultsState = {
   period: "30d",
