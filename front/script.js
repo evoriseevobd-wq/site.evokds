@@ -1140,7 +1140,53 @@ function logout() {
   localStorage.clear();
   location.reload();
 }
+// ===== MODAL DE CONFIRMAÇÃO CUSTOMIZADO =====
+function showConfirmModal(message, onConfirm) {
+  // Remove modal existente se houver
+  const existing = document.getElementById("custom-confirm-modal");
+  if (existing) existing.remove();
 
+  // Cria o modal
+  const modal = document.createElement("div");
+  modal.id = "custom-confirm-modal";
+  modal.className = "modal-backdrop open";
+  
+  modal.innerHTML = `
+    <div class="modal confirm-modal">
+      <div class="modal-header">
+        <h3>⚠️ Confirmação</h3>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 16px; color: rgba(252, 228, 228, 0.9); text-align: center; margin: 0;">
+          ${message}
+        </p>
+      </div>
+      <div class="modal-actions">
+        <button class="ghost-button" id="confirm-cancel">Cancelar</button>
+        <button class="danger-button" id="confirm-ok">Confirmar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Event listeners
+  document.getElementById("confirm-cancel").addEventListener("click", () => {
+    modal.remove();
+  });
+
+  document.getElementById("confirm-ok").addEventListener("click", () => {
+    modal.remove();
+    onConfirm();
+  });
+
+  // Fechar ao clicar fora
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  });
+}
 // ===== INIT =====
 function init() {
   const rid = getRestaurantId();
@@ -1192,12 +1238,13 @@ function init() {
 
   closeModalBtn?.addEventListener("click", closeOrderModal);
   closeModalSecondaryBtn?.addEventListener("click", closeOrderModal);
-  modalCancelBtn?.addEventListener("click", () => {
-    if (activeOrderId && confirm("Deseja realmente cancelar este pedido?")) {
+ modalCancelBtn?.addEventListener("click", () => {
+  if (activeOrderId) {
+    showConfirmModal("Deseja realmente cancelar este pedido?", () => {
       cancelOrder(activeOrderId);
       closeOrderModal();
-    }
-  });
+  }
+});
   modalPrevBtn?.addEventListener("click", () => activeOrderId && regressStatus(activeOrderId));
   modalNextBtn?.addEventListener("click", () => activeOrderId && advanceStatus(activeOrderId));
 
