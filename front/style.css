@@ -2244,10 +2244,17 @@ body {
 ======================================== */
 
 .insights-chart-section {
+  grid-column: 1 / -1; /* Ocupa toda a largura disponível */
   margin-bottom: 32px;
   animation: chartFadeIn 0.5s ease-out;
   animation-delay: 0.3s;
   animation-fill-mode: backwards;
+}
+
+.insights-chart-section .chart-container-large {
+  height: 350px; /* 🔥 Reduz a altura (era 480px) */
+  padding: 30px 50px; /* 🔥 Mais padding horizontal */
+  max-width: 100%; /* 🔥 Usa toda largura */
 }
 
 .insights-legend {
