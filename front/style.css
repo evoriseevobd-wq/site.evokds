@@ -1592,8 +1592,14 @@ body {
 
 /* Específico para o gráfico de Insights */
 .insights-chart-section .chart-container-large {
-  height: 300px;
-  padding: 30px 20px;
+  height: 440px !important;
+  padding: 35px 45px;
+  min-height: 440px;
+}
+
+.insights-chart-section .chart-container-large canvas {
+  max-height: 400px !important;
+  width: 100% !important;
 }
 
 /* FULL WIDTH */
