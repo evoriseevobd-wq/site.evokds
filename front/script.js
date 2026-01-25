@@ -1440,27 +1440,29 @@ function renderInsightsChart(data) {
           }
         }
       },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            color: 'rgba(252, 228, 228, 0.7)',
-            font: { family: 'Space Grotesk', size: 11 },
-            callback: function(value) {
-              // Formata o eixo Y baseado na métrica ativa
-              if (insightsState.activeMetric === 'revenue' || insightsState.activeMetric === 'ticket') {
-                return formatCurrency(value);
-              } else if (insightsState.activeMetric === 'roi') {
-                return value.toFixed(1) + 'x';
-              }
-              return value;
-            }
-          },
-          grid: { 
-            color: 'rgba(249, 115, 115, 0.08)',
-            drawBorder: false
-          }
-        },
+    scales: {
+  y: {
+    beginAtZero: true,
+    grace: '15%', // 🔥 Adiciona 15% de margem no topo
+    ticks: {
+      color: 'rgba(252, 228, 228, 0.7)',
+      font: { family: 'Space Grotesk', size: 11 },
+      padding: 10,
+      callback: function(value) {
+        // Formata o eixo Y baseado na métrica ativa
+        if (insightsState.activeMetric === 'revenue' || insightsState.activeMetric === 'ticket') {
+          return formatCurrency(value);
+        } else if (insightsState.activeMetric === 'roi') {
+          return value.toFixed(1) + 'x';
+        }
+        return value;
+      }
+    },
+    grid: { 
+      color: 'rgba(249, 115, 115, 0.08)',
+      drawBorder: false
+    }
+  },
         x: {
           ticks: {
             color: 'rgba(252, 228, 228, 0.7)',
