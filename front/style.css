@@ -1590,16 +1590,14 @@ body {
   height: 450px;
 }
 
-/* Específico para o gráfico de Insights */
-.insights-chart-section .chart-container-large {
-  height: 440px !important;
-  padding: 35px 45px;
-  min-height: 440px;
+/* Procure por esta seção e MODIFIQUE os valores: */
+.chart-container-large {
+  height: 500px;  /* MUDE de 450px para 500px ou mais */
 }
 
-.insights-chart-section .chart-container-large canvas {
-  max-height: 400px !important;
-  width: 100% !important;
+.insights-chart-section .chart-container-large {
+  height: 500px;  /* MUDE de 300px para 500px */
+  padding: 40px 30px;  /* AUMENTE o padding */
 }
 
 /* FULL WIDTH */
