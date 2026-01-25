@@ -386,10 +386,32 @@ function showResults() {
   hideTabsBar();
   closeDrawer();
   
+  // ✅ Configura os botões de período (só na primeira vez)
   if (!resultsState.uiReady) {
-    initResultsUI();
+    setupPeriodButtons();
+    resultsState.uiReady = true;
   }
+  
   fetchAndRenderMetrics();
+}
+
+// ✅ ADICIONE esta função NOVA aqui (antes de "CORE LOGIC"):
+function setupPeriodButtons() {
+  const periodButtons = document.querySelectorAll('.period-btn');
+  
+  periodButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Remove active de todos
+      periodButtons.forEach(b => b.classList.remove('active'));
+      
+      // Adiciona active no clicado
+      btn.classList.add('active');
+      
+      // Atualiza o período e busca novos dados
+      resultsState.period = btn.dataset.period;
+      fetchAndRenderMetrics();
+    });
+  });
 }
 
 // ===== CORE LOGIC =====
@@ -1004,106 +1026,7 @@ async function openClientDetailsModal(client) {
   }
 }
 
-// ===== 💎 DASHBOARD PREMIUM =====
-function initResultsUI() {
-  const container = resultsView;
-  if (!container) return;
 
-  container.innerHTML = "";
-
-  const root = document.createElement("div");
-  root.className = "results-premium-root";
-  root.innerHTML = `
-    <div class="results-premium-header">
-      <div>
-        <h1 class="results-premium-title">💎 Dashboard de Resultados</h1>
-        <p class="results-premium-subtitle">Análise completa de performance e ROI</p>
-      </div>
-      <div class="results-premium-filters">
-        <button class="filter-btn" data-period="3d">3D</button>
-        <button class="filter-btn" data-period="7d">7D</button>
-        <button class="filter-btn" data-period="15d">15D</button>
-        <button class="filter-btn active" data-period="30d">30D</button>
-        <button class="filter-btn" data-period="90d">90D</button>
-        <button class="filter-btn" data-period="all">Todo</button>
-      </div>
-    </div>
-
-    <!-- CARDS PRINCIPAIS -->
-    <div class="results-premium-cards">
-      <div class="premium-card faturamento-card">
-        <div class="card-label">💰 Faturamento Total</div>
-        <div class="card-value" id="card-revenue">R$ 0,00</div>
-        <div class="card-comparison" id="card-revenue-comp">—</div>
-      </div>
-      
-      <div class="premium-card roi-card">
-        <div class="card-label">🚀 ROI do Sistema</div>
-        <div class="card-value" id="card-roi">0x</div>
-        <div class="card-subtitle">Sobre o investimento de <span id="card-plan-price">R$ 0</span></div>
-      </div>
-      
-      <div class="premium-card ticket-card">
-        <div class="card-label">🎯 Ticket Médio</div>
-        <div class="card-value" id="card-ticket">R$ 0,00</div>
-        <div class="card-comparison" id="card-ticket-comp">—</div>
-      </div>
-      
-      <div class="premium-card pedidos-card">
-        <div class="card-label">📦 Total de Pedidos</div>
-        <div class="card-value" id="card-orders">0</div>
-        <div class="card-comparison" id="card-orders-comp">—</div>
-      </div>
-    </div>
-
-    <!-- GRÁFICO DE PIZZA -->
-    <div class="results-premium-chart-section">
-      <h3>🤖 IA vs Balcão</h3>
-      <div class="chart-container">
-        <canvas id="pieChart"></canvas>
-      </div>
-    </div>
-
-    <!-- DELIVERY VS LOCAL -->
-    <div class="results-premium-stats">
-      <div class="stat-box">
-        <div class="stat-icon">🚚</div>
-        <div class="stat-content">
-          <div class="stat-label">Delivery</div>
-          <div class="stat-value" id="stat-delivery">0</div>
-        </div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-icon">🏪</div>
-        <div class="stat-content">
-          <div class="stat-label">Local</div>
-          <div class="stat-value" id="stat-local">0</div>
-        </div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-icon">👥</div>
-        <div class="stat-content">
-          <div class="stat-label">Clientes Únicos</div>
-          <div class="stat-value" id="stat-clients">0</div>
-        </div>
-      </div>
-    </div>
-  `;
-
-  container.appendChild(root);
-
-  // Event listeners nos filtros
-  root.querySelectorAll(".filter-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      root.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      resultsState.period = btn.dataset.period;
-      fetchAndRenderMetrics();
-    });
-  });
-
-  resultsState.uiReady = true;
-}
 
 async function fetchAndRenderMetrics() {
   const rid = getRestaurantId();
