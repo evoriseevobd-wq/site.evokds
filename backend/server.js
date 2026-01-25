@@ -527,7 +527,146 @@ app.post("/auth/google", async (req, res) => {
     return res.status(500).json({ error: "Erro inesperado" });
   }
 });
+/* ========================================
+   📈 ROTA DE TIMELINE (dados diários)
+======================================== */
 
+app.get("/api/v1/metrics/:restaurant_id/timeline", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { period = "30d" } = req.query;
+    
+    console.log(`📊 Buscando timeline para: ${restaurant_id}, período: ${period}`);
+    
+    const exists = await restaurantExists(restaurant_id);
+    if (!exists) return sendError(res, 404, "Restaurante não encontrado");
+    
+    const plan = await getRestaurantPlan(restaurant_id);
+    
+    if (!canUseResults(plan)) {
+      return res.status(403).json({
+        error: "Recurso disponível apenas nos planos Advanced, Executive e Custom",
+        current_plan: plan,
+        upgrade_to: "advanced"
+      });
+    }
+    
+    // Calcula datas
+    let days = 30;
+    if (period === "3d") days = 3;
+    else if (period === "7d") days = 7;
+    else if (period === "15d") days = 15;
+    else if (period === "30d") days = 30;
+    else if (period === "90d") days = 90;
+    else if (period.endsWith("d")) days = parseInt(period) || 30;
+    
+    const currentStart = new Date();
+    currentStart.setDate(currentStart.getDate() - days);
+    currentStart.setHours(0, 0, 0, 0);
+
+    // Busca pedidos do período
+    const { data: orders, error } = await supabase
+      .from("orders")
+      .select("id, created_at, total_price, status")
+      .eq("restaurant_id", restaurant_id)
+      .gte("created_at", currentStart.toISOString())
+      .order("created_at", { ascending: true });
+    
+    if (error) {
+      console.error("❌ Erro ao buscar pedidos:", error);
+      return sendError(res, 500, "Erro ao buscar pedidos");
+    }
+
+    // Agrupa pedidos por dia
+    const dailyData = {};
+    
+    (orders || []).forEach(order => {
+      const date = new Date(order.created_at);
+      const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+      
+      if (!dailyData[dateKey]) {
+        dailyData[dateKey] = {
+          date: dateKey,
+          revenue: 0,
+          orders: 0,
+          total_items: 0
+        };
+      }
+      
+      dailyData[dateKey].revenue += parseFloat(order.total_price) || 0;
+      dailyData[dateKey].orders += 1;
+    });
+
+    // Converte para array e calcula métricas
+    const timeline = Object.values(dailyData)
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .map(day => ({
+        date: day.date,
+        revenue: day.revenue,
+        orders: day.orders,
+        ticket: day.orders > 0 ? day.revenue / day.orders : 0,
+        roi: day.revenue / restaurantPlanPrice // Usando o preço do plano global
+      }));
+
+    // Calcula período anterior para comparação
+    const previousStart = new Date(currentStart);
+    previousStart.setDate(previousStart.getDate() - days);
+    
+    const { data: previousOrders } = await supabase
+      .from("orders")
+      .select("id, total_price")
+      .eq("restaurant_id", restaurant_id)
+      .gte("created_at", previousStart.toISOString())
+      .lt("created_at", currentStart.toISOString());
+
+    let previousRevenue = 0;
+    (previousOrders || []).forEach(o => {
+      previousRevenue += parseFloat(o.total_price) || 0;
+    });
+
+    const previousOrdersCount = previousOrders?.length || 0;
+    const previousTicket = previousOrdersCount > 0 ? previousRevenue / previousOrdersCount : 0;
+    const previousROI = previousRevenue / restaurantPlanPrice;
+
+    // Calcula crescimentos
+    const currentRevenue = timeline.reduce((sum, day) => sum + day.revenue, 0);
+    const currentOrders = timeline.reduce((sum, day) => sum + day.orders, 0);
+    const currentTicket = currentOrders > 0 ? currentRevenue / currentOrders : 0;
+    const currentROI = currentRevenue / restaurantPlanPrice;
+
+    const comparison = {
+      revenue_growth: previousRevenue > 0 ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 : 0,
+      orders_growth: previousOrdersCount > 0 ? ((currentOrders - previousOrdersCount) / previousOrdersCount) * 100 : 0,
+      ticket_growth: previousTicket > 0 ? ((currentTicket - previousTicket) / previousTicket) * 100 : 0,
+      roi_growth: previousROI > 0 ? ((currentROI - previousROI) / previousROI) * 100 : 0
+    };
+
+    console.log(`✅ Timeline gerada: ${timeline.length} dias`);
+
+    return res.json({
+      period,
+      days,
+      timeline,
+      comparison,
+      current_totals: {
+        revenue: currentRevenue,
+        orders: currentOrders,
+        ticket: currentTicket,
+        roi: currentROI
+      },
+      previous_totals: {
+        revenue: previousRevenue,
+        orders: previousOrdersCount,
+        ticket: previousTicket,
+        roi: previousROI
+      }
+    });
+
+  } catch (err) {
+    console.error("❌ Erro em /api/v1/metrics/timeline:", err);
+    return sendError(res, 500, "Erro interno ao processar timeline");
+  }
+});
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
