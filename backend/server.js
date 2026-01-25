@@ -558,11 +558,14 @@ app.get("/api/v1/metrics/:restaurant_id/timeline", async (req, res) => {
     else if (period === "15d") days = 15;
     else if (period === "30d") days = 30;
     else if (period === "90d") days = 90;
+    else if (period === "all") days = 3650; // ~10 anos
     else if (period.endsWith("d")) days = parseInt(period) || 30;
     
     const currentStart = new Date();
     currentStart.setDate(currentStart.getDate() - days);
     currentStart.setHours(0, 0, 0, 0);
+
+    console.log(`📅 Buscando pedidos desde: ${currentStart.toISOString()}`);
 
     // Busca pedidos do período
     const { data: orders, error } = await supabase
@@ -577,6 +580,8 @@ app.get("/api/v1/metrics/:restaurant_id/timeline", async (req, res) => {
       return sendError(res, 500, "Erro ao buscar pedidos");
     }
 
+    console.log(`✅ Pedidos encontrados: ${orders?.length || 0}`);
+
     // Agrupa pedidos por dia
     const dailyData = {};
     
@@ -588,14 +593,23 @@ app.get("/api/v1/metrics/:restaurant_id/timeline", async (req, res) => {
         dailyData[dateKey] = {
           date: dateKey,
           revenue: 0,
-          orders: 0,
-          total_items: 0
+          orders: 0
         };
       }
       
       dailyData[dateKey].revenue += parseFloat(order.total_price) || 0;
       dailyData[dateKey].orders += 1;
     });
+
+    // Busca preço do plano
+    const { data: restaurantData } = await supabase
+      .from("restaurants")
+      .select("plan")
+      .eq("id", restaurant_id)
+      .single();
+
+    const planPrices = { basic: 1200, pro: 2500, advanced: 4000, executive: 6000, custom: 10000 };
+    const planPrice = planPrices[(restaurantData?.plan || "basic").toLowerCase()] || 1200;
 
     // Converte para array e calcula métricas
     const timeline = Object.values(dailyData)
@@ -605,7 +619,7 @@ app.get("/api/v1/metrics/:restaurant_id/timeline", async (req, res) => {
         revenue: day.revenue,
         orders: day.orders,
         ticket: day.orders > 0 ? day.revenue / day.orders : 0,
-        roi: day.revenue / restaurantPlanPrice // Usando o preço do plano global
+        roi: day.revenue / planPrice
       }));
 
     // Calcula período anterior para comparação
@@ -626,13 +640,13 @@ app.get("/api/v1/metrics/:restaurant_id/timeline", async (req, res) => {
 
     const previousOrdersCount = previousOrders?.length || 0;
     const previousTicket = previousOrdersCount > 0 ? previousRevenue / previousOrdersCount : 0;
-    const previousROI = previousRevenue / restaurantPlanPrice;
+    const previousROI = previousRevenue / planPrice;
 
     // Calcula crescimentos
     const currentRevenue = timeline.reduce((sum, day) => sum + day.revenue, 0);
     const currentOrders = timeline.reduce((sum, day) => sum + day.orders, 0);
     const currentTicket = currentOrders > 0 ? currentRevenue / currentOrders : 0;
-    const currentROI = currentRevenue / restaurantPlanPrice;
+    const currentROI = currentRevenue / planPrice;
 
     const comparison = {
       revenue_growth: previousRevenue > 0 ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 : 0,
@@ -664,7 +678,7 @@ app.get("/api/v1/metrics/:restaurant_id/timeline", async (req, res) => {
 
   } catch (err) {
     console.error("❌ Erro em /api/v1/metrics/timeline:", err);
-    return sendError(res, 500, "Erro interno ao processar timeline");
+    return sendError(res, 500, `Erro interno ao processar timeline: ${err.message}`);
   }
 });
 app.get("/health", (req, res) => {
