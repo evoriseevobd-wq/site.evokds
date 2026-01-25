@@ -1140,7 +1140,7 @@ body {
 }
 
 .chart-container {
-  max-width: 500px;
+  /* max-width: 500px; */ /* ❌ COMENTADA/REMOVIDA */
   margin: 0 auto;
   position: relative;
   z-index: 1;
@@ -1148,6 +1148,7 @@ body {
   background: rgba(0, 0, 0, 0.2);
   border-radius: 20px;
   backdrop-filter: blur(10px);
+  width: 100%; /* 🔥 ADICIONE ESTA LINHA */
 }
 
 .chart-container::before {
