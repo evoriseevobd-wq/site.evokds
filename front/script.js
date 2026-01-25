@@ -1240,9 +1240,12 @@ function init() {
   closeModalSecondaryBtn?.addEventListener("click", closeOrderModal);
  modalCancelBtn?.addEventListener("click", () => {
   if (activeOrderId) {
+   modalCancelBtn?.addEventListener("click", () => {
+  if (activeOrderId) {
     showConfirmModal("Deseja realmente cancelar este pedido?", () => {
       cancelOrder(activeOrderId);
       closeOrderModal();
+    });
   }
 });
   modalPrevBtn?.addEventListener("click", () => activeOrderId && regressStatus(activeOrderId));
