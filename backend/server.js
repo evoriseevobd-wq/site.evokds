@@ -585,21 +585,34 @@ app.get("/api/v1/metrics/:restaurant_id/timeline", async (req, res) => {
     // Agrupa pedidos por dia
     const dailyData = {};
     
-    (orders || []).forEach(order => {
-      const date = new Date(order.created_at);
-      const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
-      
-      if (!dailyData[dateKey]) {
-        dailyData[dateKey] = {
-          date: dateKey,
-          revenue: 0,
-          orders: 0
-        };
-      }
-      
-      dailyData[dateKey].revenue += parseFloat(order.total_price) || 0;
-      dailyData[dateKey].orders += 1;
-    });
+(orders || []).forEach(order => {
+  try {
+    // Valida created_at
+    if (!order.created_at) return;
+    
+    const date = new Date(order.created_at);
+    
+    // Verifica se a data é válida
+    if (isNaN(date.getTime())) return;
+    
+    const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    if (!dailyData[dateKey]) {
+      dailyData[dateKey] = {
+        date: dateKey,
+        revenue: 0,
+        orders: 0
+      };
+    }
+    
+    // Garante que total_price é um número válido
+    const price = parseFloat(order.total_price);
+    dailyData[dateKey].revenue += (isNaN(price) ? 0 : price);
+    dailyData[dateKey].orders += 1;
+  } catch (err) {
+    console.warn(`⚠️ Pedido ignorado:`, order.id, err.message);
+  }
+});
 
     // Busca preço do plano
     const { data: restaurantData } = await supabase
