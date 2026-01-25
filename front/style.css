@@ -2131,15 +2131,15 @@ body {
 .performance-ia-card .chart-container {
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(99, 102, 241, 0.15) 100%);
   border-radius: 20px;
-  padding: 40px;
-  min-height: 380px;
+  padding: 32px;
+  min-height: 340px;
   border: 2px solid rgba(139, 92, 246, 0.3);
 }
 
 .ia-stats {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 20px;
   height: 100%;
   justify-content: center;
 }
@@ -2148,9 +2148,9 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px 28px;
+  padding: 18px 24px;
   background: rgba(0, 0, 0, 0.4);
-  border-radius: 16px;
+  border-radius: 14px;
   border: 2px solid rgba(139, 92, 246, 0.4);
   transition: all 0.3s ease;
 }
@@ -2163,24 +2163,24 @@ body {
 }
 
 .ia-stat-label {
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 700;
-  color: rgba(252, 228, 228, 0.8);
+  color: rgba(252, 228, 228, 0.7);
   font-family: 'Space Grotesk', sans-serif;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .ia-stat-value {
-  font-size: 36px;
-  font-weight: 900;
+  font-size: 28px;
+  font-weight: 800;
   color: #fce4e4;
   font-family: 'Space Grotesk', sans-serif;
 }
 
 .ia-percentage {
   color: #a78bfa;
-  font-size: 40px;
+  font-size: 32px;
 }
 
 /* Responsividade */
