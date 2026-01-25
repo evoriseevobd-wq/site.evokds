@@ -463,7 +463,10 @@ async function updateOrderStatus(orderId, newFrontStatus) {
       orders[idx]._frontStatus = newFrontStatus;
     }
     renderBoard();
-    if (activeOrderId === orderId) openOrderModal(orderId);
+    
+    // ❌ REMOVE ESTA LINHA:
+    // if (activeOrderId === orderId) openOrderModal(orderId);
+    
   } catch (e) {
     console.error(e);
     alert("Não foi possível atualizar o status do pedido.");
@@ -646,7 +649,12 @@ function advanceStatus(orderId) {
   
   const i = seq.indexOf(s);
   if (i === -1 || i === seq.length - 1) return;
+  
+  // ✅ Atualiza o status
   updateOrderStatus(orderId, seq[i + 1]);
+  
+  // ✅ FECHA O MODAL
+  closeOrderModal();
 }
 
 function regressStatus(orderId) {
@@ -662,9 +670,13 @@ function regressStatus(orderId) {
   
   const i = seq.indexOf(s);
   if (i <= 0) return;
+  
+  // ✅ Atualiza o status
   updateOrderStatus(orderId, seq[i - 1]);
+  
+  // ✅ FECHA O MODAL
+  closeOrderModal();
 }
-
 function cancelOrder(orderId) {
   updateOrderStatus(orderId, "cancelado");
 }
