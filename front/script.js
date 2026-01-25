@@ -1219,14 +1219,15 @@ function renderAllCharts(data) {
 // ========================================
 // 📊 GRÁFICO 1: ORIGEM DOS PEDIDOS (Pizza)
 // ========================================
+// No seu script.js, SUBSTITUA a função renderOriginChart:
+
 function renderOriginChart(data) {
   const canvas = document.getElementById("originChart");
   if (!canvas) return;
 
+  // ✅ APENAS IA E BALCÃO
   const iaOrders = data.orders_by_origin?.ia_whatsapp || 0;
-  const pdvOrders = data.orders_by_origin?.pdv || 0;
   const balcaoOrders = data.orders_by_origin?.balcao || 0;
-  const outrosOrders = data.orders_by_origin?.outros || 0;
 
   if (originChartInstance) {
     originChartInstance.destroy();
@@ -1235,20 +1236,16 @@ function renderOriginChart(data) {
   originChartInstance = new Chart(canvas, {
     type: 'doughnut',
     data: {
-      labels: ['🤖 IA WhatsApp', '💻 PDV', '🏪 Balcão', '📦 Outros'],
+      labels: ['🤖 IA WhatsApp', '🏪 Balcão'],
       datasets: [{
-        data: [iaOrders, pdvOrders, balcaoOrders, outrosOrders],
+        data: [iaOrders, balcaoOrders],
         backgroundColor: [
           'rgba(139, 92, 246, 0.9)',  // Roxo - IA
-          'rgba(34, 197, 94, 0.9)',   // Verde - PDV
-          'rgba(249, 115, 115, 0.9)', // Vermelho - Balcão
-          'rgba(156, 163, 175, 0.9)'  // Cinza - Outros
+          'rgba(249, 115, 115, 0.9)'  // Vermelho - Balcão
         ],
         borderColor: [
           'rgba(139, 92, 246, 1)',
-          'rgba(34, 197, 94, 1)',
-          'rgba(249, 115, 115, 1)',
-          'rgba(156, 163, 175, 1)'
+          'rgba(249, 115, 115, 1)'
         ],
         borderWidth: 3
       }]
@@ -1261,8 +1258,8 @@ function renderOriginChart(data) {
           position: 'bottom',
           labels: {
             color: 'rgba(252, 228, 228, 0.9)',
-            font: { size: 13, family: 'Space Grotesk', weight: '600' },
-            padding: 15
+            font: { size: 15, family: 'Space Grotesk', weight: '700' },
+            padding: 20
           }
         },
         tooltip: {
