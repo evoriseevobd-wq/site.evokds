@@ -1273,7 +1273,251 @@ function renderAllCharts(data) {
   renderClientsChart(data);
   renderStatusChart(data);
 }
+// ========================================
+// 💡 GRÁFICO DE INSIGHTS INTERATIVO
+// ========================================
 
+async function fetchAndRenderInsights() {
+  const rid = getRestaurantId();
+  if (!rid) return;
+
+  try {
+    console.log("📊 Buscando timeline para Insights...");
+    
+    const resp = await fetch(`${METRICS_URL}/${rid}/timeline?period=${resultsState.period}`);
+    const data = await resp.json();
+
+    if (!resp.ok) throw new Error(data.error);
+
+    insightsState.timelineData = data;
+    console.log("✅ Timeline recebida:", data);
+    
+    renderInsightsChart(data);
+    setupCardClickHandlers();
+  } catch (e) {
+    console.error("❌ Erro ao buscar timeline:", e);
+  }
+}
+
+function renderInsightsChart(data) {
+  const canvas = document.getElementById("insightsChart");
+  if (!canvas) {
+    console.warn("⚠️ Canvas insightsChart não encontrado");
+    return;
+  }
+
+  const timeline = data.timeline || [];
+  
+  if (timeline.length === 0) {
+    console.warn("⚠️ Timeline vazia");
+    return;
+  }
+
+  console.log(`📈 Renderizando Insights com ${timeline.length} dias`);
+  
+  // Labels (datas formatadas)
+  const labels = timeline.map(day => {
+    const date = new Date(day.date);
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  });
+
+  // Datasets (4 linhas - uma para cada métrica)
+  const datasets = [
+    {
+      label: '💰 Faturamento',
+      data: timeline.map(day => day.revenue),
+      borderColor: 'rgba(251, 191, 36, 1)',
+      backgroundColor: 'rgba(251, 191, 36, 0.15)',
+      borderWidth: 3,
+      tension: 0.4,
+      pointRadius: 5,
+      pointHoverRadius: 8,
+      pointBackgroundColor: 'rgba(251, 191, 36, 1)',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2,
+      fill: true,
+      metricKey: 'revenue'
+    },
+    {
+      label: '📊 ROI',
+      data: timeline.map(day => day.roi),
+      borderColor: 'rgba(139, 92, 246, 1)',
+      backgroundColor: 'rgba(139, 92, 246, 0.15)',
+      borderWidth: 3,
+      tension: 0.4,
+      pointRadius: 5,
+      pointHoverRadius: 8,
+      pointBackgroundColor: 'rgba(139, 92, 246, 1)',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2,
+      fill: true,
+      metricKey: 'roi'
+    },
+    {
+      label: '💳 Ticket Médio',
+      data: timeline.map(day => day.ticket),
+      borderColor: 'rgba(34, 197, 94, 1)',
+      backgroundColor: 'rgba(34, 197, 94, 0.15)',
+      borderWidth: 3,
+      tension: 0.4,
+      pointRadius: 5,
+      pointHoverRadius: 8,
+      pointBackgroundColor: 'rgba(34, 197, 94, 1)',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2,
+      fill: true,
+      metricKey: 'ticket'
+    },
+    {
+      label: '📦 Pedidos',
+      data: timeline.map(day => day.orders),
+      borderColor: 'rgba(249, 115, 115, 1)',
+      backgroundColor: 'rgba(249, 115, 115, 0.15)',
+      borderWidth: 3,
+      tension: 0.4,
+      pointRadius: 5,
+      pointHoverRadius: 8,
+      pointBackgroundColor: 'rgba(249, 115, 115, 1)',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2,
+      fill: true,
+      metricKey: 'orders'
+    }
+  ];
+
+  // Aplica ofuscamento nas linhas não selecionadas
+  datasets.forEach(ds => {
+    if (ds.metricKey !== insightsState.activeMetric) {
+      ds.borderColor = ds.borderColor.replace('1)', '0.15)');
+      ds.backgroundColor = ds.backgroundColor.replace('0.15)', '0.03)');
+      ds.borderWidth = 1.5;
+      ds.pointRadius = 2;
+    }
+  });
+
+  // Destroi gráfico anterior se existir
+  if (insightsChartInstance) {
+    insightsChartInstance.destroy();
+  }
+
+  // Cria o gráfico
+  insightsChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          display: false // Esconde a legenda padrão
+        },
+        tooltip: {
+          backgroundColor: 'rgba(17, 24, 39, 0.95)',
+          titleColor: 'rgba(252, 228, 228, 0.95)',
+          bodyColor: 'rgba(252, 228, 228, 0.8)',
+          borderColor: 'rgba(249, 115, 115, 0.5)',
+          borderWidth: 1,
+          padding: 12,
+          displayColors: true,
+          callbacks: {
+            label: function(context) {
+              const label = context.dataset.label || '';
+              const value = context.parsed.y || 0;
+              
+              // Formata baseado na métrica
+              if (label.includes('Faturamento') || label.includes('Ticket')) {
+                return `${label}: ${formatCurrency(value)}`;
+              } else if (label.includes('ROI')) {
+                return `${label}: ${value.toFixed(2)}x`;
+              } else {
+                return `${label}: ${value}`;
+              }
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: 'rgba(252, 228, 228, 0.7)',
+            font: { family: 'Space Grotesk', size: 11 },
+            callback: function(value) {
+              // Formata o eixo Y baseado na métrica ativa
+              if (insightsState.activeMetric === 'revenue' || insightsState.activeMetric === 'ticket') {
+                return formatCurrency(value);
+              } else if (insightsState.activeMetric === 'roi') {
+                return value.toFixed(1) + 'x';
+              }
+              return value;
+            }
+          },
+          grid: { 
+            color: 'rgba(249, 115, 115, 0.08)',
+            drawBorder: false
+          }
+        },
+        x: {
+          ticks: {
+            color: 'rgba(252, 228, 228, 0.7)',
+            font: { family: 'Space Grotesk', size: 11 }
+          },
+          grid: { 
+            color: 'rgba(249, 115, 115, 0.05)',
+            drawBorder: false
+          }
+        }
+      }
+    }
+  });
+
+  console.log("✅ Gráfico de Insights renderizado!");
+}
+
+function setupCardClickHandlers() {
+  // Mapeia cards para suas métricas
+  const cardMetricMap = {
+    'faturamento-card': 'revenue',
+    'roi-card': 'roi',
+    'ticket-card': 'ticket',
+    'pedidos-card': 'orders'
+  };
+
+  // Adiciona evento de clique em cada card
+  Object.keys(cardMetricMap).forEach(cardClass => {
+    const card = document.querySelector(`.${cardClass}`);
+    if (card) {
+      card.addEventListener('click', () => {
+        const metric = cardMetricMap[cardClass];
+        console.log(`🎯 Card clicado: ${metric}`);
+        
+        // Atualiza estado
+        insightsState.activeMetric = metric;
+        
+        // Atualiza classes dos cards
+        document.querySelectorAll('.premium-card').forEach(c => {
+          c.classList.remove('active-metric');
+        });
+        card.classList.add('active-metric');
+        
+        // Re-renderiza o gráfico
+        if (insightsState.timelineData) {
+          renderInsightsChart(insightsState.timelineData);
+        }
+      });
+    }
+  });
+
+  // Ativa o card de Faturamento por padrão
+  const revenueCard = document.querySelector('.faturamento-card');
+  if (revenueCard) {
+    revenueCard.classList.add('active-metric');
+  }
+}
 // ========================================
 // 📊 GRÁFICO 1: ORIGEM DOS PEDIDOS (Pizza)
 // ========================================
@@ -1598,11 +1842,11 @@ function renderMetricsUI(data) {
   safeSetText("card-orders", data.total_orders || 0);
   safeSetText("card-plan-price", formatCurrency(restaurantPlanPrice));
   
-  // Comparações
-  renderComparison("card-revenue-comp", data.comparison?.revenue?.growth || 0);
-  renderComparison("card-roi-comp", data.comparison?.revenue?.growth || 0);
-  renderComparison("card-ticket-comp", data.comparison?.ticket?.growth || 0);
-  renderComparison("card-orders-comp", data.comparison?.orders?.growth || 0);
+// Gráficos
+  console.log("🎨 Renderizando gráficos...");
+  renderAllCharts(data);
+  fetchAndRenderInsights(); // 🔥 ADICIONE ESTA LINHA
+  console.log("✅ Métricas renderizadas com sucesso!");
   
   // Performance IA
   safeSetText("ia-orders", data.ia_performance?.orders || 0);
