@@ -1586,9 +1586,14 @@ body {
   opacity: 0.5;
 }
 
-/* CONTAINER GRANDE (Status Operacional) */
 .chart-container-large {
-  height: 400px;
+  height: 450px;
+}
+
+/* Específico para o gráfico de Insights */
+.insights-chart-section .chart-container-large {
+  height: 500px;
+  padding: 30px 20px;
 }
 
 /* FULL WIDTH */
