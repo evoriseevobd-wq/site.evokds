@@ -2210,3 +2210,29 @@ body {
     font-size: 13px;
   }
 }
+/* Modal de confirmação customizado */
+.confirm-modal {
+  max-width: 450px;
+}
+
+.confirm-modal .modal-header h3 {
+  font-size: 24px;
+  text-align: center;
+  width: 100%;
+}
+
+.confirm-modal .modal-body {
+  padding: 32px 24px;
+}
+
+.confirm-modal .modal-actions {
+  gap: 12px;
+}
+
+.confirm-modal .ghost-button {
+  flex: 1;
+}
+
+.confirm-modal .danger-button {
+  flex: 1;
+}
