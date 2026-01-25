@@ -512,10 +512,6 @@ function buildOrderCard(order) {
   const itemsCount = Array.isArray(order.itens) ? order.itens.length : 0;
   const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
   const paymentText = isDelivery && order.payment_method ? order.payment_method : "";
-  
-  const priceTag = order.total_price 
-    ? `<div class="order-price-tag">${formatCurrency(order.total_price)}</div>` 
-    : "";
 
   card.innerHTML = `
     <div class="order-top">
@@ -528,7 +524,6 @@ function buildOrderCard(order) {
     </div>
     ${isDelivery ? `<div class="order-delivery-tag">Delivery</div>` : ""}
     ${paymentText ? `<div class="order-payment-tag">${escapeHtml(paymentText)}</div>` : ""}
-    ${priceTag}
   `;
 
   card.addEventListener("click", () => openOrderModal(order.id));
