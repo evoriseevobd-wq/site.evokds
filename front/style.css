@@ -1589,15 +1589,9 @@ body {
 .chart-container-large {
   height: 450px;
 }
-
-/* Procure por esta seção e MODIFIQUE os valores: */
-.chart-container-large {
-  height: 500px;  /* MUDE de 450px para 500px ou mais */
-}
-
 .insights-chart-section .chart-container-large {
-  height: 500px;  /* MUDE de 300px para 500px */
-  padding: 40px 30px;  /* AUMENTE o padding */
+  height: 480px;
+  padding: 40px 35px;
 }
 
 /* FULL WIDTH */
