@@ -787,17 +787,18 @@ async function saveNewOrder() {
   }
 
   try {
-    const body = {
-      restaurant_id: rid,
-      client_name: client,
-      client_phone,
-      itens,
-      notes: String(newNotes?.value || ""),
-      service_type,
-      address: isDelivery ? address : null,
-      payment_method: isDelivery ? payment_method : null,
-      total_price: 0 
-    };
+  const body = {
+  restaurant_id: rid,
+  client_name: client,
+  client_phone,
+  itens,
+  notes: String(newNotes?.value || ""),
+  service_type,
+  address: isDelivery ? address : null,
+  payment_method: isDelivery ? payment_method : null,
+  total_price: 0,
+  origin: "balcao"  // ✅ ADICIONE ESTA LINHA
+};
 
     const resp = await fetch(`${API_BASE}/api/v1/pedidos`, {
       method: "POST",
