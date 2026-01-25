@@ -1592,7 +1592,7 @@ body {
 
 /* Específico para o gráfico de Insights */
 .insights-chart-section .chart-container-large {
-  height: 500px;
+  height: 400px;
   padding: 30px 20px;
 }
 
