@@ -235,28 +235,45 @@ app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
       : 0;
 
     // Base de clientes (novos vs recorrentes)
-    // Busca TODOS os pedidos do restaurante para identificar primeiro pedido
+    // Busca TODOS os pedidos do restaurante para identificar histórico
     const { data: allOrders } = await supabase
       .from("orders")
       .select("client_phone, created_at")
       .eq("restaurant_id", restaurant_id)
       .order("created_at", { ascending: true });
 
-    const clientFirstOrderDate = {};
+    // Conta pedidos por cliente no período ATUAL
+    const ordersInPeriod = {};
+    (currentOrders || []).forEach(order => {
+      const phone = normalizePhone(order.client_phone);
+      if (phone) {
+        ordersInPeriod[phone] = (ordersInPeriod[phone] || 0) + 1;
+      }
+    });
+
+    // Verifica se cliente tinha pedidos ANTES do período
+    const hadOrdersBefore = {};
     (allOrders || []).forEach(order => {
       const phone = normalizePhone(order.client_phone);
-      if (phone && !clientFirstOrderDate[phone]) {
-        clientFirstOrderDate[phone] = new Date(order.created_at);
+      const orderDate = new Date(order.created_at);
+      if (phone && orderDate < currentStart) {
+        hadOrdersBefore[phone] = true;
       }
     });
 
     // Classifica clientes
     uniquePhones.forEach(phone => {
-      const firstOrderDate = clientFirstOrderDate[phone];
-      if (firstOrderDate && firstOrderDate >= currentStart) {
-        metrics.client_base.new_clients++;
-      } else {
+      const ordersCount = ordersInPeriod[phone] || 0;
+      const hadPreviousOrders = hadOrdersBefore[phone] || false;
+      
+      // RECORRENTE se:
+      // 1. Fez 2+ pedidos no período OU
+      // 2. Já tinha pedidos antes do período
+      if (ordersCount >= 2 || hadPreviousOrders) {
         metrics.client_base.recurring_clients++;
+      } else {
+        // NOVO: fez apenas 1 pedido e é o primeiro dele
+        metrics.client_base.new_clients++;
       }
     });
 
