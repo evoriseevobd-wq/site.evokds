@@ -1392,6 +1392,7 @@ function renderInsightsChart(data) {
       ds.backgroundColor = ds.backgroundColor.replace('0.15)', '0.03)');
       ds.borderWidth = 1.5;
       ds.pointRadius = 2;
+      ds.pointHoverRadius = 2; // 🔥 IMPORTANTE: Não aumenta no hover!
     }
   });
 
@@ -1407,27 +1408,34 @@ function renderInsightsChart(data) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      
+      // ========================================
+      // 🔥 INTERAÇÃO: Detecta APENAS a linha mais próxima
+      // ========================================
       interaction: {
-        mode: 'index',
-        intersect: false
+        mode: 'nearest',   // ← Mudei de 'index' para 'nearest'
+        intersect: true,   // ← IMPORTANTE: true = precisa passar NO ponto
+        axis: 'xy'         // ← Considera X e Y
       },
+      
       plugins: {
         legend: {
-          display: false // Esconde a legenda padrão
+          display: false
         },
+        
         // ========================================
-        // 🔥 TOOLTIP CORRIGIDO - MINIMALISTA
+        // 🔥 TOOLTIP: SÓ APARECE NA LINHA ATIVA
         // ========================================
         tooltip: {
           enabled: true,
           
-          // 🔥 FAZ GRUDAR NO PONTO
+          // Posição grudada no ponto
           position: 'nearest',
-          xAlign: 'left',      // Aparece à direita do ponto
-          yAlign: 'center',    // Centralizado verticalmente
-          caretPadding: 10,    // Distância do ponto
+          xAlign: 'left',
+          yAlign: 'center',
+          caretPadding: 10,
           
-          // 🔥 VISUAL MINIMALISTA
+          // Visual minimalista
           backgroundColor: 'rgba(17, 24, 39, 0.95)',
           titleColor: 'rgba(252, 228, 228, 0.95)',
           bodyColor: 'rgba(252, 228, 228, 0.95)',
@@ -1435,39 +1443,27 @@ function renderInsightsChart(data) {
           borderWidth: 2,
           padding: 12,
           cornerRadius: 6,
-          displayColors: false,  // Remove bolinhas de cor
-          caretSize: 0,         // Remove a setinha
+          displayColors: false,
+          caretSize: 0,
           
-          // 🔥 CALLBACKS: SÓ MOSTRA A MÉTRICA ATIVA
           callbacks: {
-            // SEM TÍTULO (remove a data)
+            // SEM TÍTULO (sem data)
             title: function(context) {
-              return '';  // ← Vazio = sem data!
+              return '';
             },
             
-            // SÓ MOSTRA A MÉTRICA DO CARD CLICADO
+            // SÓ MOSTRA A MÉTRICA ATIVA
             label: function(context) {
               const label = context.dataset.label || '';
               const value = context.parsed.y || 0;
               const metricKey = context.dataset.metricKey;
               
-              // 🔥 Se não tem filtro ativo, mostra todas
-              if (!insightsState.activeMetric) {
-                if (label.includes('Faturamento') || label.includes('Ticket')) {
-                  return `${label}: ${formatCurrency(value)}`;
-                } else if (label.includes('ROI')) {
-                  return `${label}: ${value.toFixed(2)}x`;
-                } else {
-                  return `${label}: ${value}`;
-                }
+              // 🔥 VERIFICA: Só formata se for a métrica ativa
+              if (insightsState.activeMetric && metricKey !== insightsState.activeMetric) {
+                return '';  // Não mostra nada!
               }
               
-              // 🔥 Se tem filtro, SÓ MOSTRA SE FOR A MÉTRICA ATIVA
-              if (metricKey !== insightsState.activeMetric) {
-                return '';  // Não mostra
-              }
-              
-              // Formata baseado na métrica ativa
+              // Formata baseado no tipo
               if (label.includes('Faturamento') || label.includes('Ticket')) {
                 return `${label}: ${formatCurrency(value)}`;
               } else if (label.includes('ROI')) {
@@ -1475,34 +1471,53 @@ function renderInsightsChart(data) {
               } else {
                 return `${label}: ${value}`;
               }
-            },
-            
-            // SEM FOOTER
-            footer: function() {
-              return '';
             }
           },
           
-          // 🔥 FILTRO: Só mostra tooltip da métrica ativa
+          // ========================================
+          // 🔥 FILTRO CRÍTICO: Bloqueia tooltips das linhas de fundo
+          // ========================================
           filter: function(tooltipItem) {
-            // Se não tem filtro, mostra todas
-            if (!insightsState.activeMetric) return true;
+            // Se não tem métrica ativa, mostra tudo
+            if (!insightsState.activeMetric) {
+              return true;
+            }
             
-            // Se tem filtro, só mostra a métrica ativa
+            // 🔥 SÓ MOSTRA SE FOR A MÉTRICA ATIVA
             return tooltipItem.dataset.metricKey === insightsState.activeMetric;
           }
         }
       },
+      
+      // ========================================
+      // 🔥 HOVER: Desabilita hover nas linhas de fundo
+      // ========================================
+      onHover: (event, activeElements) => {
+        // Se tem métrica ativa e o elemento não é da métrica ativa, não faz nada
+        if (insightsState.activeMetric && activeElements.length > 0) {
+          const element = activeElements[0];
+          const dataset = insightsChartInstance.data.datasets[element.datasetIndex];
+          
+          // Se não é a métrica ativa, cancela o hover
+          if (dataset.metricKey !== insightsState.activeMetric) {
+            event.native.target.style.cursor = 'default';
+            return;
+          }
+        }
+        
+        // Se é a métrica ativa, mostra cursor pointer
+        event.native.target.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
+      },
+      
       scales: {
         y: {
           beginAtZero: true,
-          grace: '15%', // 🔥 Adiciona 15% de margem no topo
+          grace: '15%',
           ticks: {
             color: 'rgba(252, 228, 228, 0.7)',
             font: { family: 'Space Grotesk', size: 11 },
             padding: 10,
             callback: function(value) {
-              // Formata o eixo Y baseado na métrica ativa
               if (insightsState.activeMetric === 'revenue' || insightsState.activeMetric === 'ticket') {
                 return formatCurrency(value);
               } else if (insightsState.activeMetric === 'roi') {
@@ -1532,6 +1547,7 @@ function renderInsightsChart(data) {
 
   console.log("✅ Gráfico de Insights renderizado!");
 }
+
 
 function setupCardClickHandlers() {
   // Mapeia cards para suas métricas
