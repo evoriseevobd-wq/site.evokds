@@ -1415,20 +1415,59 @@ function renderInsightsChart(data) {
         legend: {
           display: false // Esconde a legenda padrão
         },
+        // ========================================
+        // 🔥 TOOLTIP CORRIGIDO - MINIMALISTA
+        // ========================================
         tooltip: {
+          enabled: true,
+          
+          // 🔥 FAZ GRUDAR NO PONTO
+          position: 'nearest',
+          xAlign: 'left',      // Aparece à direita do ponto
+          yAlign: 'center',    // Centralizado verticalmente
+          caretPadding: 10,    // Distância do ponto
+          
+          // 🔥 VISUAL MINIMALISTA
           backgroundColor: 'rgba(17, 24, 39, 0.95)',
           titleColor: 'rgba(252, 228, 228, 0.95)',
-          bodyColor: 'rgba(252, 228, 228, 0.8)',
-          borderColor: 'rgba(249, 115, 115, 0.5)',
-          borderWidth: 1,
+          bodyColor: 'rgba(252, 228, 228, 0.95)',
+          borderColor: 'rgba(139, 92, 246, 0.5)',
+          borderWidth: 2,
           padding: 12,
-          displayColors: true,
+          cornerRadius: 6,
+          displayColors: false,  // Remove bolinhas de cor
+          caretSize: 0,         // Remove a setinha
+          
+          // 🔥 CALLBACKS: SÓ MOSTRA A MÉTRICA ATIVA
           callbacks: {
+            // SEM TÍTULO (remove a data)
+            title: function(context) {
+              return '';  // ← Vazio = sem data!
+            },
+            
+            // SÓ MOSTRA A MÉTRICA DO CARD CLICADO
             label: function(context) {
               const label = context.dataset.label || '';
               const value = context.parsed.y || 0;
+              const metricKey = context.dataset.metricKey;
               
-              // Formata baseado na métrica
+              // 🔥 Se não tem filtro ativo, mostra todas
+              if (!insightsState.activeMetric) {
+                if (label.includes('Faturamento') || label.includes('Ticket')) {
+                  return `${label}: ${formatCurrency(value)}`;
+                } else if (label.includes('ROI')) {
+                  return `${label}: ${value.toFixed(2)}x`;
+                } else {
+                  return `${label}: ${value}`;
+                }
+              }
+              
+              // 🔥 Se tem filtro, SÓ MOSTRA SE FOR A MÉTRICA ATIVA
+              if (metricKey !== insightsState.activeMetric) {
+                return '';  // Não mostra
+              }
+              
+              // Formata baseado na métrica ativa
               if (label.includes('Faturamento') || label.includes('Ticket')) {
                 return `${label}: ${formatCurrency(value)}`;
               } else if (label.includes('ROI')) {
@@ -1436,33 +1475,47 @@ function renderInsightsChart(data) {
               } else {
                 return `${label}: ${value}`;
               }
+            },
+            
+            // SEM FOOTER
+            footer: function() {
+              return '';
             }
+          },
+          
+          // 🔥 FILTRO: Só mostra tooltip da métrica ativa
+          filter: function(tooltipItem) {
+            // Se não tem filtro, mostra todas
+            if (!insightsState.activeMetric) return true;
+            
+            // Se tem filtro, só mostra a métrica ativa
+            return tooltipItem.dataset.metricKey === insightsState.activeMetric;
           }
         }
       },
-    scales: {
-  y: {
-    beginAtZero: true,
-    grace: '15%', // 🔥 Adiciona 15% de margem no topo
-    ticks: {
-      color: 'rgba(252, 228, 228, 0.7)',
-      font: { family: 'Space Grotesk', size: 11 },
-      padding: 10,
-      callback: function(value) {
-        // Formata o eixo Y baseado na métrica ativa
-        if (insightsState.activeMetric === 'revenue' || insightsState.activeMetric === 'ticket') {
-          return formatCurrency(value);
-        } else if (insightsState.activeMetric === 'roi') {
-          return value.toFixed(1) + 'x';
-        }
-        return value;
-      }
-    },
-    grid: { 
-      color: 'rgba(249, 115, 115, 0.08)',
-      drawBorder: false
-    }
-  },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grace: '15%', // 🔥 Adiciona 15% de margem no topo
+          ticks: {
+            color: 'rgba(252, 228, 228, 0.7)',
+            font: { family: 'Space Grotesk', size: 11 },
+            padding: 10,
+            callback: function(value) {
+              // Formata o eixo Y baseado na métrica ativa
+              if (insightsState.activeMetric === 'revenue' || insightsState.activeMetric === 'ticket') {
+                return formatCurrency(value);
+              } else if (insightsState.activeMetric === 'roi') {
+                return value.toFixed(1) + 'x';
+              }
+              return value;
+            }
+          },
+          grid: { 
+            color: 'rgba(249, 115, 115, 0.08)',
+            drawBorder: false
+          }
+        },
         x: {
           ticks: {
             color: 'rgba(252, 228, 228, 0.7)',
