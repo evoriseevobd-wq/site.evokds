@@ -1392,7 +1392,12 @@ function renderInsightsChart(data) {
       ds.backgroundColor = ds.backgroundColor.replace('0.15)', '0.03)');
       ds.borderWidth = 1.5;
       ds.pointRadius = 2;
-      ds.pointHoverRadius = 2; // Não aumenta no hover
+      ds.pointHoverRadius = 2; // 🔥 NÃO AUMENTA
+      // 🔥 CRÍTICO: Desabilita hover completamente
+      ds.pointHitRadius = 0;  // Raio de detecção = 0!
+    } else {
+      // 🔥 Linha ativa tem raio de detecção maior
+      ds.pointHitRadius = 15; // Mais fácil de detectar
     }
   });
 
@@ -1410,12 +1415,12 @@ function renderInsightsChart(data) {
       maintainAspectRatio: false,
       
       // ========================================
-      // 🔥 INTERAÇÃO: Detecta quando mouse está PRÓXIMO
+      // 🔥 INTERAÇÃO: Só detecta ponto específico
       // ========================================
       interaction: {
-        mode: 'nearest',       // Detecta o ponto mais próximo
-        intersect: false,      // 🔥 CRÍTICO: NÃO precisa estar exatamente no ponto!
-        axis: 'x'              // Detecta baseado no eixo X (mais fácil)
+        mode: 'point',         // 🔥 Mudei para 'point' (não 'nearest')
+        intersect: false,      // Pode estar próximo
+        axis: 'x'
       },
       
       plugins: {
@@ -1424,7 +1429,7 @@ function renderInsightsChart(data) {
         },
         
         // ========================================
-        // 🔥 TOOLTIP: Aparece no HOVER
+        // 🔥 TOOLTIP: Bloqueio total das linhas de fundo
         // ========================================
         tooltip: {
           enabled: true,
@@ -1458,9 +1463,9 @@ function renderInsightsChart(data) {
               const value = context.parsed.y || 0;
               const metricKey = context.dataset.metricKey;
               
-              // 🔥 Se tem filtro e não é a métrica ativa, não mostra
+              // 🔥 BLOQUEIO ABSOLUTO: Se não for a métrica ativa, retorna vazio
               if (insightsState.activeMetric && metricKey !== insightsState.activeMetric) {
-                return '';
+                return null;  // null = não mostra NADA
               }
               
               // Formata baseado no tipo
@@ -1475,7 +1480,7 @@ function renderInsightsChart(data) {
           },
           
           // ========================================
-          // 🔥 FILTRO: SÓ MOSTRA TOOLTIP DA LINHA ATIVA
+          // 🔥 FILTRO CRÍTICO: Bloqueia linhas de fundo ANTES do tooltip
           // ========================================
           filter: function(tooltipItem) {
             // Se não tem métrica ativa, mostra tudo
@@ -1483,30 +1488,55 @@ function renderInsightsChart(data) {
               return true;
             }
             
-            // 🔥 SÓ MOSTRA SE FOR A MÉTRICA ATIVA
-            return tooltipItem.dataset.metricKey === insightsState.activeMetric;
+            // 🔥 BLOQUEIO TOTAL: Só passa se for a métrica ativa
+            const metricKey = tooltipItem.dataset.metricKey;
+            return metricKey === insightsState.activeMetric;
+          },
+          
+          // 🔥 CALLBACK EXTRA: Cancela tooltip se não for métrica ativa
+          beforeTooltip: function(context) {
+            if (!insightsState.activeMetric) return true;
+            
+            // Verifica se ALGUM item é da métrica ativa
+            const hasActiveMetric = context.tooltip.dataPoints.some(item => {
+              return item.dataset.metricKey === insightsState.activeMetric;
+            });
+            
+            // Se nenhum é da métrica ativa, cancela o tooltip
+            return hasActiveMetric;
           }
         }
       },
       
       // ========================================
-      // 🔥 HOVER: Cursor pointer só na linha ativa
+      // 🔥 HOVER: Desabilita completamente para linhas de fundo
       // ========================================
-      onHover: (event, activeElements) => {
-        if (activeElements.length > 0) {
+      onHover: (event, activeElements, chart) => {
+        // Se não tem elementos ativos, cursor normal
+        if (activeElements.length === 0) {
+          event.native.target.style.cursor = 'default';
+          return;
+        }
+        
+        // Se tem métrica ativa
+        if (insightsState.activeMetric) {
           const element = activeElements[0];
-          const dataset = insightsChartInstance.data.datasets[element.datasetIndex];
+          const dataset = chart.data.datasets[element.datasetIndex];
           
-          // Se tem filtro ativo e não é a métrica ativa, cursor normal
-          if (insightsState.activeMetric && dataset.metricKey !== insightsState.activeMetric) {
+          // 🔥 Se não é a métrica ativa, CANCELA o hover
+          if (dataset.metricKey !== insightsState.activeMetric) {
             event.native.target.style.cursor = 'default';
+            // 🔥 FORÇA esconder o tooltip
+            chart.tooltip.setActiveElements([], {x: 0, y: 0});
+            chart.update('none');
             return;
           }
           
-          // Se é a métrica ativa (ou sem filtro), cursor pointer
+          // Se é a métrica ativa, mostra pointer
           event.native.target.style.cursor = 'pointer';
         } else {
-          event.native.target.style.cursor = 'default';
+          // Sem filtro, mostra pointer
+          event.native.target.style.cursor = 'pointer';
         }
       },
       
@@ -1548,6 +1578,8 @@ function renderInsightsChart(data) {
 
   console.log("✅ Gráfico de Insights renderizado!");
 }
+
+
 function setupCardClickHandlers() {
   // Mapeia cards para suas métricas
   const cardMetricMap = {
