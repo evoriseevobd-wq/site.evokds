@@ -527,8 +527,9 @@ app.post("/auth/google", async (req, res) => {
     return res.status(500).json({ error: "Erro inesperado" });
   }
 });
+
 /* ========================================
-   📈 ROTA DE TIMELINE (dados diários)
+   📈 ROTA DE TIMELINE (dados diários) - 🔥 CORRIGIDA
 ======================================== */
 
 app.get("/api/v1/metrics/:restaurant_id/timeline", async (req, res) => {
@@ -551,28 +552,62 @@ app.get("/api/v1/metrics/:restaurant_id/timeline", async (req, res) => {
       });
     }
     
-    // Calcula datas
-    let days = 30;
-    if (period === "3d") days = 3;
-    else if (period === "7d") days = 7;
-    else if (period === "15d") days = 15;
-    else if (period === "30d") days = 30;
-    else if (period === "90d") days = 90;
-    else if (period === "all") days = 3650; // ~10 anos
-    else if (period.endsWith("d")) days = parseInt(period) || 30;
+    // ========================================
+    // 🔥 NOVA LÓGICA DE DATAS DINÂMICAS
+    // ========================================
     
-    const currentStart = new Date();
-    currentStart.setDate(currentStart.getDate() - days);
-    currentStart.setHours(0, 0, 0, 0);
-
-    console.log(`📅 Buscando pedidos desde: ${currentStart.toISOString()}`);
+    let days = 30;
+    let pointsCount = 15; // Padrão
+    let interval = 2; // Intervalo entre pontos
+    
+    if (period === "3d") {
+      days = 3;
+      pointsCount = 3;
+      interval = 1;
+    } else if (period === "7d") {
+      days = 7;
+      pointsCount = 7;
+      interval = 1;
+    } else if (period === "15d") {
+      days = 15;
+      pointsCount = 15;
+      interval = 1;
+    } else if (period === "30d") {
+      days = 30;
+      pointsCount = 15;
+      interval = 2;
+    } else if (period === "90d") {
+      days = 90;
+      pointsCount = 15;
+      interval = 6;
+    } else if (period === "all") {
+      days = 3650; // ~10 anos
+      pointsCount = 30;
+      interval = Math.floor(days / pointsCount);
+    } else if (period.endsWith("d")) {
+      days = parseInt(period) || 30;
+      pointsCount = Math.min(15, days);
+      interval = Math.max(1, Math.floor(days / pointsCount));
+    }
+    
+    // Data de hoje (zero horas)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Data inicial
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
+    
+    console.log(`📅 Período: ${days} dias | Pontos: ${pointsCount} | Intervalo: ${interval} dias`);
+    console.log(`📅 De ${startDate.toISOString()} até ${today.toISOString()}`);
 
     // Busca pedidos do período
     const { data: orders, error } = await supabase
       .from("orders")
       .select("id, created_at, total_price, status")
       .eq("restaurant_id", restaurant_id)
-      .gte("created_at", currentStart.toISOString())
+      .gte("created_at", startDate.toISOString())
       .order("created_at", { ascending: true });
     
     if (error) {
@@ -582,39 +617,38 @@ app.get("/api/v1/metrics/:restaurant_id/timeline", async (req, res) => {
 
     console.log(`✅ Pedidos encontrados: ${orders?.length || 0}`);
 
-    // Agrupa pedidos por dia
-    const dailyData = {};
+    // ========================================
+    // 🔥 GERA OS PONTOS DO GRÁFICO
+    // ========================================
     
-(orders || []).forEach(order => {
-  try {
-    // Valida created_at
-    if (!order.created_at) return;
+    // Agrupa pedidos por dia (YYYY-MM-DD)
+    const ordersByDay = {};
     
-    const date = new Date(order.created_at);
+    (orders || []).forEach(order => {
+      try {
+        if (!order.created_at) return;
+        
+        const date = new Date(order.created_at);
+        if (isNaN(date.getTime())) return;
+        
+        const dateKey = date.toISOString().split('T')[0];
+        
+        if (!ordersByDay[dateKey]) {
+          ordersByDay[dateKey] = {
+            revenue: 0,
+            orders: 0
+          };
+        }
+        
+        const price = parseFloat(order.total_price);
+        ordersByDay[dateKey].revenue += (isNaN(price) ? 0 : price);
+        ordersByDay[dateKey].orders += 1;
+      } catch (err) {
+        console.warn(`⚠️ Pedido ignorado:`, order.id, err.message);
+      }
+    });
     
-    // Verifica se a data é válida
-    if (isNaN(date.getTime())) return;
-    
-    const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
-    
-    if (!dailyData[dateKey]) {
-      dailyData[dateKey] = {
-        date: dateKey,
-        revenue: 0,
-        orders: 0
-      };
-    }
-    
-    // Garante que total_price é um número válido
-    const price = parseFloat(order.total_price);
-    dailyData[dateKey].revenue += (isNaN(price) ? 0 : price);
-    dailyData[dateKey].orders += 1;
-  } catch (err) {
-    console.warn(`⚠️ Pedido ignorado:`, order.id, err.message);
-  }
-});
-
-    // Busca preço do plano
+    // Busca preço do plano (para ROI)
     const { data: restaurantData } = await supabase
       .from("restaurants")
       .select("plan")
@@ -623,20 +657,58 @@ app.get("/api/v1/metrics/:restaurant_id/timeline", async (req, res) => {
 
     const planPrices = { basic: 1200, pro: 2500, advanced: 4000, executive: 6000, custom: 10000 };
     const planPrice = planPrices[(restaurantData?.plan || "basic").toLowerCase()] || 1200;
+    
+    // Cria os pontos do gráfico
+    const timeline = [];
+    
+    for (let i = 0; i < pointsCount; i++) {
+      // Calcula a data deste ponto
+      const pointDate = new Date(today);
+      pointDate.setDate(pointDate.getDate() - ((pointsCount - 1 - i) * interval));
+      pointDate.setHours(0, 0, 0, 0);
+      
+      const dateKey = pointDate.toISOString().split('T')[0];
+      
+      // Se o intervalo for > 1, precisa somar vários dias
+      let totalRevenue = 0;
+      let totalOrders = 0;
+      
+      if (interval === 1) {
+        // Apenas 1 dia
+        const dayData = ordersByDay[dateKey];
+        if (dayData) {
+          totalRevenue = dayData.revenue;
+          totalOrders = dayData.orders;
+        }
+      } else {
+        // Soma vários dias (agrupamento)
+        for (let d = 0; d < interval; d++) {
+          const checkDate = new Date(pointDate);
+          checkDate.setDate(checkDate.getDate() + d);
+          const checkKey = checkDate.toISOString().split('T')[0];
+          
+          const dayData = ordersByDay[checkKey];
+          if (dayData) {
+            totalRevenue += dayData.revenue;
+            totalOrders += dayData.orders;
+          }
+        }
+      }
+      
+      timeline.push({
+        date: dateKey,
+        revenue: totalRevenue,
+        orders: totalOrders,
+        ticket: totalOrders > 0 ? totalRevenue / totalOrders : 0,
+        roi: totalRevenue / planPrice
+      });
+    }
 
-    // Converte para array e calcula métricas
-    const timeline = Object.values(dailyData)
-      .sort((a, b) => new Date(a.date) - new Date(b.date))
-      .map(day => ({
-        date: day.date,
-        revenue: day.revenue,
-        orders: day.orders,
-        ticket: day.orders > 0 ? day.revenue / day.orders : 0,
-        roi: day.revenue / planPrice
-      }));
-
-    // Calcula período anterior para comparação
-    const previousStart = new Date(currentStart);
+    // ========================================
+    // 📊 COMPARAÇÃO COM PERÍODO ANTERIOR
+    // ========================================
+    
+    const previousStart = new Date(startDate);
     previousStart.setDate(previousStart.getDate() - days);
     
     const { data: previousOrders } = await supabase
@@ -644,7 +716,7 @@ app.get("/api/v1/metrics/:restaurant_id/timeline", async (req, res) => {
       .select("id, total_price")
       .eq("restaurant_id", restaurant_id)
       .gte("created_at", previousStart.toISOString())
-      .lt("created_at", currentStart.toISOString());
+      .lt("created_at", startDate.toISOString());
 
     let previousRevenue = 0;
     (previousOrders || []).forEach(o => {
@@ -655,7 +727,7 @@ app.get("/api/v1/metrics/:restaurant_id/timeline", async (req, res) => {
     const previousTicket = previousOrdersCount > 0 ? previousRevenue / previousOrdersCount : 0;
     const previousROI = previousRevenue / planPrice;
 
-    // Calcula crescimentos
+    // Totais do período atual
     const currentRevenue = timeline.reduce((sum, day) => sum + day.revenue, 0);
     const currentOrders = timeline.reduce((sum, day) => sum + day.orders, 0);
     const currentTicket = currentOrders > 0 ? currentRevenue / currentOrders : 0;
@@ -668,11 +740,14 @@ app.get("/api/v1/metrics/:restaurant_id/timeline", async (req, res) => {
       roi_growth: previousROI > 0 ? ((currentROI - previousROI) / previousROI) * 100 : 0
     };
 
-    console.log(`✅ Timeline gerada: ${timeline.length} dias`);
+    console.log(`✅ Timeline gerada: ${timeline.length} pontos`);
+    console.log(`📊 Último ponto: ${timeline[timeline.length - 1]?.date} (deve ser hoje: ${today.toISOString().split('T')[0]})`);
 
     return res.json({
       period,
       days,
+      points_count: pointsCount,
+      interval,
       timeline,
       comparison,
       current_totals: {
@@ -694,6 +769,7 @@ app.get("/api/v1/metrics/:restaurant_id/timeline", async (req, res) => {
     return sendError(res, 500, `Erro interno ao processar timeline: ${err.message}`);
   }
 });
+
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
@@ -716,4 +792,5 @@ app.listen(PORT, HOST, () => {
   console.log(`✅ COM origin (IA/PDV/Balcão)`);
   console.log(`✅ SEM tracking_id`);
   console.log(`✅ Métricas avançadas: comparação, IA, clientes, status`);
+  console.log(`✅ Timeline com datas dinâmicas - último ponto sempre HOJE`);
 });
