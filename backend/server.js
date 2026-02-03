@@ -417,9 +417,41 @@ app.patch("/orders/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body || {};
+    
     if (!ALLOWED_STATUS.includes(status)) return sendError(res, 400, "status inválido");
-    const { data, error } = await supabase.from("orders").update({ status, update_at: new Date().toISOString() }).eq("id", id).select().single();
+    
+    const now = new Date().toISOString();
+    
+    // Objeto de atualização base
+    const updateData = {
+      status,
+      update_at: now
+    };
+    
+    // Adiciona timestamp específico baseado no status
+    if (status === "pending") {
+      updateData.confirmed_at = now;
+    } else if (status === "preparing") {
+      updateData.preparing_at = now;
+    } else if (status === "mounting") {
+      updateData.mounting_at = now;
+    } else if (status === "delivering") {
+      updateData.delivering_at = now;
+    } else if (status === "finished") {
+      updateData.delivered_at = now;
+    } else if (status === "cancelled" || status === "canceled") {
+      updateData.cancelled_at = now;
+    }
+    
+    const { data, error } = await supabase
+      .from("orders")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+    
     if (error || !data) return sendError(res, 500, "Erro ao atualizar pedido");
+    
     return res.json(data);
   } catch (err) {
     return sendError(res, 500, "Erro ao atualizar pedido");
