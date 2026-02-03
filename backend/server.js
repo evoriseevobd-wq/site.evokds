@@ -812,16 +812,95 @@ app.get("/api/v1/tracking/:tracking_code", async (req, res) => {
       .select("id, order_number, restaurant_id, client_name, client_phone, status, itens, total_price, created_at, service_type, address, payment_method, notes")
       .limit(1);
     
-    // Verifica se é formato: restaurantId_orderNumber
-    if (tracking_code.includes('_')) {
-      const [shortId, orderNumber] = tracking_code.split('_');
-      
-      query = query
-        .like("restaurant_id", `${shortId}%`)
-        .eq("order_number", parseInt(orderNumber));
-        
-      console.log(`📍 Buscando: Restaurant ${shortId}*, Pedido #${orderNumber}`);
-    } 
+   // Verifica se é formato: restaurantId_orderNumber
+if (tracking_code.includes('_')) {
+  const [shortId, orderNumber] = tracking_code.split('_');
+  
+  console.log(`📍 Buscando: Restaurant ${shortId}*, Pedido #${orderNumber}`);
+  
+  // Busca todos os pedidos com esse order_number
+  const { data: allOrders, error: searchError } = await supabase
+    .from("orders")
+    .select("id, order_number, restaurant_id, client_name, client_phone, status, itens, total_price, created_at, service_type, address, payment_method, notes")
+    .eq("order_number", parseInt(orderNumber));
+  
+  if (searchError || !allOrders || allOrders.length === 0) {
+    console.log(`❌ Nenhum pedido #${orderNumber} encontrado`);
+    return res.status(404).json({
+      success: false,
+      error: "Pedido não encontrado"
+    });
+  }
+  
+  // Filtra pelo restaurant_id que começa com shortId
+  const data = allOrders.find(order => order.restaurant_id.startsWith(shortId));
+  
+  if (!data) {
+    console.log(`❌ Pedido #${orderNumber} não encontrado para restaurant ${shortId}*`);
+    return res.status(404).json({
+      success: false,
+      error: "Pedido não encontrado"
+    });
+  }
+  
+  // Pula o resto do query e vai direto pro processamento
+  // (apaga as linhas 713-732 e substitui por):
+  
+  const statusMap = {
+    "draft": { progress: 0, label: "Rascunho" },
+    "pending": { progress: 20, label: "Pedido Confirmado" },
+    "preparing": { progress: 40, label: "Em Preparo" },
+    "mounting": { progress: 60, label: "Montando" },
+    "delivering": { progress: 80, label: "Saiu para Entrega" },
+    "finished": { progress: 100, label: "Pedido Entregue" },
+    "cancelled": { progress: 0, label: "Cancelado" },
+    "canceled": { progress: 0, label: "Cancelado" }
+  };
+  
+  const currentStatus = data.status || "pending";
+  const statusInfo = statusMap[currentStatus] || statusMap["pending"];
+  
+  const items = Array.isArray(data.itens) ? data.itens.map(item => ({
+    name: item.name || item.produto || "Item",
+    quantity: item.quantity || item.quantidade || 1,
+    price: parseFloat(item.price || item.preco || 0)
+  })) : [];
+  
+  let timeRemaining = 0;
+  if (currentStatus === "pending") timeRemaining = 40;
+  else if (currentStatus === "preparing") timeRemaining = 30;
+  else if (currentStatus === "mounting") timeRemaining = 15;
+  else if (currentStatus === "delivering") timeRemaining = 20;
+  
+  const response = {
+    success: true,
+    order: {
+      id: data.id,
+      order_number: data.order_number,
+      client_name: data.client_name,
+      status: currentStatus,
+      progress: statusInfo.progress,
+      timeRemaining,
+      total_amount: parseFloat(data.total_price) || 0,
+      items,
+      service_type: data.service_type,
+      address: data.address,
+      payment_method: data.payment_method,
+      notes: data.notes,
+      confirmed_at: data.created_at,
+      preparing_at: currentStatus === "preparing" || currentStatus === "mounting" || currentStatus === "delivering" || currentStatus === "finished" ? data.created_at : null,
+      ready_at: currentStatus === "mounting" || currentStatus === "delivering" || currentStatus === "finished" ? data.created_at : null,
+      out_for_delivery_at: currentStatus === "delivering" || currentStatus === "finished" ? data.created_at : null,
+      delivered_at: currentStatus === "finished" ? data.created_at : null,
+      cancelled_at: currentStatus === "cancelled" || currentStatus === "canceled" ? data.created_at : null
+    }
+  };
+  
+  console.log(`✅ Pedido rastreado: #${data.order_number} - Status: ${currentStatus}`);
+  
+  return res.json(response);
+}
+
     // Se for UUID completo (fallback)
     else if (tracking_code.includes('-')) {
       query = query.eq("id", tracking_code);
