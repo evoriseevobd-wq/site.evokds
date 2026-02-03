@@ -841,7 +841,7 @@ app.get("/api/v1/tracking/:tracking_code", async (req, res) => {
     
     let query = supabase
       .from("orders")
-      .select("id, order_number, restaurant_id, client_name, client_phone, status, itens, total_price, created_at, update_at, service_type, address, payment_method, notes")
+      .select("id, order_number, restaurant_id, client_name, client_phone, status, itens, total_price, created_at, update_at, preparing_at, mounting_at, delivering_at, delivered_at, service_type, address, payment_method, notes")
       .limit(1);
     
    // Verifica se é formato: restaurantId_orderNumber
@@ -853,7 +853,7 @@ if (tracking_code.includes('_')) {
   // Busca todos os pedidos com esse order_number
 const { data: allOrders, error: searchError } = await supabase
     .from("orders")
-    .select("id, order_number, restaurant_id, client_name, client_phone, status, itens, total_price, created_at, update_at, service_type, address, payment_method, notes")
+    .select("id, order_number, restaurant_id, client_name, client_phone, status, itens, total_price, created_at, update_at, preparing_at, mounting_at, delivering_at, delivered_at, service_type, address, payment_method, notes")
     .eq("order_number", parseInt(orderNumber));
   
   if (searchError || !allOrders || allOrders.length === 0) {
