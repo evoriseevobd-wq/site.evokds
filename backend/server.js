@@ -841,7 +841,7 @@ app.get("/api/v1/tracking/:tracking_code", async (req, res) => {
     
     let query = supabase
       .from("orders")
-      .select("id, order_number, restaurant_id, client_name, client_phone, status, itens, total_price, created_at, service_type, address, payment_method, notes")
+      .select("id, order_number, restaurant_id, client_name, client_phone, status, itens, total_price, created_at, update_at, service_type, address, payment_method, notes")
       .limit(1);
     
    // Verifica se é formato: restaurantId_orderNumber
