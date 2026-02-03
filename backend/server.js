@@ -904,6 +904,8 @@ const { data: allOrders, error: searchError } = await supabase
   else if (currentStatus === "mounting") timeRemaining = 15;
   else if (currentStatus === "delivering") timeRemaining = 20;
   
+// Para status anteriores ao atual: usa created_at
+// Para status atual: usa update_at
 const now = data.update_at || data.created_at;
 
 const response = {
@@ -921,10 +923,10 @@ const response = {
     address: data.address,
     payment_method: data.payment_method,
     notes: data.notes,
-    confirmed_at: data.created_at, // Sempre tem
-    preparing_at: currentStatus === "preparing" || currentStatus === "mounting" || currentStatus === "delivering" || currentStatus === "finished" ? now : null,
-    mounting_at: currentStatus === "mounting" || currentStatus === "delivering" || currentStatus === "finished" ? now : null,
-    delivering_at: currentStatus === "delivering" || currentStatus === "finished" ? now : null,
+    confirmed_at: data.created_at,
+    preparing_at: currentStatus === "preparing" ? now : (currentStatus === "mounting" || currentStatus === "delivering" || currentStatus === "finished" ? data.created_at : null),
+    mounting_at: currentStatus === "mounting" ? now : (currentStatus === "delivering" || currentStatus === "finished" ? data.created_at : null),
+    delivering_at: currentStatus === "delivering" ? now : (currentStatus === "finished" ? data.created_at : null),
     delivered_at: currentStatus === "finished" ? now : null,
     cancelled_at: currentStatus === "cancelled" || currentStatus === "canceled" ? now : null
   }
