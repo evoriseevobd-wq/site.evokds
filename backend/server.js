@@ -904,29 +904,31 @@ if (tracking_code.includes('_')) {
   else if (currentStatus === "mounting") timeRemaining = 15;
   else if (currentStatus === "delivering") timeRemaining = 20;
   
-  const response = {
-    success: true,
-    order: {
-      id: data.id,
-      order_number: data.order_number,
-      client_name: data.client_name,
-      status: currentStatus,
-      progress: statusInfo.progress,
-      timeRemaining,
-      total_amount: parseFloat(data.total_price) || 0,
-      items,
-      service_type: data.service_type,
-      address: data.address,
-      payment_method: data.payment_method,
-      notes: data.notes,
-      confirmed_at: data.created_at,
-      preparing_at: currentStatus === "preparing" || currentStatus === "mounting" || currentStatus === "delivering" || currentStatus === "finished" ? data.created_at : null,
-      ready_at: currentStatus === "mounting" || currentStatus === "delivering" || currentStatus === "finished" ? data.created_at : null,
-      out_for_delivery_at: currentStatus === "delivering" || currentStatus === "finished" ? data.created_at : null,
-      delivered_at: currentStatus === "finished" ? data.created_at : null,
-      cancelled_at: currentStatus === "cancelled" || currentStatus === "canceled" ? data.created_at : null
-    }
-  };
+const now = data.update_at || data.created_at;
+
+const response = {
+  success: true,
+  order: {
+    id: data.id,
+    order_number: data.order_number,
+    client_name: data.client_name,
+    status: currentStatus,
+    progress: statusInfo.progress,
+    timeRemaining,
+    total_amount: parseFloat(data.total_price) || 0,
+    items,
+    service_type: data.service_type,
+    address: data.address,
+    payment_method: data.payment_method,
+    notes: data.notes,
+    confirmed_at: data.created_at, // Sempre tem
+    preparing_at: currentStatus === "preparing" || currentStatus === "mounting" || currentStatus === "delivering" || currentStatus === "finished" ? now : null,
+    mounting_at: currentStatus === "mounting" || currentStatus === "delivering" || currentStatus === "finished" ? now : null,
+    delivering_at: currentStatus === "delivering" || currentStatus === "finished" ? now : null,
+    delivered_at: currentStatus === "finished" ? now : null,
+    cancelled_at: currentStatus === "cancelled" || currentStatus === "canceled" ? now : null
+  }
+};
   
   console.log(`✅ Pedido rastreado: #${data.order_number} - Status: ${currentStatus}`);
   
