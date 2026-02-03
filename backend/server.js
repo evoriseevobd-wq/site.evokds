@@ -851,9 +851,9 @@ if (tracking_code.includes('_')) {
   console.log(`📍 Buscando: Restaurant ${shortId}*, Pedido #${orderNumber}`);
   
   // Busca todos os pedidos com esse order_number
-  const { data: allOrders, error: searchError } = await supabase
+const { data: allOrders, error: searchError } = await supabase
     .from("orders")
-    .select("id, order_number, restaurant_id, client_name, client_phone, status, itens, total_price, created_at, service_type, address, payment_method, notes")
+    .select("id, order_number, restaurant_id, client_name, client_phone, status, itens, total_price, created_at, update_at, service_type, address, payment_method, notes")
     .eq("order_number", parseInt(orderNumber));
   
   if (searchError || !allOrders || allOrders.length === 0) {
