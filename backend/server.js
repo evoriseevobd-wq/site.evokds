@@ -527,7 +527,17 @@ app.post("/api/v1/pedidos", async (req, res) => {
       resultData = data;
     }
 
-    return res.status(201).json({ success: true, order: resultData });
+    // Gera código único: primeiros 8 caracteres do restaurant_id + order_number
+const shortRestaurantId = restaurant_id.substring(0, 8);
+const trackingCode = `${shortRestaurantId}_${resultData.order_number}`;
+const trackingLink = `https://rastreio.evoriseai.com.br?code=${trackingCode}`;
+
+return res.status(201).json({ 
+  success: true, 
+  order: resultData,
+  tracking_code: trackingCode,
+  tracking_link: trackingLink
+});
   } catch (err) {
     console.error("❌ Erro em /api/v1/pedidos:", err);
     return sendError(res, 500, "Erro interno no servidor");
