@@ -786,6 +786,7 @@ app.get("/api/v1/metrics/:restaurant_id/timeline", async (req, res) => {
     return sendError(res, 500, `Erro interno ao processar timeline: ${err.message}`);
   }
 });
+
 /* ========================================
    🔗 ROTA DE RASTREAMENTO DE PEDIDO
 ======================================== */
@@ -796,19 +797,31 @@ app.get("/api/v1/tracking/:tracking_code", async (req, res) => {
     
     console.log(`🔍 Rastreando pedido: ${tracking_code}`);
     
-    // Busca o pedido (pode ser por ID ou order_number)
     let query = supabase
       .from("orders")
-      .select("id, order_number, client_name, client_phone, status, itens, total_price, created_at, service_type, address, payment_method, notes")
+      .select("id, order_number, restaurant_id, client_name, client_phone, status, itens, total_price, created_at, service_type, address, payment_method, notes")
       .limit(1);
     
-    // Tenta buscar por ID ou por order_number
-    if (tracking_code.includes('-')) {
-      // É um UUID
+    // Verifica se é formato: restaurantId_orderNumber
+    if (tracking_code.includes('_')) {
+      const [shortId, orderNumber] = tracking_code.split('_');
+      
+      query = query
+        .like("restaurant_id", `${shortId}%`)
+        .eq("order_number", parseInt(orderNumber));
+        
+      console.log(`📍 Buscando: Restaurant ${shortId}*, Pedido #${orderNumber}`);
+    } 
+    // Se for UUID completo (fallback)
+    else if (tracking_code.includes('-')) {
       query = query.eq("id", tracking_code);
-    } else {
-      // É um número de pedido
-      query = query.eq("order_number", parseInt(tracking_code));
+    } 
+    // Se for apenas número (não permitir)
+    else {
+      return res.status(400).json({
+        success: false,
+        error: "Formato inválido. Use: restaurantId_orderNumber"
+      });
     }
     
     const { data, error } = await query.single();
@@ -821,7 +834,6 @@ app.get("/api/v1/tracking/:tracking_code", async (req, res) => {
       });
     }
     
-    // Mapeia status para progresso
     const statusMap = {
       "draft": { progress: 0, label: "Rascunho" },
       "pending": { progress: 20, label: "Pedido Confirmado" },
@@ -836,14 +848,12 @@ app.get("/api/v1/tracking/:tracking_code", async (req, res) => {
     const currentStatus = data.status || "pending";
     const statusInfo = statusMap[currentStatus] || statusMap["pending"];
     
-    // Formata os itens
     const items = Array.isArray(data.itens) ? data.itens.map(item => ({
       name: item.name || item.produto || "Item",
       quantity: item.quantity || item.quantidade || 1,
       price: parseFloat(item.price || item.preco || 0)
     })) : [];
     
-    // Calcula tempo restante estimado (baseado no status)
     let timeRemaining = 0;
     if (currentStatus === "pending") timeRemaining = 40;
     else if (currentStatus === "preparing") timeRemaining = 30;
