@@ -701,6 +701,12 @@ function closeCreateModal() {
   if (newPayment) newPayment.value = "";
   if (newDelivery) newDelivery.checked = false;
 
+  // 🔥 LIMPA O CAMPO DE VALOR TOTAL
+  const totalPriceField = document.getElementById("new-total-price");
+  if (totalPriceField) totalPriceField.value = "";
+
+  updateCreateDeliveryVisibility();
+}
   updateCreateDeliveryVisibility();
 }
 
@@ -766,7 +772,11 @@ async function saveNewOrder() {
   const payment_method = String(newPayment?.value || "").trim();
 
   const phoneRaw = String(newPhone?.value || "").trim();
+  
   const client_phone = phoneRaw ? phoneRaw : null;
+
+  // 🔥 PEGA O VALOR TOTAL DO CAMPO
+  const total_price = parseFloat(document.getElementById("new-total-price")?.value || 0);
 
   if (!rid || !client) {
     alert("Preencha o nome do cliente.");
