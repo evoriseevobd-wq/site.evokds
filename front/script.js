@@ -1330,16 +1330,7 @@ function renderAllCharts(data) {
 // ========================================
 
 async function fetchAndRenderInsights() {
-  function init() {
   const rid = getRestaurantId();
-  
-  // 🔥 ADICIONE ESTAS 3 LINHAS AQUI:
-  console.log("🔍 openDrawerBtn:", openDrawerBtn);
-  console.log("🔍 drawer:", drawer);
-  console.log("🔍 drawerBackdrop:", drawerBackdrop);
-
-  if (!rid) {
-    loginScreen?.classList.remove("hidden");
   if (!rid) return;
 
   try {
