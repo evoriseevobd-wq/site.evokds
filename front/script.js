@@ -1295,7 +1295,6 @@ openCreateBtn?.addEventListener("click", (e) => {
   modalPrevBtn?.addEventListener("click", () => activeOrderId && regressStatus(activeOrderId));
   modalNextBtn?.addEventListener("click", () => activeOrderId && advanceStatus(activeOrderId));
 
-  logoutBtn?.addEventListener("click", logout);
   unauthClose?.addEventListener("click", () => closeBackdrop(unauthorizedModal));
 
   // 🔥 ATIVA MÁSCARA DE DINHEIRO
