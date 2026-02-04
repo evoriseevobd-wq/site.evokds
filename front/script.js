@@ -1245,7 +1245,12 @@ function init() {
     if (userAvatar) userAvatar.src = localStorage.getItem("user_picture") || "";
   }
 
-openDrawerBtn?.addEventListener("click", () => {
+openDrawerBtn?.addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  console.log("🎯 Abrindo drawer...");
+  
   drawer?.classList.add("open");
   drawerBackdrop?.classList.add("open");
 });
