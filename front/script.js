@@ -1246,80 +1246,58 @@ function init() {
     if (userAvatar) userAvatar.src = localStorage.getItem("user_picture") || "";
   }
 
- // 🔥 CORREÇÃO DO DRAWER - VERSÃO DEFINITIVA
+// 🔥 DRAWER - CORREÇÃO FINAL COM ONCLICK
 console.log("🔧 Configurando drawer...");
 
-// Referências diretas aos elementos
-const menuButton = document.getElementById("open-drawer");
-const sideDrawer = document.getElementById("drawer");
-const backdrop = document.getElementById("drawer-backdrop");
+const menuBtn = document.getElementById("open-drawer");
+const drawerEl = document.getElementById("drawer");
+const backdropEl = document.getElementById("drawer-backdrop");
 
-console.log("📦 Elementos encontrados:", {
-  menuButton: !!menuButton,
-  sideDrawer: !!sideDrawer,
-  backdrop: !!backdrop
-});
-
-if (menuButton && sideDrawer && backdrop) {
-  // Remove qualquer listener antigo
-  menuButton.replaceWith(menuButton.cloneNode(true));
-  const freshButton = document.getElementById("open-drawer");
-  
-  freshButton.addEventListener("click", function(e) {
+if (menuBtn && drawerEl && backdropEl) {
+  // MÉTODO 1: onclick direto (mais confiável)
+  menuBtn.onclick = function(e) {
     e.preventDefault();
     e.stopPropagation();
     
-    console.log("🎯 BOTÃO CLICADO!");
+    console.log("🎯 CLICOU NO MENU!");
     
-    sideDrawer.classList.add("open");
-    backdrop.classList.add("open");
+    drawerEl.classList.add("open");
+    backdropEl.classList.add("open");
     
-    console.log("✅ Classes adicionadas:", {
-      drawerClasses: sideDrawer.className,
-      backdropClasses: backdrop.className
-    });
-  }, true); // <-- O 'true' aqui força o evento na fase de captura
+    console.log("✅ Drawer aberto!");
+  };
   
-  console.log("✅ Event listener configurado!");
+  // MÉTODO 2: addEventListener como backup
+  menuBtn.addEventListener("click", function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log("🎯 Event listener disparou!");
+    
+    drawerEl.classList.add("open");
+    backdropEl.classList.add("open");
+  }, { capture: true });
+  
+  console.log("✅ Drawer configurado com dupla proteção!");
 } else {
-  console.error("❌ Algum elemento não foi encontrado!");
+  console.error("❌ Elementos não encontrados!");
+}
+
+// Fechar drawer
+if (closeDrawerBtn && drawerEl && backdropEl) {
+  closeDrawerBtn.onclick = function() {
+    drawerEl.classList.remove("open");
+    backdropEl.classList.remove("open");
+  };
+}
+
+if (backdropEl && drawerEl) {
+  backdropEl.onclick = function() {
+    drawerEl.classList.remove("open");
+    backdropEl.classList.remove("open");
+  };
 }
   
-  closeDrawerBtn?.addEventListener("click", closeDrawer);
-  drawerBackdrop?.addEventListener("click", closeDrawer);
-
-  drawerOrdersBtn?.addEventListener("click", showBoard);
-  drawerCrmBtn?.addEventListener("click", showCRM);
-  drawerResultsBtn?.addEventListener("click", showResults);
-
-  crmBackBtn?.addEventListener("click", showBoard);
-  resultsBackBtn?.addEventListener("click", showBoard);
-
-  tabAtivos?.addEventListener("click", () => changeView("ativos"));
-  tabFinalizados?.addEventListener("click", () => changeView("finalizados"));
-  tabCancelados?.addEventListener("click", () => changeView("cancelados"));
-  tabEntregas?.addEventListener("click", () => changeView("entregas"));
-
-  openCreateBtn?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    openCreateModal();
-  });
-  
-  closeCreateBtn?.addEventListener("click", closeCreateModal);
-  cancelCreateBtn?.addEventListener("click", closeCreateModal);
-  saveCreateBtn?.addEventListener("click", saveNewOrder);
-  newDelivery?.addEventListener("change", updateCreateDeliveryVisibility);
-
-  closeModalBtn?.addEventListener("click", closeOrderModal);
-  closeModalSecondaryBtn?.addEventListener("click", closeOrderModal);
-  modalCancelBtn?.addEventListener("click", () => {
-    if (activeOrderId) {
-      showConfirmModal("Deseja realmente cancelar este pedido?", () => {
-        cancelOrder(activeOrderId);
-        closeOrderModal();
-      });
-    }
-  });
   modalPrevBtn?.addEventListener("click", () => activeOrderId && regressStatus(activeOrderId));
   modalNextBtn?.addEventListener("click", () => activeOrderId && advanceStatus(activeOrderId));
 
