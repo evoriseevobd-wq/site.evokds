@@ -1246,76 +1246,76 @@ function init() {
     if (userAvatar) userAvatar.src = localStorage.getItem("user_picture") || "";
   }
 
-// 🔥 DRAWER - CORREÇÃO FINAL COM ONCLICK
+// 🔥 DRAWER - SOLUÇÃO DEFINITIVA
 console.log("🔧 Configurando drawer...");
 
-const menuBtn = document.getElementById("open-drawer");
-const drawerEl = document.getElementById("drawer");
-const backdropEl = document.getElementById("drawer-backdrop");
+// Espera o DOM carregar completamente
+setTimeout(function() {
+  const menuBtn = document.getElementById("open-drawer");
+  const drawerEl = document.getElementById("drawer");
+  const backdropEl = document.getElementById("drawer-backdrop");
+  const closeBtn = document.getElementById("close-drawer");
 
-if (menuBtn && drawerEl && backdropEl) {
-  // MÉTODO 1: onclick direto (mais confiável)
-  menuBtn.onclick = function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    console.log("🎯 CLICOU NO MENU!");
-    
-    drawerEl.classList.add("open");
-    backdropEl.classList.add("open");
-    
-    console.log("✅ Drawer aberto!");
-  };
-  
-  // MÉTODO 2: addEventListener como backup
-  menuBtn.addEventListener("click", function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    console.log("🎯 Event listener disparou!");
-    
-    drawerEl.classList.add("open");
-    backdropEl.classList.add("open");
-  }, { capture: true });
-  
-  console.log("✅ Drawer configurado com dupla proteção!");
-} else {
-  console.error("❌ Elementos não encontrados!");
-}
+  console.log("📦 Elementos:", {
+    menuBtn: !!menuBtn,
+    drawerEl: !!drawerEl,
+    backdropEl: !!backdropEl,
+    closeBtn: !!closeBtn
+  });
 
-// Fechar drawer
-if (closeDrawerBtn && drawerEl && backdropEl) {
-  closeDrawerBtn.onclick = function() {
-    drawerEl.classList.remove("open");
-    backdropEl.classList.remove("open");
-  };
-}
+  if (menuBtn && drawerEl && backdropEl) {
+    // Limpa eventos antigos
+    const newMenuBtn = menuBtn.cloneNode(true);
+    menuBtn.parentNode.replaceChild(newMenuBtn, menuBtn);
 
-if (backdropEl && drawerEl) {
-  backdropEl.onclick = function() {
-    drawerEl.classList.remove("open");
-    backdropEl.classList.remove("open");
-  };
-}
-  
-  modalPrevBtn?.addEventListener("click", () => activeOrderId && regressStatus(activeOrderId));
-  modalNextBtn?.addEventListener("click", () => activeOrderId && advanceStatus(activeOrderId));
+    // Adiciona evento ONCLICK (mais confiável)
+    document.getElementById("open-drawer").onclick = function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      console.log("🎯 DRAWER ABRINDO!");
+      
+      const drawer = document.getElementById("drawer");
+      const backdrop = document.getElementById("drawer-backdrop");
+      
+      drawer.classList.add("open");
+      backdrop.classList.add("open");
+      
+      console.log("✅ Drawer aberto!");
+    };
 
-  logoutBtn?.addEventListener("click", logout);
-  unauthClose?.addEventListener("click", () => closeBackdrop(unauthorizedModal));
-
-  // 🔥 ATIVA MÁSCARA DE DINHEIRO
-  const totalPriceInput = document.getElementById('new-total-price');
-  if (totalPriceInput) {
-    totalPriceInput.addEventListener('input', function() {
-      formatMoneyInput(this);
-    });
+    console.log("✅ Drawer configurado com onclick!");
+  } else {
+    console.error("❌ Elementos não encontrados!");
   }
 
-  // Polling
-  fetchOrders();
-  setInterval(fetchOrders, 15000);
-}
+  // Fechar drawer
+  if (closeBtn) {
+    closeBtn.onclick = function() {
+      console.log("🚪 Fechando drawer...");
+      document.getElementById("drawer").classList.remove("open");
+      document.getElementById("drawer-backdrop").classList.remove("open");
+    };
+  }
+
+  if (backdropEl) {
+    backdropEl.onclick = function() {
+      console.log("🚪 Fechando drawer (backdrop)...");
+      document.getElementById("drawer").classList.remove("open");
+      document.getElementById("drawer-backdrop").classList.remove("open");
+    };
+  }
+
+  // Botões de navegação do drawer
+  const drawerOrdersBtn = document.getElementById("drawer-orders");
+  const drawerCrmBtn = document.getElementById("drawer-crm");
+  const drawerResultsBtn = document.getElementById("drawer-results");
+
+  if (drawerOrdersBtn) drawerOrdersBtn.onclick = showBoard;
+  if (drawerCrmBtn) drawerCrmBtn.onclick = showCRM;
+  if (drawerResultsBtn) drawerResultsBtn.onclick = showResults;
+
+}, 500); // Aguarda 500ms para garantir que tudo carregou
 
 // ========================================
 // 🎨 DASHBOARD COMPLETO - 4 GRÁFICOS
