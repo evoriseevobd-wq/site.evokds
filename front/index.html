@@ -37,6 +37,64 @@
   .form-body::-webkit-scrollbar-thumb:hover {
     background: rgba(220, 38, 38, 0.9);
   }
+  <!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="fenix-logo-png.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FluxON</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <!-- ... resto dos links ... -->
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  
+  <!-- Google Identity -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  
+  <!-- Seu CSS -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- 🔥 COLE AQUI, LOGO ANTES DO </head> -->
+  <style>
+  /* 🔥 FIX DRAWER - FORÇADO */
+  #drawer {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    height: 100vh !important;
+    width: 320px !important;
+    background: rgba(42, 11, 11, 0.98) !important;
+    border-right: 1px solid rgba(91, 28, 28, 0.85) !important;
+    z-index: 99999 !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.3s ease !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  #drawer.open {
+    transform: translateX(0) !important;
+  }
+
+  #drawer-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+    z-index: 99998 !important;
+    display: none !important;
+  }
+
+  #drawer-backdrop.open {
+    display: block !important;
+  }
+  </style>
+</head> <!-- ← Aqui fecha o head -->
+<body>
+  <!-- resto do HTML -->
 </style>
 </head>
 <body>
