@@ -708,6 +708,27 @@ function closeCreateModal() {
   updateCreateDeliveryVisibility();
 }
 
+// ===== 🔥 MÁSCARA DE DINHEIRO =====
+function formatMoneyInput(input) {
+  let value = input.value.replace(/\D/g, ''); // Remove tudo que não é número
+  
+  if (value === '') {
+    input.value = '';
+    return;
+  }
+  
+  // Converte para número com centavos
+  value = (parseInt(value) / 100).toFixed(2);
+  
+  // Formata com vírgula
+  value = value.replace('.', ',');
+  
+  // Adiciona pontos de milhar
+  value = value.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  
+  input.value = value;
+}
+
 function parseItems(raw) {
   const s = String(raw || "").trim();
   if (!s) return [];
@@ -759,6 +780,32 @@ function parseItems(raw) {
   }
 }
 
+    // Separa por linha
+    const lines = s
+      .split("\n")
+      .map((x) => x.trim())
+      .filter(Boolean);
+
+    if (lines.length === 0) return [];
+
+    return lines.map((ln) => {
+      const m = ln.match(/(.+?)\s*x\s*(\d+)$/i);
+      if (m) {
+        return { 
+          name: m[1].trim(), 
+          qty: Number(m[2]),
+          quantidade: Number(m[2])
+        };
+      }
+      return { 
+        name: ln, 
+        qty: 1,
+        quantidade: 1
+      };
+    });
+  }
+}
+
 async function saveNewOrder() {
   const rid = getRestaurantId();
   const client = String(newCustomer?.value || "").trim();
@@ -770,11 +817,11 @@ async function saveNewOrder() {
   const payment_method = String(newPayment?.value || "").trim();
 
   const phoneRaw = String(newPhone?.value || "").trim();
-  
   const client_phone = phoneRaw ? phoneRaw : null;
 
-  // 🔥 PEGA O VALOR TOTAL DO CAMPO
-  const total_price = parseFloat(document.getElementById("new-total-price")?.value || 0);
+  // 🔥 CONVERTE O VALOR FORMATADO PARA NÚMERO
+  const totalPriceFormatted = document.getElementById("new-total-price")?.value || '0';
+  const total_price = parseFloat(totalPriceFormatted.replace(/\./g, '').replace(',', '.')) || 0;
 
   if (!rid || !client) {
     alert("Preencha o nome do cliente.");
@@ -797,18 +844,18 @@ async function saveNewOrder() {
   }
 
   try {
-  const body = {
-  restaurant_id: rid,
-  client_name: client,
-  client_phone,
-  itens,
-  notes: String(newNotes?.value || ""),
-  service_type,
-  address: isDelivery ? address : null,
-  payment_method: isDelivery ? payment_method : null,
-  total_price,
-  origin: "balcao"  // ✅ ADICIONE ESTA LINHA
-};
+    const body = {
+      restaurant_id: rid,
+      client_name: client,
+      client_phone,
+      itens,
+      notes: String(newNotes?.value || ""),
+      service_type,
+      address: isDelivery ? address : null,
+      payment_method: isDelivery ? payment_method : null,
+      total_price,
+      origin: "balcao"
+    };
 
     const resp = await fetch(`${API_BASE}/api/v1/pedidos`, {
       method: "POST",
@@ -1242,21 +1289,29 @@ function init() {
   saveCreateBtn?.addEventListener("click", saveNewOrder);
   newDelivery?.addEventListener("change", updateCreateDeliveryVisibility);
 
-  closeModalBtn?.addEventListener("click", closeOrderModal);
+closeModalBtn?.addEventListener("click", closeOrderModal);
   closeModalSecondaryBtn?.addEventListener("click", closeOrderModal);
   modalCancelBtn?.addEventListener("click", () => {
-  if (activeOrderId) {
-    showConfirmModal("Deseja realmente cancelar este pedido?", () => {
-      cancelOrder(activeOrderId);
-      closeOrderModal();
-    });
-  }
-});
+    if (activeOrderId) {
+      showConfirmModal("Deseja realmente cancelar este pedido?", () => {
+        cancelOrder(activeOrderId);
+        closeOrderModal();
+      });
+    }
+  });
   modalPrevBtn?.addEventListener("click", () => activeOrderId && regressStatus(activeOrderId));
   modalNextBtn?.addEventListener("click", () => activeOrderId && advanceStatus(activeOrderId));
 
   logoutBtn?.addEventListener("click", logout);
   unauthClose?.addEventListener("click", () => closeBackdrop(unauthorizedModal));
+
+  // 🔥 ATIVA MÁSCARA DE DINHEIRO
+  const totalPriceInput = document.getElementById('new-total-price');
+  if (totalPriceInput) {
+    totalPriceInput.addEventListener('input', function() {
+      formatMoneyInput(this);
+    });
+  }
 
   // Polling
   fetchOrders();
