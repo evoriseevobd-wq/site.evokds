@@ -1312,21 +1312,7 @@ function renderInsightsChart(data) {
     return;
   }
 
-  console.log(`📈 Renderizando Insights com ${timeline.length} dias`);
-  
-  // 🔥 CALCULA O MÁXIMO DA MÉTRICA ATIVA
-  const activeData = timeline.map(day => {
-    if (insightsState.activeMetric === 'revenue') return day.revenue;
-    if (insightsState.activeMetric === 'roi') return day.roi;
-    if (insightsState.activeMetric === 'ticket') return day.ticket;
-    if (insightsState.activeMetric === 'orders') return day.orders;
-    return 0;
-  });
-  
-  const maxValue = Math.max(...activeData);
-  const suggestedMax = Math.ceil(maxValue * 1.2); // 20% acima
-  
-  console.log(`📊 Métrica: ${insightsState.activeMetric} | Max: ${maxValue} | Escala: 0 a ${suggestedMax}`);
+  console.log(`📈 Renderizando Insights: ${insightsState.activeMetric}`);
   
   // Labels (datas formatadas)
   const labels = timeline.map(day => {
@@ -1334,101 +1320,77 @@ function renderInsightsChart(data) {
     return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   });
 
-  // Datasets (4 linhas - uma para cada métrica)
-  const datasets = [
-    {
+  // 🔥 TODOS OS DATASETS POSSÍVEIS
+  const allDatasets = {
+    revenue: {
       label: '💰 Faturamento',
       data: timeline.map(day => day.revenue),
       borderColor: 'rgba(251, 191, 36, 1)',
       backgroundColor: 'rgba(251, 191, 36, 0.15)',
-      borderWidth: 3,
-      tension: 0.4,
-      pointRadius: 5,
-      pointHoverRadius: 10,
-      pointBackgroundColor: 'rgba(251, 191, 36, 1)',
-      pointBorderColor: '#fff',
-      pointBorderWidth: 2,
-      fill: true,
       metricKey: 'revenue'
     },
-    {
+    roi: {
       label: '📊 ROI',
       data: timeline.map(day => day.roi),
       borderColor: 'rgba(139, 92, 246, 1)',
       backgroundColor: 'rgba(139, 92, 246, 0.15)',
-      borderWidth: 3,
-      tension: 0.4,
-      pointRadius: 5,
-      pointHoverRadius: 10,
-      pointBackgroundColor: 'rgba(139, 92, 246, 1)',
-      pointBorderColor: '#fff',
-      pointBorderWidth: 2,
-      fill: true,
       metricKey: 'roi'
     },
-    {
+    ticket: {
       label: '💳 Ticket Médio',
       data: timeline.map(day => day.ticket),
       borderColor: 'rgba(34, 197, 94, 1)',
       backgroundColor: 'rgba(34, 197, 94, 0.15)',
-      borderWidth: 3,
-      tension: 0.4,
-      pointRadius: 5,
-      pointHoverRadius: 10,
-      pointBackgroundColor: 'rgba(34, 197, 94, 1)',
-      pointBorderColor: '#fff',
-      pointBorderWidth: 2,
-      fill: true,
       metricKey: 'ticket'
     },
-    {
+    orders: {
       label: '📦 Pedidos',
       data: timeline.map(day => day.orders),
       borderColor: 'rgba(249, 115, 115, 1)',
       backgroundColor: 'rgba(249, 115, 115, 0.15)',
-      borderWidth: 3,
-      tension: 0.4,
-      pointRadius: 5,
-      pointHoverRadius: 10,
-      pointBackgroundColor: 'rgba(249, 115, 115, 1)',
-      pointBorderColor: '#fff',
-      pointBorderWidth: 2,
-      fill: true,
       metricKey: 'orders'
     }
-  ];
+  };
 
-  // Aplica ofuscamento nas linhas não selecionadas
-  datasets.forEach(ds => {
-    if (ds.metricKey !== insightsState.activeMetric) {
-      ds.borderColor = ds.borderColor.replace('1)', '0.15)');
-      ds.backgroundColor = ds.backgroundColor.replace('0.15)', '0.03)');
-      ds.borderWidth = 1.5;
-      ds.pointRadius = 2;
-      ds.pointHoverRadius = 2;
-      ds.pointHitRadius = 0;
-    } else {
-      ds.pointHitRadius = 15;
-    }
-  });
+  // 🔥 PEGA APENAS O DATASET ATIVO
+  const activeDataset = allDatasets[insightsState.activeMetric];
+  
+  // Estilo da linha ativa
+  activeDataset.borderWidth = 3;
+  activeDataset.tension = 0.4;
+  activeDataset.pointRadius = 5;
+  activeDataset.pointHoverRadius = 10;
+  activeDataset.pointBackgroundColor = activeDataset.borderColor;
+  activeDataset.pointBorderColor = '#fff';
+  activeDataset.pointBorderWidth = 2;
+  activeDataset.fill = true;
+  activeDataset.pointHitRadius = 15;
 
-  // Destroi gráfico anterior se existir
+  // 🔥 CALCULA ESCALA BASEADO APENAS NA MÉTRICA ATIVA
+  const maxValue = Math.max(...activeDataset.data);
+  const suggestedMax = Math.ceil(maxValue * 1.2); // 20% acima
+  
+  console.log(`📊 Max: ${maxValue} | Escala: 0 a ${suggestedMax}`);
+
+  // Destroi gráfico anterior
   if (insightsChartInstance) {
     insightsChartInstance.destroy();
   }
 
-  // Cria o gráfico
+  // Cria o gráfico COM APENAS 1 DATASET
   insightsChartInstance = new Chart(canvas, {
     type: 'line',
-    data: { labels, datasets },
+    data: { 
+      labels, 
+      datasets: [activeDataset] // 🔥 SÓ O ATIVO!
+    },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       
       interaction: {
-        mode: 'point',
-        intersect: false,
-        axis: 'x'
+        mode: 'index',
+        intersect: false
       },
       
       plugins: {
@@ -1438,89 +1400,40 @@ function renderInsightsChart(data) {
         
         tooltip: {
           enabled: true,
-          position: 'nearest',
-          xAlign: 'left',
-          yAlign: 'center',
-          caretPadding: 10,
           backgroundColor: 'rgba(17, 24, 39, 0.95)',
           titleColor: 'rgba(252, 228, 228, 0.95)',
           bodyColor: 'rgba(252, 228, 228, 0.95)',
-          borderColor: 'rgba(139, 92, 246, 0.5)',
+          borderColor: activeDataset.borderColor,
           borderWidth: 2,
           padding: 12,
           cornerRadius: 6,
           displayColors: false,
-          caretSize: 0,
           
           callbacks: {
             title: function(context) {
-              return '';
+              return context[0].label;
             },
             
             label: function(context) {
               const label = context.dataset.label || '';
               const value = context.parsed.y || 0;
-              const metricKey = context.dataset.metricKey;
               
-              if (insightsState.activeMetric && metricKey !== insightsState.activeMetric) {
-                return null;
-              }
-              
-              if (label.includes('Faturamento') || label.includes('Ticket')) {
+              if (insightsState.activeMetric === 'revenue' || insightsState.activeMetric === 'ticket') {
                 return `${label}: ${formatCurrency(value)}`;
-              } else if (label.includes('ROI')) {
+              } else if (insightsState.activeMetric === 'roi') {
                 return `${label}: ${value.toFixed(2)}x`;
               } else {
                 return `${label}: ${value}`;
               }
             }
-          },
-          
-          filter: function(tooltipItem) {
-            if (!insightsState.activeMetric) {
-              return true;
-            }
-            const metricKey = tooltipItem.dataset.metricKey;
-            return metricKey === insightsState.activeMetric;
-          },
-          
-          beforeTooltip: function(context) {
-            if (!insightsState.activeMetric) return true;
-            const hasActiveMetric = context.tooltip.dataPoints.some(item => {
-              return item.dataset.metricKey === insightsState.activeMetric;
-            });
-            return hasActiveMetric;
           }
-        }
-      },
-      
-      onHover: (event, activeElements, chart) => {
-        if (activeElements.length === 0) {
-          event.native.target.style.cursor = 'default';
-          return;
-        }
-        
-        if (insightsState.activeMetric) {
-          const element = activeElements[0];
-          const dataset = chart.data.datasets[element.datasetIndex];
-          
-          if (dataset.metricKey !== insightsState.activeMetric) {
-            event.native.target.style.cursor = 'default';
-            chart.tooltip.setActiveElements([], {x: 0, y: 0});
-            chart.update('none');
-            return;
-          }
-          
-          event.native.target.style.cursor = 'pointer';
-        } else {
-          event.native.target.style.cursor = 'pointer';
         }
       },
       
       scales: {
         y: {
           beginAtZero: true,
-          suggestedMax: suggestedMax, // 🔥 USA A VARIÁVEL CALCULADA
+          max: suggestedMax, // 🔥 USA max (não suggestedMax)
           
           ticks: {
             color: 'rgba(252, 228, 228, 0.7)',
@@ -1554,7 +1467,7 @@ function renderInsightsChart(data) {
     }
   });
 
-  console.log("✅ Gráfico de Insights renderizado!");
+  console.log("✅ Gráfico renderizado!");
 }
 
 function setupCardClickHandlers() {
