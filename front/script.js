@@ -1308,7 +1308,6 @@ openCreateBtn?.addEventListener("click", (e) => {
   setInterval(fetchOrders, 15000);
 }
 
-document.addEventListener("DOMContentLoaded", init);
 // ========================================
 // 🎨 DASHBOARD COMPLETO - 4 GRÁFICOS
 // ========================================
@@ -1332,6 +1331,16 @@ function renderAllCharts(data) {
 
 async function fetchAndRenderInsights() {
   const rid = getRestaurantId();
+  function init() {
+  const rid = getRestaurantId();
+  
+  // 🔥 ADICIONE ESTAS 3 LINHAS AQUI:
+  console.log("🔍 openDrawerBtn:", openDrawerBtn);
+  console.log("🔍 drawer:", drawer);
+  console.log("🔍 drawerBackdrop:", drawerBackdrop);
+
+  if (!rid) {
+    loginScreen?.classList.remove("hidden");
   if (!rid) return;
 
   try {
@@ -1922,4 +1931,10 @@ function formatCurrency(value) {
     style: 'currency',
     currency: 'BRL'
   }).format(value);
+}
+// Garante que init() só roda depois do DOM estar pronto
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
 }
