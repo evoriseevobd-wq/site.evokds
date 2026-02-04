@@ -451,12 +451,12 @@ async function fetchOrders() {
 async function updateOrderStatus(orderId, newFrontStatus) {
   const backStatus = toBackStatus(newFrontStatus);
   try {
-    const resp = await fetch(`${API_URL}/${orderId}`, {
+    const resp = await fetch(`${API_URL}/${orderId}/status`, {  // 🔥 ADICIONA /status
       method: "PATCH",
       headers: buildHeaders(),
       body: JSON.stringify({ status: backStatus }),
     });
-
+    
     if (!resp.ok) throw new Error("Erro ao atualizar status");
 
     const idx = orders.findIndex((o) => o.id === orderId);
