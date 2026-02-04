@@ -780,32 +780,7 @@ function parseItems(raw) {
   }
 }
 
-    // Separa por linha
-    const lines = s
-      .split("\n")
-      .map((x) => x.trim())
-      .filter(Boolean);
-
-    if (lines.length === 0) return [];
-
-    return lines.map((ln) => {
-      const m = ln.match(/(.+?)\s*x\s*(\d+)$/i);
-      if (m) {
-        return { 
-          name: m[1].trim(), 
-          qty: Number(m[2]),
-          quantidade: Number(m[2])
-        };
-      }
-      return { 
-        name: ln, 
-        qty: 1,
-        quantidade: 1
-      };
-    });
-  }
-}
-
+ 
 async function saveNewOrder() {
   const rid = getRestaurantId();
   const client = String(newCustomer?.value || "").trim();
