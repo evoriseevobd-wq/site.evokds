@@ -345,35 +345,15 @@ body {
 }
 
 .modal {
-  background: var(--card-bg);
-  border-radius: 20px;
-  padding: 0; /* 🔥 MUDA PARA 0 */
-  max-width: 500px;
-  width: 90%;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden; /* 🔥 ADICIONA */
+  width: min(720px, 94vw);
+  background: rgba(59, 16, 16, 0.95);
+  border: 1px solid rgba(91, 28, 28, 0.85);
+  border-radius: 18px;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
+  padding: 18px;
+  animation: slideUp 0.3s ease;
 }
 
-/* 🔥 ADICIONA ESTA CLASSE NOVA */
-.modal-body {
-  padding: 32px;
-  overflow-y: auto; /* 🔥 SCROLL AQUI */
-  flex: 1;
-}
-
-/* 🔥 ADICIONA (se não tiver) */
-.modal-header {
-  padding: 24px 32px 16px 32px;
-  flex-shrink: 0;
-}
-
-.modal-actions {
-  padding: 16px 32px 24px 32px;
-  flex-shrink: 0;
-  border-top: 1px solid rgba(91, 28, 28, 0.3);
-}
 
 .modal-header {
   display: flex;
