@@ -1248,6 +1248,11 @@ function init() {
   // Listeners
  openDrawerBtn?.addEventListener("click", (e) => {
   e.stopPropagation();
+  e.preventDefault();
+  
+  // Fecha o modal se estiver aberto
+  closeBackdrop(createModal);
+  
   openBackdrop(drawer);
   openBackdrop(drawerBackdrop);
 });
