@@ -324,6 +324,10 @@ body {
   background: rgba(46, 8, 8, 0.75);
   color: rgba(252, 228, 228, 1);
   font-size: 18px;
+  position: relative;
+  z-index: 100;
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 /* ===== MODALS ===== */
