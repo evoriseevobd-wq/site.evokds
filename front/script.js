@@ -1239,10 +1239,11 @@ function init() {
   }
 
   // Listeners
-  openDrawerBtn?.addEventListener("click", () => {
-    openBackdrop(drawer);
-    openBackdrop(drawerBackdrop);
-  });
+ openDrawerBtn?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  openBackdrop(drawer);
+  openBackdrop(drawerBackdrop);
+});
   closeDrawerBtn?.addEventListener("click", closeDrawer);
   drawerBackdrop?.addEventListener("click", closeDrawer);
 
@@ -1258,7 +1259,10 @@ function init() {
   tabCancelados?.addEventListener("click", () => changeView("cancelados"));
   tabEntregas?.addEventListener("click", () => changeView("entregas"));
 
-  openCreateBtn?.addEventListener("click", openCreateModal);
+  openCreateBtn?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  openCreateModal();
+});
   closeCreateBtn?.addEventListener("click", closeCreateModal);
   cancelCreateBtn?.addEventListener("click", closeCreateModal);
   saveCreateBtn?.addEventListener("click", saveNewOrder);
