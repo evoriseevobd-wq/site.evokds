@@ -1245,17 +1245,13 @@ function init() {
     if (userAvatar) userAvatar.src = localStorage.getItem("user_picture") || "";
   }
 
-  // Listeners
- openDrawerBtn?.addEventListener("click", (e) => {
-  e.stopPropagation();
-  e.preventDefault();
+ // Listeners
+  openDrawerBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openBackdrop(drawer);
+    openBackdrop(drawerBackdrop);
+  });
   
-  // Fecha o modal se estiver aberto
-  closeBackdrop(createModal);
-  
-  openBackdrop(drawer);
-  openBackdrop(drawerBackdrop);
-});
   closeDrawerBtn?.addEventListener("click", closeDrawer);
   drawerBackdrop?.addEventListener("click", closeDrawer);
 
@@ -1272,9 +1268,9 @@ function init() {
   tabEntregas?.addEventListener("click", () => changeView("entregas"));
 
   openCreateBtn?.addEventListener("click", (e) => {
-  e.stopPropagation();
-  e.preventDefault();
-  
+    e.stopPropagation();
+    openCreateModal();
+  });
   // Fecha o drawer se estiver aberto
   closeDrawer();
   
