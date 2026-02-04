@@ -1278,12 +1278,6 @@ openCreateBtn?.addEventListener("click", (e) => {
   newDelivery?.addEventListener("change", updateCreateDeliveryVisibility);
 
   closeModalBtn?.addEventListener("click", closeOrderModal);
-  closeCreateBtn?.addEventListener("click", closeCreateModal);
-  cancelCreateBtn?.addEventListener("click", closeCreateModal);
-  saveCreateBtn?.addEventListener("click", saveNewOrder);
-  newDelivery?.addEventListener("change", updateCreateDeliveryVisibility);
-
-closeModalBtn?.addEventListener("click", closeOrderModal);
   closeModalSecondaryBtn?.addEventListener("click", closeOrderModal);
   modalCancelBtn?.addEventListener("click", () => {
     if (activeOrderId) {
@@ -1293,6 +1287,11 @@ closeModalBtn?.addEventListener("click", closeOrderModal);
       });
     }
   });
+  modalPrevBtn?.addEventListener("click", () => activeOrderId && regressStatus(activeOrderId));
+  modalNextBtn?.addEventListener("click", () => activeOrderId && advanceStatus(activeOrderId));
+
+  logoutBtn?.addEventListener("click", logout);
+  unauthClose?.addEventListener("click", () => closeBackdrop(unauthorizedModal));
   modalPrevBtn?.addEventListener("click", () => activeOrderId && regressStatus(activeOrderId));
   modalNextBtn?.addEventListener("click", () => activeOrderId && advanceStatus(activeOrderId));
 
