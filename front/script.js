@@ -1330,7 +1330,6 @@ function renderAllCharts(data) {
 // ========================================
 
 async function fetchAndRenderInsights() {
-  const rid = getRestaurantId();
   function init() {
   const rid = getRestaurantId();
   
