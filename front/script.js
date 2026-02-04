@@ -1246,12 +1246,12 @@ function init() {
   }
 
 openDrawerBtn?.addEventListener("click", () => {
-  openBackdrop(drawer);
-  openBackdrop(drawerBackdrop);
+  drawer?.classList.add("open");
+  drawerBackdrop?.classList.add("open");
 });
   
-  closeDrawerBtn?.addEventListener("click", closeDrawer);
-  drawerBackdrop?.addEventListener("click", closeDrawer);
+closeDrawerBtn?.addEventListener("click", closeDrawer);
+drawerBackdrop?.addEventListener("click", closeDrawer);
 
   drawerOrdersBtn?.addEventListener("click", showBoard);
   drawerCrmBtn?.addEventListener("click", showCRM);
