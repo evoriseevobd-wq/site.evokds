@@ -1298,7 +1298,6 @@ async function fetchAndRenderInsights() {
     console.error("❌ Erro ao buscar timeline:", e);
   }
 }
-
 function renderInsightsChart(data) {
   const canvas = document.getElementById("insightsChart");
   if (!canvas) {
@@ -1314,6 +1313,20 @@ function renderInsightsChart(data) {
   }
 
   console.log(`📈 Renderizando Insights com ${timeline.length} dias`);
+  
+  // 🔥 CALCULA O MÁXIMO DA MÉTRICA ATIVA
+  const activeData = timeline.map(day => {
+    if (insightsState.activeMetric === 'revenue') return day.revenue;
+    if (insightsState.activeMetric === 'roi') return day.roi;
+    if (insightsState.activeMetric === 'ticket') return day.ticket;
+    if (insightsState.activeMetric === 'orders') return day.orders;
+    return 0;
+  });
+  
+  const maxValue = Math.max(...activeData);
+  const suggestedMax = Math.ceil(maxValue * 1.2); // 20% acima
+  
+  console.log(`📊 Métrica: ${insightsState.activeMetric} | Max: ${maxValue} | Escala: 0 a ${suggestedMax}`);
   
   // Labels (datas formatadas)
   const labels = timeline.map(day => {
@@ -1392,12 +1405,10 @@ function renderInsightsChart(data) {
       ds.backgroundColor = ds.backgroundColor.replace('0.15)', '0.03)');
       ds.borderWidth = 1.5;
       ds.pointRadius = 2;
-      ds.pointHoverRadius = 2; // 🔥 NÃO AUMENTA
-      // 🔥 CRÍTICO: Desabilita hover completamente
-      ds.pointHitRadius = 0;  // Raio de detecção = 0!
+      ds.pointHoverRadius = 2;
+      ds.pointHitRadius = 0;
     } else {
-      // 🔥 Linha ativa tem raio de detecção maior
-      ds.pointHitRadius = 15; // Mais fácil de detectar
+      ds.pointHitRadius = 15;
     }
   });
 
@@ -1414,12 +1425,9 @@ function renderInsightsChart(data) {
       responsive: true,
       maintainAspectRatio: false,
       
-      // ========================================
-      // 🔥 INTERAÇÃO: Só detecta ponto específico
-      // ========================================
       interaction: {
-        mode: 'point',         // 🔥 Mudei para 'point' (não 'nearest')
-        intersect: false,      // Pode estar próximo
+        mode: 'point',
+        intersect: false,
         axis: 'x'
       },
       
@@ -1428,19 +1436,12 @@ function renderInsightsChart(data) {
           display: false
         },
         
-        // ========================================
-        // 🔥 TOOLTIP: Bloqueio total das linhas de fundo
-        // ========================================
         tooltip: {
           enabled: true,
-          
-          // Posição grudada no ponto
           position: 'nearest',
           xAlign: 'left',
           yAlign: 'center',
           caretPadding: 10,
-          
-          // Visual minimalista
           backgroundColor: 'rgba(17, 24, 39, 0.95)',
           titleColor: 'rgba(252, 228, 228, 0.95)',
           bodyColor: 'rgba(252, 228, 228, 0.95)',
@@ -1452,23 +1453,19 @@ function renderInsightsChart(data) {
           caretSize: 0,
           
           callbacks: {
-            // SEM TÍTULO (sem data)
             title: function(context) {
               return '';
             },
             
-            // SÓ MOSTRA A MÉTRICA ATIVA
             label: function(context) {
               const label = context.dataset.label || '';
               const value = context.parsed.y || 0;
               const metricKey = context.dataset.metricKey;
               
-              // 🔥 BLOQUEIO ABSOLUTO: Se não for a métrica ativa, retorna vazio
               if (insightsState.activeMetric && metricKey !== insightsState.activeMetric) {
-                return null;  // null = não mostra NADA
+                return null;
               }
               
-              // Formata baseado no tipo
               if (label.includes('Faturamento') || label.includes('Ticket')) {
                 return `${label}: ${formatCurrency(value)}`;
               } else if (label.includes('ROI')) {
@@ -1479,103 +1476,70 @@ function renderInsightsChart(data) {
             }
           },
           
-          // ========================================
-          // 🔥 FILTRO CRÍTICO: Bloqueia linhas de fundo ANTES do tooltip
-          // ========================================
           filter: function(tooltipItem) {
-            // Se não tem métrica ativa, mostra tudo
             if (!insightsState.activeMetric) {
               return true;
             }
-            
-            // 🔥 BLOQUEIO TOTAL: Só passa se for a métrica ativa
             const metricKey = tooltipItem.dataset.metricKey;
             return metricKey === insightsState.activeMetric;
           },
           
-          // 🔥 CALLBACK EXTRA: Cancela tooltip se não for métrica ativa
           beforeTooltip: function(context) {
             if (!insightsState.activeMetric) return true;
-            
-            // Verifica se ALGUM item é da métrica ativa
             const hasActiveMetric = context.tooltip.dataPoints.some(item => {
               return item.dataset.metricKey === insightsState.activeMetric;
             });
-            
-            // Se nenhum é da métrica ativa, cancela o tooltip
             return hasActiveMetric;
           }
         }
       },
       
-      // ========================================
-      // 🔥 HOVER: Desabilita completamente para linhas de fundo
-      // ========================================
       onHover: (event, activeElements, chart) => {
-        // Se não tem elementos ativos, cursor normal
         if (activeElements.length === 0) {
           event.native.target.style.cursor = 'default';
           return;
         }
         
-        // Se tem métrica ativa
         if (insightsState.activeMetric) {
           const element = activeElements[0];
           const dataset = chart.data.datasets[element.datasetIndex];
           
-          // 🔥 Se não é a métrica ativa, CANCELA o hover
           if (dataset.metricKey !== insightsState.activeMetric) {
             event.native.target.style.cursor = 'default';
-            // 🔥 FORÇA esconder o tooltip
             chart.tooltip.setActiveElements([], {x: 0, y: 0});
             chart.update('none');
             return;
           }
           
-          // Se é a métrica ativa, mostra pointer
           event.native.target.style.cursor = 'pointer';
         } else {
-          // Sem filtro, mostra pointer
           event.native.target.style.cursor = 'pointer';
         }
       },
       
-scales: {
-  y: {
-    beginAtZero: true,
-    
-    // 🔥 CALCULA O MÁXIMO BASEADO NA MÉTRICA ATIVA
-    suggestedMax: (() => {
-      const activeData = timeline.map(day => {
-        if (insightsState.activeMetric === 'revenue') return day.revenue;
-        if (insightsState.activeMetric === 'roi') return day.roi;
-        if (insightsState.activeMetric === 'ticket') return day.ticket;
-        if (insightsState.activeMetric === 'orders') return day.orders;
-        return 0;
-      });
-      
-      const maxValue = Math.max(...activeData);
-      return Math.ceil(maxValue * 1.2); // 20% acima do máximo
-    })(),
-    
-    ticks: {
-      color: 'rgba(252, 228, 228, 0.7)',
-      font: { family: 'Space Grotesk', size: 11 },
-      padding: 10,
-      callback: function(value) {
-        if (insightsState.activeMetric === 'revenue' || insightsState.activeMetric === 'ticket') {
-          return formatCurrency(value);
-        } else if (insightsState.activeMetric === 'roi') {
-          return value.toFixed(1) + 'x';
-        }
-        return value;
-      }
-    },
-    grid: { 
-      color: 'rgba(249, 115, 115, 0.08)',
-      drawBorder: false
-    }
-  },
+      scales: {
+        y: {
+          beginAtZero: true,
+          suggestedMax: suggestedMax, // 🔥 USA A VARIÁVEL CALCULADA
+          
+          ticks: {
+            color: 'rgba(252, 228, 228, 0.7)',
+            font: { family: 'Space Grotesk', size: 11 },
+            padding: 10,
+            callback: function(value) {
+              if (insightsState.activeMetric === 'revenue' || insightsState.activeMetric === 'ticket') {
+                return formatCurrency(value);
+              } else if (insightsState.activeMetric === 'roi') {
+                return value.toFixed(1) + 'x';
+              }
+              return value;
+            }
+          },
+          grid: { 
+            color: 'rgba(249, 115, 115, 0.08)',
+            drawBorder: false
+          }
+        },
         x: {
           ticks: {
             color: 'rgba(252, 228, 228, 0.7)',
@@ -1592,7 +1556,6 @@ scales: {
 
   console.log("✅ Gráfico de Insights renderizado!");
 }
-
 
 function setupCardClickHandlers() {
   // Mapeia cards para suas métricas
