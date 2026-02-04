@@ -1246,28 +1246,44 @@ function init() {
     if (userAvatar) userAvatar.src = localStorage.getItem("user_picture") || "";
   }
 
-  // 🔥 CORREÇÃO DO DRAWER
-  if (openDrawerBtn) {
-    // Remove listeners antigos (se houver)
-    const newBtn = openDrawerBtn.cloneNode(true);
-    openDrawerBtn.parentNode.replaceChild(newBtn, openDrawerBtn);
+ // 🔥 CORREÇÃO DO DRAWER - VERSÃO DEFINITIVA
+console.log("🔧 Configurando drawer...");
+
+// Referências diretas aos elementos
+const menuButton = document.getElementById("open-drawer");
+const sideDrawer = document.getElementById("drawer");
+const backdrop = document.getElementById("drawer-backdrop");
+
+console.log("📦 Elementos encontrados:", {
+  menuButton: !!menuButton,
+  sideDrawer: !!sideDrawer,
+  backdrop: !!backdrop
+});
+
+if (menuButton && sideDrawer && backdrop) {
+  // Remove qualquer listener antigo
+  menuButton.replaceWith(menuButton.cloneNode(true));
+  const freshButton = document.getElementById("open-drawer");
+  
+  freshButton.addEventListener("click", function(e) {
+    e.preventDefault();
+    e.stopPropagation();
     
-    // Adiciona listener limpo
-    newBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      console.log("🎯 Abrindo drawer...");
-      
-      if (drawer && drawerBackdrop) {
-        drawer.classList.add("open");
-        drawerBackdrop.classList.add("open");
-        console.log("✅ Classes 'open' adicionadas!");
-      } else {
-        console.error("❌ Elementos drawer não encontrados!");
-      }
+    console.log("🎯 BOTÃO CLICADO!");
+    
+    sideDrawer.classList.add("open");
+    backdrop.classList.add("open");
+    
+    console.log("✅ Classes adicionadas:", {
+      drawerClasses: sideDrawer.className,
+      backdropClasses: backdrop.className
     });
-  }
+  }, true); // <-- O 'true' aqui força o evento na fase de captura
+  
+  console.log("✅ Event listener configurado!");
+} else {
+  console.error("❌ Algum elemento não foi encontrado!");
+}
   
   closeDrawerBtn?.addEventListener("click", closeDrawer);
   drawerBackdrop?.addEventListener("click", closeDrawer);
