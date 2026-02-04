@@ -685,11 +685,18 @@ function updateCreateDeliveryVisibility() {
   paymentWrap?.classList.toggle("hidden", !isDelivery);
 }
 
-function openCreateModal() {
+function openCreateModal(e) {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  
+  // Fecha o drawer se estiver aberto
+  closeDrawer();
+  
   openBackdrop(createModal);
   updateCreateDeliveryVisibility();
 }
-
 function closeCreateModal() {
   closeBackdrop(createModal);
 
