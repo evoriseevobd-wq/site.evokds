@@ -1223,6 +1223,7 @@ function showConfirmModal(message, onConfirm) {
   });
 }
 // ===== INIT =====
+// ===== INIT =====
 function init() {
   const rid = getRestaurantId();
 
@@ -1245,18 +1246,31 @@ function init() {
     if (userAvatar) userAvatar.src = localStorage.getItem("user_picture") || "";
   }
 
-openDrawerBtn?.addEventListener("click", (e) => {
-  e.preventDefault();
-  e.stopPropagation();
+  // 🔥 CORREÇÃO DO DRAWER
+  if (openDrawerBtn) {
+    // Remove listeners antigos (se houver)
+    const newBtn = openDrawerBtn.cloneNode(true);
+    openDrawerBtn.parentNode.replaceChild(newBtn, openDrawerBtn);
+    
+    // Adiciona listener limpo
+    newBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      console.log("🎯 Abrindo drawer...");
+      
+      if (drawer && drawerBackdrop) {
+        drawer.classList.add("open");
+        drawerBackdrop.classList.add("open");
+        console.log("✅ Classes 'open' adicionadas!");
+      } else {
+        console.error("❌ Elementos drawer não encontrados!");
+      }
+    });
+  }
   
-  console.log("🎯 Abrindo drawer...");
-  
-  drawer?.classList.add("open");
-  drawerBackdrop?.classList.add("open");
-});
-  
-closeDrawerBtn?.addEventListener("click", closeDrawer);
-drawerBackdrop?.addEventListener("click", closeDrawer);
+  closeDrawerBtn?.addEventListener("click", closeDrawer);
+  drawerBackdrop?.addEventListener("click", closeDrawer);
 
   drawerOrdersBtn?.addEventListener("click", showBoard);
   drawerCrmBtn?.addEventListener("click", showCRM);
@@ -1270,7 +1284,7 @@ drawerBackdrop?.addEventListener("click", closeDrawer);
   tabCancelados?.addEventListener("click", () => changeView("cancelados"));
   tabEntregas?.addEventListener("click", () => changeView("entregas"));
 
-openCreateBtn?.addEventListener("click", (e) => {
+  openCreateBtn?.addEventListener("click", (e) => {
     e.stopPropagation();
     openCreateModal();
   });
@@ -1294,10 +1308,6 @@ openCreateBtn?.addEventListener("click", (e) => {
   modalNextBtn?.addEventListener("click", () => activeOrderId && advanceStatus(activeOrderId));
 
   logoutBtn?.addEventListener("click", logout);
-  unauthClose?.addEventListener("click", () => closeBackdrop(unauthorizedModal));
-  modalPrevBtn?.addEventListener("click", () => activeOrderId && regressStatus(activeOrderId));
-  modalNextBtn?.addEventListener("click", () => activeOrderId && advanceStatus(activeOrderId));
-
   unauthClose?.addEventListener("click", () => closeBackdrop(unauthorizedModal));
 
   // 🔥 ATIVA MÁSCARA DE DINHEIRO
