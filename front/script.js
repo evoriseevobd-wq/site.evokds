@@ -1245,12 +1245,10 @@ function init() {
     if (userAvatar) userAvatar.src = localStorage.getItem("user_picture") || "";
   }
 
- // Listeners
-  openDrawerBtn?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    openBackdrop(drawer);
-    openBackdrop(drawerBackdrop);
-  });
+openDrawerBtn?.addEventListener("click", () => {
+  openBackdrop(drawer);
+  openBackdrop(drawerBackdrop);
+});
   
   closeDrawerBtn?.addEventListener("click", closeDrawer);
   drawerBackdrop?.addEventListener("click", closeDrawer);
