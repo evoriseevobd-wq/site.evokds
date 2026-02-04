@@ -350,6 +350,27 @@
         <label>Observações
           <textarea id="new-notes" placeholder="Sem cebola, bebida sem gelo"></textarea>
         </label>
+        </label>
+
+    <!-- 🔥 CAMPO VALOR TOTAL -->
+    <label style="margin-top: 12px;">
+      💰 Valor Total do Pedido
+      <div style="display: flex; align-items: center; gap: 8px; background: rgba(46, 8, 8, 0.45); border: 1px solid rgba(91, 28, 28, 0.85); border-radius: 12px; padding: 0 14px;">
+        <span style="color: rgba(252, 228, 228, 0.7); font-weight: 700; font-size: 14px;">R$</span>
+        <input 
+          type="number" 
+          id="new-total-price" 
+          placeholder="0,00" 
+          step="0.01" 
+          min="0"
+          style="flex: 1; border: none; background: transparent; padding: 12px 0; color: rgba(252, 228, 228, 1); outline: none; font-size: 16px; font-weight: 700;"
+        />
+      </div>
+      <small style="color: var(--muted); font-size: 11px; margin-top: 6px; display: block;">
+        💡 Digite apenas o valor (ex: 58.50)
+      </small>
+    </label>
+  </div>
       </div>
       <div class="modal-actions">
         <button class="ghost-button" id="cancel-create">Cancelar</button>
