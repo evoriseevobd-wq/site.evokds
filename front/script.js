@@ -1222,7 +1222,63 @@ function showConfirmModal(message, onConfirm) {
     }
   });
 }
-// ===== INIT =====
+
+// ===== DRAWER SETUP =====
+function setupDrawer() {
+  console.log("🔧 Configurando drawer...");
+
+  // Botão de abrir
+  const openBtn = document.getElementById("open-drawer");
+  const drawerEl = document.getElementById("drawer");
+  const backdropEl = document.getElementById("drawer-backdrop");
+  const closeBtn = document.getElementById("close-drawer");
+
+  if (openBtn && drawerEl && backdropEl) {
+    openBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log("🎯 Abrindo drawer...");
+      drawerEl.classList.add("open");
+      backdropEl.classList.add("open");
+    });
+    console.log("✅ Botão abrir configurado");
+  } else {
+    console.error("❌ Elementos não encontrados:", {
+      openBtn: !!openBtn,
+      drawerEl: !!drawerEl,
+      backdropEl: !!backdropEl
+    });
+  }
+
+  // Botão de fechar
+  if (closeBtn) {
+    closeBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      console.log("🚪 Fechando drawer...");
+      closeDrawer();
+    });
+  }
+
+  // Fechar ao clicar no backdrop
+  if (backdropEl) {
+    backdropEl.addEventListener("click", () => {
+      console.log("🚪 Fechando drawer (backdrop)...");
+      closeDrawer();
+    });
+  }
+
+  // Botões de navegação
+  const ordersBtn = document.getElementById("drawer-orders");
+  const crmBtn = document.getElementById("drawer-crm");
+  const resultsBtn = document.getElementById("drawer-results");
+
+  if (ordersBtn) ordersBtn.addEventListener("click", showBoard);
+  if (crmBtn) crmBtn.addEventListener("click", showCRM);
+  if (resultsBtn) resultsBtn.addEventListener("click", showResults);
+
+  console.log("✅ Drawer totalmente configurado!");
+}
+
 // ===== INIT =====
 function init() {
   const rid = getRestaurantId();
@@ -1245,78 +1301,57 @@ function init() {
     if (userNameEl) userNameEl.textContent = localStorage.getItem("user_name") || "Usuário";
     if (userAvatar) userAvatar.src = localStorage.getItem("user_picture") || "";
   }
-
-// 🔥 DRAWER - SOLUÇÃO DEFINITIVA
-console.log("🔧 Configurando drawer...");
-
-// Espera o DOM carregar completamente
-setTimeout(function() {
-  const menuBtn = document.getElementById("open-drawer");
-  const drawerEl = document.getElementById("drawer");
-  const backdropEl = document.getElementById("drawer-backdrop");
-  const closeBtn = document.getElementById("close-drawer");
-
-  console.log("📦 Elementos:", {
-    menuBtn: !!menuBtn,
-    drawerEl: !!drawerEl,
-    backdropEl: !!backdropEl,
-    closeBtn: !!closeBtn
+// Configura o drawer
+setupDrawer();
+// Event listeners dos modais
+if (closeModalBtn) closeModalBtn.addEventListener("click", closeOrderModal);
+if (closeModalSecondaryBtn) closeModalSecondaryBtn.addEventListener("click", closeOrderModal);
+if (modalBackdrop) modalBackdrop.addEventListener("click", (e) => {
+  if (e.target === modalBackdrop) closeOrderModal();
+});
+if (modalPrevBtn) modalPrevBtn.addEventListener("click", () => regressStatus(activeOrderId));
+if (modalNextBtn) modalNextBtn.addEventListener("click", () => advanceStatus(activeOrderId));
+if (modalCancelBtn) modalCancelBtn.addEventListener("click", () => {
+  showConfirmModal("Tem certeza que deseja cancelar este pedido?", () => {
+    cancelOrder(activeOrderId);
+    closeOrderModal();
   });
+});
 
-  if (menuBtn && drawerEl && backdropEl) {
-    // Limpa eventos antigos
-    const newMenuBtn = menuBtn.cloneNode(true);
-    menuBtn.parentNode.replaceChild(newMenuBtn, menuBtn);
+// Event listeners do modal de criação
+if (openCreateBtn) openCreateBtn.addEventListener("click", openCreateModal);
+if (closeCreateBtn) closeCreateBtn.addEventListener("click", closeCreateModal);
+if (cancelCreateBtn) cancelCreateBtn.addEventListener("click", closeCreateModal);
+if (saveCreateBtn) saveCreateBtn.addEventListener("click", saveNewOrder);
+if (newDelivery) newDelivery.addEventListener("change", updateCreateDeliveryVisibility);
 
-    // Adiciona evento ONCLICK (mais confiável)
-    document.getElementById("open-drawer").onclick = function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      console.log("🎯 DRAWER ABRINDO!");
-      
-      const drawer = document.getElementById("drawer");
-      const backdrop = document.getElementById("drawer-backdrop");
-      
-      drawer.classList.add("open");
-      backdrop.classList.add("open");
-      
-      console.log("✅ Drawer aberto!");
-    };
+// Máscara de dinheiro
+const totalPriceField = document.getElementById("new-total-price");
+if (totalPriceField) {
+  totalPriceField.addEventListener("input", function() {
+    formatMoneyInput(this);
+  });
+}
 
-    console.log("✅ Drawer configurado com onclick!");
-  } else {
-    console.error("❌ Elementos não encontrados!");
-  }
+// Event listeners das tabs
+if (tabAtivos) tabAtivos.addEventListener("click", () => changeView("ativos"));
+if (tabFinalizados) tabFinalizados.addEventListener("click", () => changeView("finalizados"));
+if (tabCancelados) tabCancelados.addEventListener("click", () => changeView("cancelados"));
+if (tabEntregas) tabEntregas.addEventListener("click", () => changeView("entregas"));
 
-  // Fechar drawer
-  if (closeBtn) {
-    closeBtn.onclick = function() {
-      console.log("🚪 Fechando drawer...");
-      document.getElementById("drawer").classList.remove("open");
-      document.getElementById("drawer-backdrop").classList.remove("open");
-    };
-  }
+// Event listeners dos botões de voltar
+if (crmBackBtn) crmBackBtn.addEventListener("click", showBoard);
+if (resultsBackBtn) resultsBackBtn.addEventListener("click", showBoard);
 
-  if (backdropEl) {
-    backdropEl.onclick = function() {
-      console.log("🚪 Fechando drawer (backdrop)...");
-      document.getElementById("drawer").classList.remove("open");
-      document.getElementById("drawer-backdrop").classList.remove("open");
-    };
-  }
+// Logout
+if (logoutBtn) logoutBtn.addEventListener("click", logout);
+if (unauthClose) unauthClose.addEventListener("click", () => closeBackdrop(unauthorizedModal));
 
-  // Botões de navegação do drawer
-  const drawerOrdersBtn = document.getElementById("drawer-orders");
-  const drawerCrmBtn = document.getElementById("drawer-crm");
-  const drawerResultsBtn = document.getElementById("drawer-results");
-
-  if (drawerOrdersBtn) drawerOrdersBtn.onclick = showBoard;
-  if (drawerCrmBtn) drawerCrmBtn.onclick = showCRM;
-  if (drawerResultsBtn) drawerResultsBtn.onclick = showResults;
-
-}, 500); // Aguarda 500ms para garantir que tudo carregou
-
+// Polling de pedidos
+setInterval(fetchOrders, 5000);
+fetchOrders();
+renderBoard();
+}
 // ========================================
 // 🎨 DASHBOARD COMPLETO - 4 GRÁFICOS
 // ========================================
