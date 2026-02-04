@@ -1273,7 +1273,15 @@ function init() {
 
   openCreateBtn?.addEventListener("click", (e) => {
   e.stopPropagation();
-  openCreateModal();
+  e.preventDefault();
+  
+  // Fecha o drawer se estiver aberto
+  closeDrawer();
+  
+  // Pequeno delay para garantir que o drawer fechou
+  setTimeout(() => {
+    openCreateModal(e);
+  }, 50);
 });
   closeCreateBtn?.addEventListener("click", closeCreateModal);
   cancelCreateBtn?.addEventListener("click", closeCreateModal);
