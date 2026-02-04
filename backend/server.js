@@ -343,7 +343,7 @@ app.get("/crm/:restaurant_id", async (req, res) => {
 
     const { data, error } = await supabase
       .from("orders")
-      .select("id, client_name, client_phone, created_at, total_price")
+      .select("id, order_number, client_name, client_phone, status, itens, total_price, created_at, update_at, preparing_at, mounting_at, delivering_at, delivered_at, service_type, address, payment_method, notes")
       .eq("restaurant_id", restaurant_id)
       .order("created_at", { ascending: true });
     
