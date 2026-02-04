@@ -1540,28 +1540,42 @@ function renderInsightsChart(data) {
         }
       },
       
-      scales: {
-        y: {
-          beginAtZero: true,
-          grace: '15%',
-          ticks: {
-            color: 'rgba(252, 228, 228, 0.7)',
-            font: { family: 'Space Grotesk', size: 11 },
-            padding: 10,
-            callback: function(value) {
-              if (insightsState.activeMetric === 'revenue' || insightsState.activeMetric === 'ticket') {
-                return formatCurrency(value);
-              } else if (insightsState.activeMetric === 'roi') {
-                return value.toFixed(1) + 'x';
-              }
-              return value;
-            }
-          },
-          grid: { 
-            color: 'rgba(249, 115, 115, 0.08)',
-            drawBorder: false
-          }
-        },
+scales: {
+  y: {
+    beginAtZero: true,
+    
+    // 🔥 CALCULA O MÁXIMO BASEADO NA MÉTRICA ATIVA
+    suggestedMax: (() => {
+      const activeData = timeline.map(day => {
+        if (insightsState.activeMetric === 'revenue') return day.revenue;
+        if (insightsState.activeMetric === 'roi') return day.roi;
+        if (insightsState.activeMetric === 'ticket') return day.ticket;
+        if (insightsState.activeMetric === 'orders') return day.orders;
+        return 0;
+      });
+      
+      const maxValue = Math.max(...activeData);
+      return Math.ceil(maxValue * 1.2); // 20% acima do máximo
+    })(),
+    
+    ticks: {
+      color: 'rgba(252, 228, 228, 0.7)',
+      font: { family: 'Space Grotesk', size: 11 },
+      padding: 10,
+      callback: function(value) {
+        if (insightsState.activeMetric === 'revenue' || insightsState.activeMetric === 'ticket') {
+          return formatCurrency(value);
+        } else if (insightsState.activeMetric === 'roi') {
+          return value.toFixed(1) + 'x';
+        }
+        return value;
+      }
+    },
+    grid: { 
+      color: 'rgba(249, 115, 115, 0.08)',
+      drawBorder: false
+    }
+  },
         x: {
           ticks: {
             color: 'rgba(252, 228, 228, 0.7)',
