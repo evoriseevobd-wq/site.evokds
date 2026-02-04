@@ -1267,18 +1267,17 @@ function init() {
   tabCancelados?.addEventListener("click", () => changeView("cancelados"));
   tabEntregas?.addEventListener("click", () => changeView("entregas"));
 
-  openCreateBtn?.addEventListener("click", (e) => {
+openCreateBtn?.addEventListener("click", (e) => {
     e.stopPropagation();
     openCreateModal();
   });
-  // Fecha o drawer se estiver aberto
-  closeDrawer();
   
-  // Pequeno delay para garantir que o drawer fechou
-  setTimeout(() => {
-    openCreateModal(e);
-  }, 50);
-});
+  closeCreateBtn?.addEventListener("click", closeCreateModal);
+  cancelCreateBtn?.addEventListener("click", closeCreateModal);
+  saveCreateBtn?.addEventListener("click", saveNewOrder);
+  newDelivery?.addEventListener("change", updateCreateDeliveryVisibility);
+
+  closeModalBtn?.addEventListener("click", closeOrderModal);
   closeCreateBtn?.addEventListener("click", closeCreateModal);
   cancelCreateBtn?.addEventListener("click", closeCreateModal);
   saveCreateBtn?.addEventListener("click", saveNewOrder);
