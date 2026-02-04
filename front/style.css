@@ -614,9 +614,17 @@ body {
   transition: transform 0.22s ease;
   background: rgba(42, 11, 11, 0.95);
   border-right: 1px solid rgba(91, 28, 28, 0.85);
-  z-index: 90;
+  z-index: 9999; /* 🔥 MUDE DE 90 PARA 9999 */
   display: flex;
   flex-direction: column;
+}
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: none;
+  z-index: 9998; /* 🔥 MUDE DE 89 PARA 9998 */
 }
 
 .drawer.open {
