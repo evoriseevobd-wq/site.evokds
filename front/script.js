@@ -707,8 +707,6 @@ function closeCreateModal() {
 
   updateCreateDeliveryVisibility();
 }
-  updateCreateDeliveryVisibility();
-}
 
 function parseItems(raw) {
   const s = String(raw || "").trim();
@@ -808,7 +806,7 @@ async function saveNewOrder() {
   service_type,
   address: isDelivery ? address : null,
   payment_method: isDelivery ? payment_method : null,
-  total_price: 0,
+  total_price,
   origin: "balcao"  // ✅ ADICIONE ESTA LINHA
 };
 
