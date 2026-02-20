@@ -383,6 +383,21 @@ body {
   border-radius: 14px;
 }
 
+/* ADICIONA DEPOIS DESSE */
+.modal-row-inline {
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(46, 8, 8, 0.35);
+  border: 1px solid rgba(91, 28, 28, 0.55);
+  border-radius: 14px;
+  align-items: center;
+}
+
+.modal-row-inline .muted {
+  min-width: 90px;
+}
+
 .modal-section {
   padding: 10px 10px 12px;
   background: rgba(46, 8, 8, 0.25);
