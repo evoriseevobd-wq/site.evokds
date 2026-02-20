@@ -1624,16 +1624,16 @@ function setupCardClickHandlers() {
 }
 // ========================================
 // 📊 GRÁFICO 1: ORIGEM DOS PEDIDOS (Pizza)
-// ========================================
-// No seu script.js, SUBSTITUA a função renderOriginChart:
-
 function renderOriginChart(data) {
   const canvas = document.getElementById("originChart");
   if (!canvas) return;
 
   // ✅ APENAS IA E BALCÃO
   const iaOrders = data.orders_by_origin?.ia_whatsapp || 0;
-  const balcaoOrders = data.orders_by_origin?.balcao || 0;
+const balcaoOrders = data.orders_by_origin?.balcao || 0;
+const ifoodOrders = data.orders_by_origin?.ifood || 0;
+const aiqfomeOrders = data.orders_by_origin?.aiqfome || 0;
+const anotaaiOrders = data.orders_by_origin?.anota_ai || 0;
 
   if (originChartInstance) {
     originChartInstance.destroy();
@@ -1642,19 +1642,25 @@ function renderOriginChart(data) {
   originChartInstance = new Chart(canvas, {
     type: 'doughnut',
     data: {
-      labels: ['🤖 IA WhatsApp', '🏪 Balcão'],
-      datasets: [{
-        data: [iaOrders, balcaoOrders],
-        backgroundColor: [
-          'rgba(139, 92, 246, 0.9)',  // Roxo - IA
-          'rgba(249, 115, 115, 0.9)'  // Vermelho - Balcão
-        ],
-        borderColor: [
-          'rgba(139, 92, 246, 1)',
-          'rgba(249, 115, 115, 1)'
-        ],
-        borderWidth: 3
-      }]
+      labels: [' IA WhatsApp', ' iFood', ' Aiqfome', ' Anota Aí', ' Balcão'],
+datasets: [{
+  data: [iaOrders, ifoodOrders, aiqfomeOrders, anotaaiOrders, balcaoOrders],
+  backgroundColor: [
+    'rgba(139, 92, 246, 0.9)',
+    'rgba(249, 115, 115, 0.9)',
+    'rgba(251, 191, 36, 0.9)',
+    'rgba(34, 197, 94, 0.9)',
+    'rgba(59, 130, 246, 0.9)'
+  ],
+  borderColor: [
+    'rgba(139, 92, 246, 1)',
+    'rgba(249, 115, 115, 1)',
+    'rgba(251, 191, 36, 1)',
+    'rgba(34, 197, 94, 1)',
+    'rgba(59, 130, 246, 1)'
+  ],
+  borderWidth: 3
+}]
     },
     options: {
       responsive: true,
