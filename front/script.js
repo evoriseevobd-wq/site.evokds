@@ -85,12 +85,12 @@ const closeModalSecondaryBtn = document.getElementById("close-modal-secondary");
 const modalId = document.getElementById("modal-id");
 const modalCustomer = document.getElementById("modal-customer");
 const modalTime = document.getElementById("modal-time");
-const modalPhoneRow = document.getElementById("modal-phone-row");
-const modalPhone = document.getElementById("modal-phone");
+
+
 const modalAddressRow = document.getElementById("modal-address-row");
 const modalAddress = document.getElementById("modal-address");
-const modalPaymentRow = document.getElementById("modal-payment-row");
-const modalPayment = document.getElementById("modal-payment");
+
+
 const modalItems = document.getElementById("modal-items");
 const modalNotes = document.getElementById("modal-notes");
 const modalPrevBtn = document.getElementById("modal-prev");
