@@ -294,49 +294,38 @@
 
   </main>
 
-  <!-- MODAL DE PEDIDO -->
-  <div class="modal-backdrop" id="modal">
-    <div class="modal">
-      <div class="modal-header">
-        <div>
-          <p class="modal-label">Pedido</p>
-          <h3 id="modal-id"></h3>
-        </div>
-        <button class="icon-button" id="close-modal" aria-label="Fechar modal">&times;</button>
-      </div>
-
-      <div class="modal-body">
-  <div class="modal-row">
-    <span class="muted">Cliente</span>
+<div class="modal-body">
+  <div class="modal-row-inline">
+    <span class="muted" style="min-width: 90px;">Cliente</span>
     <span id="modal-customer"></span>
   </div>
 
   <div style="display: flex; gap: 10px;">
-    <div class="modal-row" style="flex: 1;">
-      <span class="muted">Número</span>
+    <div class="modal-row-inline" style="flex: 1;">
+      <span class="muted" style="min-width: 70px;">Número</span>
       <span id="modal-phone"></span>
     </div>
-    <div class="modal-row" style="flex: 1;">
-      <span class="muted">Data</span>
+    <div class="modal-row-inline" style="flex: 1;">
+      <span class="muted" style="min-width: 50px;">Data</span>
       <span id="modal-time"></span>
     </div>
   </div>
 
- <div id="modal-payment-price-row" style="display: none; gap: 10px;">
-  <div style="display: flex; gap: 10px;">
-    <div class="modal-row" style="flex: 1; justify-content: flex-start; gap: 8px;">
-      <span class="muted">Pagamento</span>
-      <span id="modal-payment"></span>
-    </div>
-    <div class="modal-row" style="flex: 1; justify-content: flex-start; gap: 8px;">
-      <span class="muted">Valor</span>
-      <span id="modal-total-price"></span>
+  <div id="modal-payment-price-row" style="display: none;">
+    <div style="display: flex; gap: 10px;">
+      <div class="modal-row-inline" style="flex: 1;">
+        <span class="muted" style="min-width: 90px;">Pagamento</span>
+        <span id="modal-payment"></span>
+      </div>
+      <div class="modal-row-inline" style="flex: 1;">
+        <span class="muted" style="min-width: 50px;">Valor</span>
+        <span id="modal-total-price"></span>
+      </div>
     </div>
   </div>
-</div>
 
-  <div class="modal-row" id="modal-address-row" style="display:none;">
-    <span class="muted">Endereço</span>
+  <div class="modal-row-inline" id="modal-address-row" style="display:none;">
+    <span class="muted" style="min-width: 90px;">Endereço</span>
     <span id="modal-address"></span>
   </div>
 
