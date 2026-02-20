@@ -1642,21 +1642,21 @@ const anotaaiOrders = data.orders_by_origin?.anota_ai || 0;
   originChartInstance = new Chart(canvas, {
     type: 'doughnut',
     data: {
-      labels: [' IA WhatsApp', ' iFood', ' Aiqfome', ' Anota Aí', ' Balcão'],
+    labels: [' IA WhatsApp', ' iFood', ' Aiqfome', ' Anota Aí', ' Balcão'],
 datasets: [{
   data: [iaOrders, ifoodOrders, aiqfomeOrders, anotaaiOrders, balcaoOrders],
   backgroundColor: [
-    'rgba(139, 92, 246, 0.9)',
-    'rgba(249, 115, 115, 0.9)',
-    'rgba(251, 191, 36, 0.9)',
-    'rgba(34, 197, 94, 0.9)',
-    'rgba(59, 130, 246, 0.9)'
+    'rgba(34, 197, 94, 0.9)',    // Verde - IA WhatsApp
+    'rgba(239, 68, 68, 0.9)',    // Vermelho - iFood
+    'rgba(139, 92, 246, 0.9)',   // Roxo - Aiqfome
+    'rgba(30, 30, 30, 0.9)',     // Preto - Anota Aí
+    'rgba(59, 130, 246, 0.9)'    // Azul - Balcão
   ],
   borderColor: [
-    'rgba(139, 92, 246, 1)',
-    'rgba(249, 115, 115, 1)',
-    'rgba(251, 191, 36, 1)',
     'rgba(34, 197, 94, 1)',
+    'rgba(239, 68, 68, 1)',
+    'rgba(139, 92, 246, 1)',
+    'rgba(30, 30, 30, 1)',
     'rgba(59, 130, 246, 1)'
   ],
   borderWidth: 3
@@ -1667,13 +1667,15 @@ datasets: [{
       maintainAspectRatio: true,
       plugins: {
         legend: {
-          position: 'bottom',
-          labels: {
-            color: 'rgba(252, 228, 228, 0.9)',
-            font: { size: 15, family: 'Space Grotesk', weight: '700' },
-            padding: 20
-          }
-        },
+  position: 'bottom',
+  labels: {
+    color: 'rgba(252, 228, 228, 0.9)',
+    font: { size: 11, family: 'Space Grotesk', weight: '700' },
+    padding: 10,
+    boxWidth: 12,
+    boxHeight: 12
+  }
+},
         tooltip: {
           backgroundColor: 'rgba(17, 24, 39, 0.95)',
           titleColor: 'rgba(252, 228, 228, 0.95)',
