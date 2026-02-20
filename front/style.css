@@ -253,6 +253,19 @@ body {
   font-weight: 900;
 }
 
+.order-origin-tag {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  background: rgba(139, 92, 246, 0.15);
+  color: rgba(167, 139, 250, 1);
+  font-weight: 700;
+  font-size: 11px;
+}
+
 .empty-balloon {
   padding: 14px;
   border-radius: 12px;
