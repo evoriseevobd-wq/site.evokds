@@ -561,15 +561,35 @@ function openOrderModal(orderId) {
 
   if (modalId) modalId.textContent = `#${order.order_number || ""}`;
   if (modalCustomer) modalCustomer.textContent = order.client_name || "Cliente";
-  if (modalTime) modalTime.textContent = formatDateTime(order.created_at);
 
+  // Telefone + Horário na mesma linha
   const phone = normalizePhone(order.client_phone);
-  if (modalPhoneRow && modalPhone) {
-    const hasPhone = !!phone;
-    modalPhoneRow.style.display = hasPhone ? "" : "none";
-    modalPhone.textContent = hasPhone ? phone : "";
+  const modalPhoneEl = document.getElementById("modal-phone");
+  const modalTimeEl = document.getElementById("modal-time");
+  if (modalPhoneEl) modalPhoneEl.textContent = phone || "—";
+  if (modalTimeEl) modalTimeEl.textContent = formatDateTime(order.created_at);
+
+  // Pagamento + Valor na mesma linha
+  const paymentPriceRow = document.getElementById("modal-payment-price-row");
+  const modalPaymentEl = document.getElementById("modal-payment");
+  const modalTotalPriceEl = document.getElementById("modal-total-price");
+  const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
+
+  if (paymentPriceRow && modalPaymentEl && modalTotalPriceEl) {
+    const showPay = isDelivery && !!String(order.payment_method || "").trim();
+    paymentPriceRow.style.display = showPay ? "" : "none";
+    modalPaymentEl.textContent = showPay ? String(order.payment_method || "") : "";
+    modalTotalPriceEl.textContent = order.total_price ? formatCurrency(order.total_price) : "";
   }
 
+  // Endereço linha completa
+  if (modalAddressRow && modalAddress) {
+    const showAddress = isDelivery && !!String(order.address || "").trim();
+    modalAddressRow.style.display = showAddress ? "" : "none";
+    modalAddress.textContent = showAddress ? String(order.address || "") : "";
+  }
+
+  // Itens
   if (modalItems) {
     modalItems.innerHTML = "";
     const itens = Array.isArray(order.itens) ? order.itens : [];
@@ -578,28 +598,14 @@ function openOrderModal(orderId) {
       const name = it?.name || it?.nome || "Item";
       const qty = it?.qty || it?.quantidade || 1;
       const price = it?.price || it?.preco || 0;
-      li.textContent = qty > 1 
-        ? `${name} x${qty}${price > 0 ? ` - ${formatCurrency(price * qty)}` : ''}` 
-        : `${name}${price > 0 ? ` - ${formatCurrency(price)}` : ''}`;
+      li.textContent = qty > 1
+        ? `${name} x${qty}${price > 0 ? ` - ${formatCurrency(price * qty)}` : ""}`
+        : `${name}${price > 0 ? ` - ${formatCurrency(price)}` : ""}`;
       modalItems.appendChild(li);
     });
   }
 
   if (modalNotes) modalNotes.textContent = order.notes || "";
-
-  const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
-
-  if (modalAddressRow && modalAddress) {
-    const showAddress = isDelivery && !!String(order.address || "").trim();
-    modalAddressRow.style.display = showAddress ? "" : "none";
-    modalAddress.textContent = showAddress ? String(order.address || "") : "";
-  }
-
-  if (modalPaymentRow && modalPayment) {
-    const showPay = isDelivery && !!String(order.payment_method || "").trim();
-    modalPaymentRow.style.display = showPay ? "" : "none";
-    modalPayment.textContent = showPay ? String(order.payment_method || "") : "";
-  }
 
   modalPrevBtn?.classList.toggle("hidden", ["cancelado", "finalizado", "recebido"].includes(order._frontStatus));
   modalCancelBtn?.classList.toggle("hidden", ["cancelado", "finalizado"].includes(order._frontStatus));
@@ -607,15 +613,11 @@ function openOrderModal(orderId) {
   if (modalNextBtn) {
     const s = getFrontStatus(orderId);
     const nextLabel =
-      s === "recebido"
-        ? "Ir para Preparo"
-        : s === "preparo"
-        ? "Ir para Pronto"
-        : s === "pronto"
-        ? (isDelivery ? "Enviar para entrega" : "Finalizar pedido")
-        : s === "caminho"
-        ? "Finalizar"
-        : "OK";
+      s === "recebido" ? "Ir para Preparo"
+      : s === "preparo" ? "Ir para Pronto"
+      : s === "pronto" ? (isDelivery ? "Enviar para entrega" : "Finalizar pedido")
+      : s === "caminho" ? "Finalizar"
+      : "OK";
     modalNextBtn.textContent = nextLabel;
     modalNextBtn.classList.toggle("hidden", s === "finalizado" || s === "cancelado");
   }
