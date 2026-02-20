@@ -385,12 +385,12 @@ body {
 
 .modal-row-inline {
   display: flex;
-  align-items: center;
   gap: 8px;
   padding: 8px 10px;
   background: rgba(46, 8, 8, 0.35);
   border: 1px solid rgba(91, 28, 28, 0.55);
   border-radius: 14px;
+  align-items: center;
 }
 
 .modal-row-inline .muted {
