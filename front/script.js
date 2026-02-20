@@ -506,6 +506,19 @@ function renderBoard() {
   toggleNoOrdersBalloons();
 }
 
+function getOriginLabel(origin) {
+  const map = {
+    ia_whatsapp: "WhatsApp",
+    whatsapp: "WhatsApp",
+    ifood: "iFood",
+    aiqfome: "Aiqfome",
+    anota_ai: "Anota Aí",
+    anotaai: "Anota Aí",
+    balcao: "Balcão",
+  };
+  return map[String(origin).toLowerCase()] || origin;
+}
+
 function buildOrderCard(order) {
   const card = document.createElement("div");
   card.className = "order-card";
