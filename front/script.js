@@ -524,8 +524,9 @@ function buildOrderCard(order) {
       <div class="order-time">${formatTime(order.created_at)}</div>
       <div class="order-items">${itemsCount} item(ns)</div>
     </div>
-    ${isDelivery ? `<div class="order-delivery-tag">Delivery</div>` : ""}
-    ${paymentText ? `<div class="order-payment-tag">${escapeHtml(paymentText)}</div>` : ""}
+   ${isDelivery ? `<div class="order-delivery-tag">Delivery</div>` : ""}
+${paymentText ? `<div class="order-payment-tag">${escapeHtml(paymentText)}</div>` : ""}
+${order.origin ? `<div class="order-origin-tag">${getOriginLabel(order.origin)}</div>` : ""}
   `;
 
   card.addEventListener("click", () => openOrderModal(order.id));
