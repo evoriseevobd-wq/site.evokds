@@ -311,17 +311,30 @@
     <span id="modal-customer"></span>
   </div>
 
-  <div class="modal-row">
-    <span id="modal-phone"></span>
-    <span id="modal-time"></span>
+  <div style="display: flex; gap: 10px;">
+    <div class="modal-row" style="flex: 1;">
+      <span class="muted">Número</span>
+      <span id="modal-phone"></span>
+    </div>
+    <div class="modal-row" style="flex: 1;">
+      <span class="muted">Data</span>
+      <span id="modal-time"></span>
+    </div>
   </div>
 
-  <div class="modal-row" id="modal-payment-price-row" style="display:none;">
-    <span id="modal-payment"></span>
-    <span id="modal-total-price"></span>
+  <div id="modal-payment-price-row" style="display: none; gap: 10px; display: flex;">
+    <div class="modal-row" style="flex: 1;">
+      <span class="muted">Pagamento</span>
+      <span id="modal-payment"></span>
+    </div>
+    <div class="modal-row" style="flex: 1;">
+      <span class="muted">Valor</span>
+      <span id="modal-total-price"></span>
+    </div>
   </div>
 
   <div class="modal-row" id="modal-address-row" style="display:none;">
+    <span class="muted">Endereço</span>
     <span id="modal-address"></span>
   </div>
 
