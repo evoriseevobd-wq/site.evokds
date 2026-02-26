@@ -284,6 +284,36 @@
 
     </div>
 
+    <!-- 🏆 PRODUTOS + 🕐 PICO (lado a lado) -->
+<div class="results-charts-grid">
+  <div class="results-premium-chart-section">
+    <h3>🏆 Produtos Mais Vendidos</h3>
+    <div class="chart-container chart-container-large">
+      <canvas id="topProductsChart"></canvas>
+    </div>
+  </div>
+
+  <div class="results-premium-chart-section">
+    <h3>🕐 Pico de Vendas por Horário</h3>
+    <div class="chart-container chart-container-large">
+      <canvas id="peakHoursChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ⏱️ TEMPO MÉDIO POR ETAPA -->
+<div class="results-premium-chart-section chart-full-width">
+  <h3>⏱️ Tempo Médio por Etapa</h3>
+  <div class="chart-container chart-container-large">
+    <canvas id="timingChart"></canvas>
+  </div>
+  <div class="timing-metas-info">
+    <span class="meta-badge meta-ok">✅ Dentro da meta</span>
+    <span class="meta-badge meta-warn">🔴 Acima da meta</span>
+    <small class="muted">Metas: Confirmação 5min · Preparo 15min · Montagem 8min · Entrega 20min</small>
+  </div>
+</div>
+    
     <!-- STATUS OPERACIONAL (FULL WIDTH) -->
     <div class="results-premium-chart-section chart-full-width">
       <h3>⚡ Status Operacional</h3>
