@@ -1046,6 +1046,83 @@ const response = {
     return sendError(res, 500, "Erro ao rastrear pedido");
   }
 });
+
+// ONDE COLAR: server.js, após a rota de timeline, antes do app.get("/health")
+
+app.get("/api/v1/metrics/:restaurant_id/timing", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { period = "30d" } = req.query;
+
+    const exists = await restaurantExists(restaurant_id);
+    if (!exists) return sendError(res, 404, "Restaurante não encontrado");
+
+    const plan = await getRestaurantPlan(restaurant_id);
+    if (!canUseResults(plan)) return res.status(403).json({ error: "Plano insuficiente", upgrade_to: "advanced" });
+
+    // Calcula data inicial
+    const days = period === "all" ? 3650 : (parseInt(period) || 30);
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    // Busca pedidos finalizados com timestamps
+    const { data: orders, error } = await supabase
+      .from("orders")
+      .select("created_at, preparing_at, mounting_at, delivering_at, delivered_at, service_type")
+      .eq("restaurant_id", restaurant_id)
+      .eq("status", "finished")
+      .gte("created_at", startDate.toISOString())
+      .not("preparing_at", "is", null);
+
+    if (error) return sendError(res, 500, "Erro ao buscar pedidos");
+
+    const METAS = { confirmacao: 5, preparo: 15, montagem: 8, entrega: 20 };
+    const totals = { confirmacao: 0, preparo: 0, montagem: 0, entrega: 0 };
+    const counts = { confirmacao: 0, preparo: 0, montagem: 0, entrega: 0 };
+
+    const diffMin = (a, b) => {
+      if (!a || !b) return null;
+      const d = (new Date(b) - new Date(a)) / 60000;
+      return (d > 0 && d < 300) ? d : null;
+    };
+
+    // Calcula tempo de cada etapa por pedido
+    (orders || []).forEach(o => {
+      const delivery = (o.service_type || "").toLowerCase() === "delivery";
+      const d1 = diffMin(o.created_at, o.preparing_at);
+      const d2 = diffMin(o.preparing_at, o.mounting_at);
+      const d3 = diffMin(o.mounting_at, delivery ? o.delivering_at : o.delivered_at);
+      const d4 = delivery ? diffMin(o.delivering_at, o.delivered_at) : null;
+
+      if (d1) { totals.confirmacao += d1; counts.confirmacao++; }
+      if (d2) { totals.preparo     += d2; counts.preparo++;     }
+      if (d3) { totals.montagem    += d3; counts.montagem++;    }
+      if (d4) { totals.entrega     += d4; counts.entrega++;     }
+    });
+
+    // Médias por etapa
+    const medias = Object.fromEntries(
+      Object.keys(totals).map(k => [k, counts[k] > 0 ? parseFloat((totals[k] / counts[k]).toFixed(2)) : 0])
+    );
+
+    // Identifica gargalos (etapas acima da meta)
+    const gargalos = Object.keys(METAS)
+      .filter(k => medias[k] > METAS[k])
+      .map(k => ({ etapa: k, excesso: parseFloat((medias[k] - METAS[k]).toFixed(2)) }));
+
+    return res.json({
+      period,
+      total_analisados: orders?.length || 0,
+      medias,
+      metas: METAS,
+      gargalos
+    });
+
+  } catch (err) {
+    return sendError(res, 500, `Erro interno: ${err.message}`);
+  }
+});
+
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
