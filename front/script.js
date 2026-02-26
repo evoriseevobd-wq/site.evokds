@@ -1622,6 +1622,9 @@ function setupCardClickHandlers() {
     revenueCard.classList.add('active-metric');
   }
 }
+let timingChartInstance      = null;
+let topProductsChartInstance = null;
+let peakHoursChartInstance   = null;
 // ========================================
 // 📊 GRÁFICO 1: ORIGEM DOS PEDIDOS (Pizza)
 function renderOriginChart(data) {
