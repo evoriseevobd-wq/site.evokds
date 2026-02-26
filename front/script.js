@@ -2097,7 +2097,11 @@ function renderMetricsUI(data) {
   renderAllCharts(data);
   fetchAndRenderInsights(); // 🔥 ADICIONE ESTA LINHA
   console.log("✅ Métricas renderizadas com sucesso!");
+  fetchAndRenderTiming();
+  renderTopProductsChart(orders);
+  renderPeakHoursChart(orders);
   
+
   // Performance IA
   safeSetText("ia-orders", data.ia_performance?.orders || 0);
   safeSetText("ia-revenue", formatCurrency(data.ia_performance?.revenue || 0));
