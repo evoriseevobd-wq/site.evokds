@@ -2369,9 +2369,93 @@ function openItemModal(item = null) {
 
   document.body.appendChild(modal);
   document.getElementById("item-preco").addEventListener("input", function() { formatMoneyInput(this); });
+  setupFotoDropzone(item?.foto_url || "");
   document.getElementById("item-cancel").addEventListener("click", () => modal.remove());
   document.getElementById("item-save").addEventListener("click", () => salvarItem(item?.id));
   modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
+}
+
+function setupFotoDropzone(existingUrl = "") {
+  const dropzone = document.getElementById("foto-dropzone");
+  const fileInput = document.getElementById("foto-file-input");
+  const preview = document.getElementById("foto-preview");
+  const previewWrap = document.getElementById("foto-preview-wrap");
+  const placeholder = document.getElementById("foto-placeholder");
+  const hiddenInput = document.getElementById("item-foto");
+
+  if (existingUrl) {
+    preview.src = existingUrl;
+    previewWrap.style.display = "block";
+    placeholder.style.display = "none";
+  }
+
+  dropzone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropzone.style.borderColor = "rgba(249,115,115,0.9)";
+    dropzone.style.background = "rgba(249,115,115,0.1)";
+  });
+
+  dropzone.addEventListener("dragleave", () => {
+    dropzone.style.borderColor = "rgba(249,115,115,0.5)";
+    dropzone.style.background = "rgba(46,8,8,0.3)";
+  });
+
+  dropzone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropzone.style.borderColor = "rgba(249,115,115,0.5)";
+    dropzone.style.background = "rgba(46,8,8,0.3)";
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileUpload(file);
+  });
+
+  fileInput.addEventListener("change", () => {
+    const file = fileInput.files[0];
+    if (file) handleFileUpload(file);
+  });
+
+  async function handleFileUpload(file) {
+    if (!file.type.startsWith("image/")) {
+      alert("Selecione uma imagem válida.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Imagem muito grande. Máximo 5MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      preview.src = e.target.result;
+      previewWrap.style.display = "block";
+      placeholder.style.display = "none";
+    };
+    reader.readAsDataURL(file);
+
+    dropzone.style.opacity = "0.6";
+    dropzone.style.pointerEvents = "none";
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const resp = await fetch(`${API_BASE}/api/v1/upload-image`, {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await resp.json();
+      if (!resp.ok || !data.url) throw new Error(data.error || "Erro no upload");
+
+      hiddenInput.value = data.url;
+      console.log("✅ Imagem enviada:", data.url);
+    } catch (e) {
+      console.error("❌ Erro upload:", e);
+      alert("Erro ao enviar imagem: " + e.message);
+    } finally {
+      dropzone.style.opacity = "1";
+      dropzone.style.pointerEvents = "auto";
+    }
+  }
 }
 
 async function salvarItem(id = null) {
