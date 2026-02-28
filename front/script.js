@@ -517,7 +517,7 @@ function getOriginLabel(origin) {
     whatsapp: "WhatsApp",
     ifood: "iFood",
     aiqfome: "Aiqfome",
-    Autoatendimento: "Autoatendimento",
+    autoatendimento: "Autoatendimento",
     balcao: "Balcão",
   };
   return map[String(origin).toLowerCase()] || origin;
