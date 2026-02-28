@@ -2412,6 +2412,7 @@ function setupFotoDropzone(existingUrl = "") {
     const file = fileInput.files[0];
     if (file) handleFileUpload(file);
   });
+}
 
 function resizeImage(file, maxWidth, maxHeight) {
   return new Promise((resolve) => {
@@ -2442,6 +2443,35 @@ function resizeImage(file, maxWidth, maxHeight) {
 
     img.src = url;
   });
+}
+
+async function handleFileUpload(file) {
+  const preview = document.getElementById("foto-preview");
+  const previewWrap = document.getElementById("foto-preview-wrap");
+  const placeholder = document.getElementById("foto-placeholder");
+  const hiddenInput = document.getElementById("item-foto");
+
+  // Mostra preview local
+  const localUrl = URL.createObjectURL(file);
+  preview.src = localUrl;
+  previewWrap.style.display = "block";
+  placeholder.style.display = "none";
+
+  // Faz upload pro backend
+  const resized = await resizeImage(file, 800, 800);
+  const formData = new FormData();
+  formData.append("file", resized, file.name);
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/upload-image`, { method: "POST", body: formData });
+    const data = await resp.json();
+    if (data.url) {
+      hiddenInput.value = data.url;
+      preview.src = data.url;
+    }
+  } catch (e) {
+    console.error("Erro no upload:", e);
+  }
 }
 
 async function salvarItem(id = null) {
