@@ -324,6 +324,39 @@
 
   </main>
 
+  <!-- AUTOATENDIMENTO VIEW -->
+<main class="crm-view hidden" id="autoatendimento-view">
+  <div class="crm-header">
+    <div class="crm-title">📱 Autoatendimento</div>
+    <button class="ghost-button" type="button" id="autoatendimento-back-btn">Voltar</button>
+  </div>
+
+  <div class="crm-content" id="autoatendimento-content">
+    <!-- Tabs internas -->
+    <div style="display:flex; gap:12px; margin-bottom:24px;">
+      <button class="period-btn active" id="tab-cardapio">🍽️ Cardápio</button>
+      <button class="period-btn" id="tab-mesas">🪑 Mesas & QR Codes</button>
+    </div>
+
+    <!-- ABA CARDÁPIO -->
+    <div id="painel-cardapio">
+      <button class="primary-button" id="btn-novo-item" style="margin-bottom:20px;">+ Novo Item</button>
+      <div id="lista-cardapio"></div>
+    </div>
+
+    <!-- ABA MESAS -->
+    <div id="painel-mesas" class="hidden">
+      <div style="display:flex; gap:12px; align-items:center; margin-bottom:20px;">
+        <label style="color:rgba(252,228,228,0.8); font-size:14px;">Quantidade de mesas:</label>
+        <input type="number" id="input-mesas" min="1" max="100" value="10"
+          style="width:80px; padding:8px 12px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
+        <button class="primary-button" id="btn-gerar-qr">Gerar QR Codes</button>
+      </div>
+      <div id="lista-qrcodes" style="display:flex; flex-wrap:wrap; gap:16px;"></div>
+    </div>
+  </div>
+</main>
+
 <!-- MODAL DE PEDIDO -->
 <div class="modal-backdrop" id="modal">
   <div class="modal">
