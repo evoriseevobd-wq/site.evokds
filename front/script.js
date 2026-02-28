@@ -680,21 +680,24 @@ function showPaymentModal(orderId) {
   const existing = document.getElementById("payment-modal");
   if (existing) existing.remove();
 
+  const o = orders.find((x) => x.id === orderId); // 🔥 busca o pedido aqui
+  if (!o) return;
+
   const modal = document.createElement("div");
   modal.id = "payment-modal";
   modal.className = "modal-backdrop open";
 
-modal.innerHTML = `
+  modal.innerHTML = `
     <div class="modal confirm-modal">
       <div class="modal-header">
         <h3>💳 Forma de Pagamento</h3>
       </div>
       <div class="modal-body">
-       <div style="background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px; padding:12px 14px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
-  <span style="color:rgba(252,228,228,0.7); font-weight:700;">Valor Total</span>
-  <span style="color:rgba(252,228,228,1); font-size:18px; font-weight:900;">${formatCurrency(o.total_price || 0)}</span>
-</div>
-        <p style="color: rgba(252,228,228,0.8); margin-bottom: 12px;">Como o cliente vai pagar?</p>
+        <div style="background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px; padding:12px 14px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+          <span style="color:rgba(252,228,228,0.7); font-weight:700;">Valor Total</span>
+          <span style="color:rgba(252,228,228,1); font-size:18px; font-weight:900;">${formatCurrency(o.total_price || 0)}</span>
+        </div>
+        <p style="color:rgba(252,228,228,0.8); margin-bottom:12px;">Como o cliente vai pagar?</p>
         <select id="payment-select" style="width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; font-family:inherit; outline:none;">
           <option value="">Selecione...</option>
           <option value="pix">PIX</option>
@@ -712,11 +715,6 @@ modal.innerHTML = `
 
   document.body.appendChild(modal);
 
-  // Máscara de dinheiro
-  document.getElementById("payment-value").addEventListener("input", function() {
-    formatMoneyInput(this);
-  });
-
   document.getElementById("payment-cancel").addEventListener("click", () => modal.remove());
 
   document.getElementById("payment-confirm").addEventListener("click", async () => {
@@ -732,7 +730,6 @@ modal.innerHTML = `
     modal.remove();
     updateOrderStatus(orderId, "finalizado");
   });
-
 
   modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
 }
