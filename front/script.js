@@ -2440,32 +2440,115 @@ function resizeImage(file, maxWidth, maxHeight) {
   });
 }
 
+// ── CROP ──
+let cropperInstance = null;
+let cropResolve = null;
+
+function openCropModal(file) {
+  return new Promise((resolve) => {
+    cropResolve = resolve;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = document.getElementById('crop-image');
+      img.src = e.target.result;
+
+      document.getElementById('crop-modal-backdrop').classList.remove('hidden');
+
+      // Destrói instância anterior se houver
+      if (cropperInstance) {
+        cropperInstance.destroy();
+        cropperInstance = null;
+      }
+
+      // Espera o img carregar antes de iniciar o Cropper
+      img.onload = () => {
+        cropperInstance = new Cropper(img, {
+          aspectRatio: 1,         // quadrado — igual Instagram
+          viewMode: 1,
+          dragMode: 'move',
+          autoCropArea: 0.9,
+          restore: false,
+          guides: false,
+          center: false,
+          highlight: false,
+          cropBoxMovable: false,
+          cropBoxResizable: false,
+          toggleDragModeOnDblclick: false,
+        });
+      };
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function cancelCrop() {
+  document.getElementById('crop-modal-backdrop').classList.add('hidden');
+  if (cropperInstance) { cropperInstance.destroy(); cropperInstance = null; }
+  if (cropResolve) { cropResolve(null); cropResolve = null; }
+}
+
+function confirmCrop() {
+  if (!cropperInstance || !cropResolve) return;
+
+  const canvas = cropperInstance.getCroppedCanvas({ width: 800, height: 800 });
+
+  canvas.toBlob((blob) => {
+    document.getElementById('crop-modal-backdrop').classList.add('hidden');
+    cropperInstance.destroy();
+    cropperInstance = null;
+
+    const resolve = cropResolve;
+    cropResolve = null;
+    resolve(blob); // devolve o blob já recortado
+  }, 'image/jpeg', 0.9);
+}
+
 async function handleFileUpload(file) {
-  const preview = document.getElementById("foto-preview");
-  const previewWrap = document.getElementById("foto-preview-wrap");
-  const placeholder = document.getElementById("foto-placeholder");
-  const hiddenInput = document.getElementById("item-foto");
+  const previewEl = document.getElementById('foto-preview');
+  const inputUrl  = document.getElementById('item-foto-url');
 
-  // Mostra preview local
+  // Mostra preview local imediatamente
   const localUrl = URL.createObjectURL(file);
-  preview.src = localUrl;
-  previewWrap.style.display = "block";
-  placeholder.style.display = "none";
+  if (previewEl) {
+    previewEl.src = localUrl;
+    previewEl.style.display = 'block';
+  }
 
-  // Faz upload pro backend
-  const resized = await resizeImage(file, 800, 800);
-  const formData = new FormData();
-  formData.append("file", resized, file.name);
+  // Abre o modal de crop e espera a pessoa confirmar
+  const croppedBlob = await openCropModal(file);
 
+  if (!croppedBlob) {
+    // Pessoa cancelou — limpa preview
+    if (previewEl) { previewEl.src = ''; previewEl.style.display = 'none'; }
+    if (inputUrl)  { inputUrl.value = ''; }
+    return;
+  }
+
+  // Atualiza preview com a imagem recortada
+  const croppedUrl = URL.createObjectURL(croppedBlob);
+  if (previewEl) { previewEl.src = croppedUrl; }
+
+  // Faz o upload
   try {
-    const resp = await fetch(`${API_BASE}/api/v1/upload-image`, { method: "POST", body: formData });
+    const formData = new FormData();
+    formData.append('image', croppedBlob, 'foto.jpg');
+
+    const resp = await fetch(`${API_BASE}/api/v1/upload-image`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    });
+
     const data = await resp.json();
-    if (data.url) {
-      hiddenInput.value = data.url;
-      preview.src = data.url;
-    }
+    if (!resp.ok) throw new Error(data.error || 'Erro no upload');
+
+    if (inputUrl) { inputUrl.value = data.url; }
+    if (previewEl) { previewEl.src = data.url; }
+
   } catch (e) {
-    console.error("Erro no upload:", e);
+    alert('Erro ao enviar imagem: ' + e.message);
+    if (previewEl) { previewEl.src = ''; previewEl.style.display = 'none'; }
+    if (inputUrl)  { inputUrl.value = ''; }
   }
 }
 
