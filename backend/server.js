@@ -1123,6 +1123,51 @@ app.get("/api/v1/metrics/:restaurant_id/timing", async (req, res) => {
   }
 });
 
+// GET - Lista cardápio do restaurante
+app.get("/api/v1/cardapio/:restaurant_id", async (req, res) => {
+  const { restaurant_id } = req.params;
+  const { data, error } = await supabase
+    .from("cardapio")
+    .select("*")
+    .eq("restaurant_id", restaurant_id)
+    .order("categoria").order("ordem");
+  if (error) return sendError(res, 500, "Erro ao buscar cardápio");
+  return res.json(data);
+});
+
+// POST - Cria item no cardápio
+app.post("/api/v1/cardapio", async (req, res) => {
+  const { restaurant_id, nome, descricao, preco, categoria, foto_url, ordem } = req.body;
+  if (!restaurant_id || !nome || !preco) return sendError(res, 400, "Campos obrigatórios: restaurant_id, nome, preco");
+  const { data, error } = await supabase
+    .from("cardapio")
+    .insert([{ restaurant_id, nome, descricao, preco, categoria: categoria || "Geral", foto_url, ordem: ordem || 0 }])
+    .select().single();
+  if (error) return sendError(res, 500, "Erro ao criar item");
+  return res.status(201).json(data);
+});
+
+// PATCH - Edita item do cardápio
+app.patch("/api/v1/cardapio/:id", async (req, res) => {
+  const { id } = req.params;
+  const fields = req.body;
+  const { data, error } = await supabase
+    .from("cardapio")
+    .update(fields)
+    .eq("id", id)
+    .select().single();
+  if (error) return sendError(res, 500, "Erro ao atualizar item");
+  return res.json(data);
+});
+
+// DELETE - Remove item do cardápio
+app.delete("/api/v1/cardapio/:id", async (req, res) => {
+  const { id } = req.params;
+  const { error } = await supabase.from("cardapio").delete().eq("id", id);
+  if (error) return sendError(res, 500, "Erro ao deletar item");
+  return res.json({ success: true });
+});
+
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
