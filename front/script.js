@@ -2534,10 +2534,9 @@ async function handleFileUpload(file) {
     formData.append('image', croppedBlob, 'foto.jpg');
 
     const resp = await fetch(`${API_BASE}/api/v1/upload-image`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
-      body: formData
-    });
+  method: 'POST',
+  body: formData
+});
 
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || 'Erro no upload');
