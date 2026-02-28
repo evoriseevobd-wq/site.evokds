@@ -1707,7 +1707,7 @@ function renderOriginChart(data) {
 const balcaoOrders = data.orders_by_origin?.balcao || 0;
 const ifoodOrders = data.orders_by_origin?.ifood || 0;
 const aiqfomeOrders = data.orders_by_origin?.aiqfome || 0;
-const anotaaiOrders = data.orders_by_origin?.anota_ai || 0;
+const autoatendimentoOrders = data.orders_by_origin?.autoatendimento || 0;
 
   if (originChartInstance) {
     originChartInstance.destroy();
@@ -1716,9 +1716,9 @@ const anotaaiOrders = data.orders_by_origin?.anota_ai || 0;
   originChartInstance = new Chart(canvas, {
     type: 'doughnut',
     data: {
-    labels: [' IA WhatsApp', ' iFood', ' Aiqfome', ' Anota Aí', ' Balcão'],
+    labels: [' IA WhatsApp', ' iFood', ' Aiqfome', ' Autoatendimento', ' Balcão'],
 datasets: [{
-  data: [iaOrders, ifoodOrders, aiqfomeOrders, anotaaiOrders, balcaoOrders],
+  data: [iaOrders, ifoodOrders, aiqfomeOrders, autoatendimentoOrders, balcaoOrders],
   backgroundColor: [
     'rgba(34, 197, 94, 0.9)',    // Verde - IA WhatsApp
     'rgba(239, 68, 68, 0.9)',    // Vermelho - iFood
