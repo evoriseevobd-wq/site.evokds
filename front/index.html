@@ -72,6 +72,107 @@
   #drawer-backdrop.open {
     display: block !important;
   }
+    /* ── CROP MODAL ── */
+.crop-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.crop-modal-backdrop.hidden { display: none; }
+
+.crop-modal-box {
+  background: #1a1814;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 480px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.crop-modal-header {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.crop-modal-title {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.crop-modal-close {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  font-size: 22px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+
+.crop-modal-close:hover { color: #fff; }
+
+.crop-img-wrap {
+  width: 100%;
+  height: 320px;
+  background: #000;
+  position: relative;
+  overflow: hidden;
+}
+
+.crop-img-wrap img {
+  display: block;
+  max-width: 100%;
+}
+
+.crop-modal-footer {
+  padding: 16px 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.crop-btn-cancel {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(255,255,255,0.2);
+  background: transparent;
+  color: rgba(255,255,255,0.7);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.crop-btn-cancel:hover {
+  border-color: rgba(255,255,255,0.5);
+  color: #fff;
+}
+
+.crop-btn-confirm {
+  flex: 2;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: #e53935;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.crop-btn-confirm:hover { background: #c62828; }
   </style>
 </head>
 <body>
@@ -580,5 +681,21 @@
 
   <!-- Seu JavaScript -->
   <script src="script.js"></script>
+<!-- CROP MODAL -->
+<div class="crop-modal-backdrop hidden" id="crop-modal-backdrop">
+  <div class="crop-modal-box">
+    <div class="crop-modal-header">
+      <span class="crop-modal-title">✂️ Recortar imagem</span>
+      <button class="crop-modal-close" onclick="cancelCrop()">×</button>
+    </div>
+    <div class="crop-img-wrap">
+      <img id="crop-image" src="" alt="crop" />
+    </div>
+    <div class="crop-modal-footer">
+      <button class="crop-btn-cancel" onclick="cancelCrop()">Cancelar</button>
+      <button class="crop-btn-confirm" onclick="confirmCrop()">Usar esta imagem</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
