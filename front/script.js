@@ -2505,7 +2505,7 @@ function confirmCrop() {
 
 async function handleFileUpload(file) {
   const previewEl = document.getElementById('foto-preview');
-  const inputUrl  = document.getElementById('item-foto-url');
+  const inputUrl  = document.getElementById('item-foto'); // ✅ era 'item-foto-url'
 
   // Mostra preview local imediatamente
   const localUrl = URL.createObjectURL(file);
@@ -2518,7 +2518,6 @@ async function handleFileUpload(file) {
   const croppedBlob = await openCropModal(file);
 
   if (!croppedBlob) {
-    // Pessoa cancelou — limpa preview
     if (previewEl) { previewEl.src = ''; previewEl.style.display = 'none'; }
     if (inputUrl)  { inputUrl.value = ''; }
     return;
@@ -2531,12 +2530,12 @@ async function handleFileUpload(file) {
   // Faz o upload
   try {
     const formData = new FormData();
-    formData.append('image', croppedBlob, 'foto.jpg');
+    formData.append('file', croppedBlob, 'foto.jpg'); // ✅ era 'image'
 
     const resp = await fetch(`${API_BASE}/api/v1/upload-image`, {
-  method: 'POST',
-  body: formData
-});
+      method: 'POST',
+      body: formData // ✅ sem header Authorization
+    });
 
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || 'Erro no upload');
