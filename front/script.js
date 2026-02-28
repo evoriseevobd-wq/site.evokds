@@ -2772,20 +2772,27 @@ async function salvarItem(id = null) {
   const precoRaw = document.getElementById("item-preco").value;
   const preco = parseFloat(precoRaw.replace(/\./g, "").replace(",", ".")) || 0;
   const categoria = document.getElementById("item-categoria").value.trim() || "Geral";
-const foto_url = document.getElementById("item-foto").value.trim() || null;
-  
+
+  const fotos = [0,1,2]
+    .map(i => document.getElementById(`foto-url-${i}`)?.value?.trim() || "")
+    .filter(url => url !== "");
+
+  const foto_url = fotos.length === 0 ? null :
+                   fotos.length === 1 ? fotos[0] :
+                   JSON.stringify(fotos);
+
   if (!nome || !preco) { alert("Nome e preço são obrigatórios."); return; }
 
   try {
     if (id) {
       await fetch(`${API_BASE}/api/v1/cardapio/${id}`, {
-  method: "PATCH", headers: buildHeaders(),
-  body: JSON.stringify({ nome, descricao, preco, categoria, foto_url })
-});
+        method: "PATCH", headers: buildHeaders(),
+        body: JSON.stringify({ nome, descricao, preco, categoria, foto_url })
+      });
     } else {
       await fetch(`${API_BASE}/api/v1/cardapio`, {
         method: "POST", headers: buildHeaders(),
-        body: JSON.stringify({ restaurant_id: rid, nome, descricao, preco, categoria })
+        body: JSON.stringify({ restaurant_id: rid, nome, descricao, preco, categoria, foto_url })
       });
     }
     document.getElementById("item-modal")?.remove();
