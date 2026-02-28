@@ -652,22 +652,80 @@ function getFrontStatus(orderId) {
 function advanceStatus(orderId) {
   const o = orders.find((x) => x.id === orderId);
   if (!o) return;
-  
+
   const s = getFrontStatus(orderId);
   const isDelivery = String(o.service_type || "").toLowerCase() === "delivery";
-  
-  const seq = isDelivery 
+
+  const seq = isDelivery
     ? ["recebido", "preparo", "pronto", "caminho", "finalizado"]
     : ["recebido", "preparo", "pronto", "finalizado"];
-  
+
   const i = seq.indexOf(s);
   if (i === -1 || i === seq.length - 1) return;
-  
-  // ✅ Atualiza o status
-  updateOrderStatus(orderId, seq[i + 1]);
-  
-  // ✅ FECHA O MODAL
+
+  const proximoStatus = seq[i + 1];
+
+  // Presencial indo finalizar → pede pagamento antes
+  if (!isDelivery && proximoStatus === "finalizado" && !o.payment_method) {
+    closeOrderModal();
+    showPaymentModal(orderId);
+    return;
+  }
+
+  updateOrderStatus(orderId, proximoStatus);
   closeOrderModal();
+}
+
+function showPaymentModal(orderId) {
+  const existing = document.getElementById("payment-modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "payment-modal";
+  modal.className = "modal-backdrop open";
+
+  modal.innerHTML = `
+    <div class="modal confirm-modal">
+      <div class="modal-header">
+        <h3>💳 Forma de Pagamento</h3>
+      </div>
+      <div class="modal-body">
+        <p style="color: rgba(252,228,228,0.8); margin-bottom: 16px;">Como o cliente vai pagar?</p>
+        <select id="payment-select" style="width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; font-family:inherit; outline:none;">
+          <option value="">Selecione...</option>
+          <option value="pix">PIX</option>
+          <option value="credito">Cartão de crédito</option>
+          <option value="debito">Cartão de débito</option>
+          <option value="dinheiro">Dinheiro</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="ghost-button" id="payment-cancel">Cancelar</button>
+        <button class="primary-button" id="payment-confirm">Finalizar Pedido</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  document.getElementById("payment-cancel").addEventListener("click", () => modal.remove());
+
+  document.getElementById("payment-confirm").addEventListener("click", async () => {
+    const metodo = document.getElementById("payment-select").value;
+    if (!metodo) { alert("Selecione o método de pagamento."); return; }
+
+    // Salva o método e finaliza
+    await fetch(`${API_BASE}/api/v1/pedidos`, {
+      method: "POST",
+      headers: buildHeaders(),
+      body: JSON.stringify({ order_id: orderId, payment_method: metodo, restaurant_id: getRestaurantId(), client_name: "x" })
+    });
+
+    modal.remove();
+    updateOrderStatus(orderId, "finalizado");
+  });
+
+  modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
 }
 
 function regressStatus(orderId) {
