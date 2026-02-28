@@ -684,13 +684,18 @@ function showPaymentModal(orderId) {
   modal.id = "payment-modal";
   modal.className = "modal-backdrop open";
 
-  modal.innerHTML = `
+modal.innerHTML = `
     <div class="modal confirm-modal">
       <div class="modal-header">
         <h3>💳 Forma de Pagamento</h3>
       </div>
       <div class="modal-body">
-        <p style="color: rgba(252,228,228,0.8); margin-bottom: 16px;">Como o cliente vai pagar?</p>
+        <div style="display:flex; align-items:center; gap:8px; background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px; padding:0 14px; margin-bottom:12px;">
+          <span style="color:rgba(252,228,228,0.7); font-weight:700;">R$</span>
+          <input type="text" id="payment-value" placeholder="0,00" inputmode="decimal"
+            style="flex:1; border:none; background:transparent; padding:12px 0; color:rgba(252,228,228,1); outline:none; font-size:16px; font-weight:700; font-family:inherit;" />
+        </div>
+        <p style="color: rgba(252,228,228,0.8); margin-bottom: 12px;">Como o cliente vai pagar?</p>
         <select id="payment-select" style="width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; font-family:inherit; outline:none;">
           <option value="">Selecione...</option>
           <option value="pix">PIX</option>
@@ -708,17 +713,24 @@ function showPaymentModal(orderId) {
 
   document.body.appendChild(modal);
 
+  // Máscara de dinheiro
+  document.getElementById("payment-value").addEventListener("input", function() {
+    formatMoneyInput(this);
+  });
+
   document.getElementById("payment-cancel").addEventListener("click", () => modal.remove());
 
   document.getElementById("payment-confirm").addEventListener("click", async () => {
     const metodo = document.getElementById("payment-select").value;
+    const valorRaw = document.getElementById("payment-value").value || "0";
+    const valor = parseFloat(valorRaw.replace(/\./g, "").replace(",", ".")) || 0;
+
     if (!metodo) { alert("Selecione o método de pagamento."); return; }
 
-    // Salva o método e finaliza
     await fetch(`${API_BASE}/api/v1/pedidos`, {
       method: "POST",
       headers: buildHeaders(),
-      body: JSON.stringify({ order_id: orderId, payment_method: metodo, restaurant_id: getRestaurantId(), client_name: "x" })
+      body: JSON.stringify({ order_id: orderId, payment_method: metodo, total_price: valor, restaurant_id: getRestaurantId(), client_name: "x" })
     });
 
     modal.remove();
