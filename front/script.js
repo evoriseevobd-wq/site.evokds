@@ -2334,9 +2334,30 @@ function openItemModal(item = null) {
           <input id="item-categoria" value="${item ? escapeHtml(item.categoria || "") : ""}" placeholder="Ex: Lanches, Bebidas..."
             style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
         </label>
-        <label style="color:rgba(252,228,228,0.8); font-size:13px;">Foto (URL opcional)
-  <input id="item-foto" value="${item ? escapeHtml(item.foto_url || "") : ""}" placeholder="https://..."
-    style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
+       <label style="color:rgba(252,228,228,0.8); font-size:13px;">Foto do Item
+  <div id="foto-dropzone" style="
+    margin-top:8px; border:2px dashed rgba(249,115,115,0.5);
+    border-radius:12px; padding:24px; text-align:center;
+    cursor:pointer; transition:all 0.2s ease;
+    background:rgba(46,8,8,0.3); position:relative;
+  ">
+    <div id="foto-preview-wrap" style="display:none; margin-bottom:12px;">
+      <img id="foto-preview" style="max-height:120px; border-radius:10px; object-fit:cover;" />
+    </div>
+    <div id="foto-placeholder">
+      <div style="font-size:32px; margin-bottom:8px;">🖼️</div>
+      <div style="color:rgba(252,228,228,0.7); font-size:13px; font-weight:700;">
+        Arraste uma imagem ou clique para selecionar
+      </div>
+      <div style="color:rgba(252,228,228,0.4); font-size:11px; margin-top:4px;">
+        JPG, PNG, WEBP — máx. 5MB
+      </div>
+    </div>
+    <input type="file" id="foto-file-input" accept="image/*" style="
+      position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%;
+    " />
+  </div>
+  <input type="hidden" id="item-foto" value="${item ? escapeHtml(item.foto_url || '') : ''}" />
 </label>
       </div>
       <div class="modal-actions">
