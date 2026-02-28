@@ -2413,49 +2413,35 @@ function setupFotoDropzone(existingUrl = "") {
     if (file) handleFileUpload(file);
   });
 
-  async function handleFileUpload(file) {
-    if (!file.type.startsWith("image/")) {
-      alert("Selecione uma imagem válida.");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      alert("Imagem muito grande. Máximo 5MB.");
-      return;
-    }
+function resizeImage(file, maxWidth, maxHeight) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      preview.src = e.target.result;
-      previewWrap.style.display = "block";
-      placeholder.style.display = "none";
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+
+      let { width, height } = img;
+
+      // Mantém proporção
+      if (width > maxWidth || height > maxHeight) {
+        const ratio = Math.min(maxWidth / width, maxHeight / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.85);
     };
-    reader.readAsDataURL(file);
 
-    dropzone.style.opacity = "0.6";
-    dropzone.style.pointerEvents = "none";
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const resp = await fetch(`${API_BASE}/api/v1/upload-image`, {
-        method: "POST",
-        body: formData
-      });
-
-      const data = await resp.json();
-      if (!resp.ok || !data.url) throw new Error(data.error || "Erro no upload");
-
-      hiddenInput.value = data.url;
-      console.log("✅ Imagem enviada:", data.url);
-    } catch (e) {
-      console.error("❌ Erro upload:", e);
-      alert("Erro ao enviar imagem: " + e.message);
-    } finally {
-      dropzone.style.opacity = "1";
-      dropzone.style.pointerEvents = "auto";
-    }
-  }
+    img.src = url;
+  });
 }
 
 async function salvarItem(id = null) {
