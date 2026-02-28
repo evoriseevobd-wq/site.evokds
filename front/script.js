@@ -2334,6 +2334,10 @@ function openItemModal(item = null) {
           <input id="item-categoria" value="${item ? escapeHtml(item.categoria || "") : ""}" placeholder="Ex: Lanches, Bebidas..."
             style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
         </label>
+        <label style="color:rgba(252,228,228,0.8); font-size:13px;">Foto (URL opcional)
+  <input id="item-foto" value="${item ? escapeHtml(item.foto_url || "") : ""}" placeholder="https://..."
+    style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
+</label>
       </div>
       <div class="modal-actions">
         <button class="ghost-button" id="item-cancel">Cancelar</button>
@@ -2356,7 +2360,8 @@ async function salvarItem(id = null) {
   const precoRaw = document.getElementById("item-preco").value;
   const preco = parseFloat(precoRaw.replace(/\./g, "").replace(",", ".")) || 0;
   const categoria = document.getElementById("item-categoria").value.trim() || "Geral";
-
+const foto_url = document.getElementById("item-foto").value.trim() || null;
+  
   if (!nome || !preco) { alert("Nome e preço são obrigatórios."); return; }
 
   try {
