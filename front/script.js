@@ -350,7 +350,6 @@ function changeView(v) {
   tabFinalizados?.classList.toggle("active", v === "finalizados");
   tabCancelados?.classList.toggle("active", v === "cancelados");
   tabEntregas?.classList.toggle("active", v === "entregas");
-
   renderBoard();
 }
 
@@ -358,6 +357,7 @@ function showBoard() {
   currentView = "ativos";
   crmView?.classList.add("hidden");
   resultsView?.classList.add("hidden");
+  document.getElementById("autoatendimento-view")?.classList.add("hidden");
   board?.classList.remove("hidden");
   showTabsBar();
   closeDrawer();
@@ -371,6 +371,7 @@ function showCRM() {
   }
   board?.classList.add("hidden");
   resultsView?.classList.add("hidden");
+  document.getElementById("autoatendimento-view")?.classList.add("hidden");
   crmView?.classList.remove("hidden");
   hideTabsBar();
   closeDrawer();
@@ -384,11 +385,11 @@ function showResults() {
   }
   board?.classList.add("hidden");
   crmView?.classList.add("hidden");
+  document.getElementById("autoatendimento-view")?.classList.add("hidden");
   resultsView?.classList.remove("hidden");
   hideTabsBar();
   closeDrawer();
   
-  // ✅ Configura os botões de período (só na primeira vez)
   if (!resultsState.uiReady) {
     setupPeriodButtons();
     resultsState.uiReady = true;
@@ -407,19 +408,13 @@ function showAutoatendimento() {
   initAutoatendimento();
 }
 
-// ✅ ADICIONE esta função NOVA aqui (antes de "CORE LOGIC"):
 function setupPeriodButtons() {
   const periodButtons = document.querySelectorAll('.period-btn');
   
   periodButtons.forEach(btn => {
     btn.addEventListener('click', () => {
-      // Remove active de todos
       periodButtons.forEach(b => b.classList.remove('active'));
-      
-      // Adiciona active no clicado
       btn.classList.add('active');
-      
-      // Atualiza o período e busca novos dados
       resultsState.period = btn.dataset.period;
       fetchAndRenderMetrics();
     });
