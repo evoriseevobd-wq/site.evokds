@@ -1168,6 +1168,37 @@ app.delete("/api/v1/cardapio/:id", async (req, res) => {
   return res.json({ success: true });
 });
 
+const upload = multer({ 
+  storage: multer.memoryStorage(), 
+  limits: { fileSize: 5 * 1024 * 1024 } 
+});
+
+app.post("/api/v1/upload-image", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) return sendError(res, 400, "Nenhum arquivo enviado");
+
+    const ext = req.file.originalname.split(".").pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+    const { data, error } = await supabase.storage
+      .from("cardapio-images")
+      .upload(fileName, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: false
+      });
+
+    if (error) return sendError(res, 500, "Erro ao fazer upload: " + error.message);
+
+    const { data: urlData } = supabase.storage
+      .from("cardapio-images")
+      .getPublicUrl(fileName);
+
+    return res.json({ success: true, url: urlData.publicUrl });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno no upload");
+  }
+});
+
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
