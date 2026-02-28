@@ -590,7 +590,7 @@ function openOrderModal(orderId) {
   const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
 
   if (paymentPriceRow && modalPaymentEl && modalTotalPriceEl) {
-    const showPay = isDelivery && !!String(order.payment_method || "").trim();
+    const showPay = && !!String(order.payment_method || "").trim();
     paymentPriceRow.style.display = showPay ? "" : "none";
     modalPaymentEl.textContent = showPay ? String(order.payment_method || "") : "";
     modalTotalPriceEl.textContent = order.total_price ? formatCurrency(order.total_price) : "";
