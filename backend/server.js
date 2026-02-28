@@ -1200,6 +1200,17 @@ app.post("/api/v1/upload-image", upload.single("file"), async (req, res) => {
   }
 });
 
+app.get("/api/v1/dominio/:dominio", async (req, res) => {
+  const { dominio } = req.params;
+  const { data, error } = await supabase
+    .from("restaurants")
+    .select("id")
+    .eq("dominio", dominio)
+    .single();
+  if (error || !data) return sendError(res, 404, "Domínio não encontrado");
+  return res.json({ restaurant_id: data.id });
+});
+
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
