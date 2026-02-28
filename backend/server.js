@@ -154,7 +154,7 @@ orders_by_origin: {
   balcao: 0,
   autoatendimento: 0,
   outros: 0
-}
+},
   
       orders_by_status: {
         pending: 0,
