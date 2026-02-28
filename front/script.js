@@ -2312,7 +2312,7 @@ function openItemModal(item = null) {
       <div class="modal-header">
         <h3>${item ? "✏️ Editar Item" : "➕ Novo Item"}</h3>
       </div>
-      <div class="modal-body" style="display:flex; flex-direction:column; gap:12px;">
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:12px; max-height:70vh; overflow-y:auto;">
         <label style="color:rgba(252,228,228,0.8); font-size:13px;">Nome *
           <input id="item-nome" value="${item ? escapeHtml(item.nome) : ""}" placeholder="Ex: X-Burguer"
             style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
@@ -2329,31 +2329,40 @@ function openItemModal(item = null) {
           <input id="item-categoria" value="${item ? escapeHtml(item.categoria || "") : ""}" placeholder="Ex: Lanches, Bebidas..."
             style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
         </label>
-       <label style="color:rgba(252,228,228,0.8); font-size:13px;">Foto do Item
-  <div id="foto-dropzone" style="
-    margin-top:8px; border:2px dashed rgba(249,115,115,0.5);
-    border-radius:12px; padding:24px; text-align:center;
-    cursor:pointer; transition:all 0.2s ease;
-    background:rgba(46,8,8,0.3); position:relative;
-  ">
-    <div id="foto-preview-wrap" style="display:none; margin-bottom:12px;">
-      <img id="foto-preview" style="max-height:120px; border-radius:10px; object-fit:cover;" />
-    </div>
-    <div id="foto-placeholder">
-      <div style="font-size:32px; margin-bottom:8px;">🖼️</div>
-      <div style="color:rgba(252,228,228,0.7); font-size:13px; font-weight:700;">
-        Arraste uma imagem ou clique para selecionar
-      </div>
-      <div style="color:rgba(252,228,228,0.4); font-size:11px; margin-top:4px;">
-        JPG, PNG, WEBP — máx. 5MB
-      </div>
-    </div>
-    <input type="file" id="foto-file-input" accept="image/*" style="
-      position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%;
-    " />
-  </div>
-  <input type="hidden" id="item-foto" value="${item ? escapeHtml(item.foto_url || '') : ''}" />
-</label>
+
+        <label style="color:rgba(252,228,228,0.8); font-size:13px;">Fotos do Item (até 3)
+          <div style="display:flex; gap:10px; margin-top:8px;">
+            ${[0,1,2].map(i => {
+              const url = getFotoUrl(item, i);
+              return `
+              <div style="flex:1; position:relative;">
+                <div id="dropzone-${i}" style="
+                  border:2px dashed rgba(249,115,115,0.5);
+                  border-radius:12px; padding:12px; text-align:center;
+                  cursor:pointer; background:rgba(46,8,8,0.3); position:relative;
+                  min-height:90px; display:flex; flex-direction:column;
+                  align-items:center; justify-content:center; gap:6px;
+                ">
+                  ${url ? `
+                    <img src="${url}" style="width:100%; height:70px; object-fit:cover; border-radius:8px;" />
+                    <button type="button" onclick="removerFoto(${i})" style="
+                      position:absolute; top:4px; right:4px; width:20px; height:20px;
+                      border-radius:50%; border:none; background:rgba(239,68,68,0.9);
+                      color:white; font-size:11px; cursor:pointer; line-height:1;
+                    ">×</button>
+                  ` : `
+                    <div style="font-size:22px;">📷</div>
+                    <div style="color:rgba(252,228,228,0.4); font-size:10px;">Foto ${i+1}</div>
+                  `}
+                  <input type="file" id="file-${i}" accept="image/*" style="
+                    position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%;
+                  " />
+                </div>
+                <input type="hidden" id="foto-url-${i}" value="${url}" />
+              </div>`;
+            }).join('')}
+          </div>
+        </label>
       </div>
       <div class="modal-actions">
         <button class="ghost-button" id="item-cancel">Cancelar</button>
@@ -2364,10 +2373,216 @@ function openItemModal(item = null) {
 
   document.body.appendChild(modal);
   document.getElementById("item-preco").addEventListener("input", function() { formatMoneyInput(this); });
-  setupFotoDropzone(item?.foto_url || "");
+
+  [0,1,2].forEach(i => {
+    document.getElementById(`file-${i}`).addEventListener("change", async function() {
+      if (this.files[0]) await handleFileUploadSlot(this.files[0], i);
+    });
+  });
+
   document.getElementById("item-cancel").addEventListener("click", () => modal.remove());
   document.getElementById("item-save").addEventListener("click", () => salvarItem(item?.id));
   modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
+}
+
+function getFotoUrl(item, index) {
+  if (!item || !item.foto_url) return "";
+  try {
+    const parsed = JSON.parse(item.foto_url);
+    if (Array.isArray(parsed)) return parsed[index] || "";
+    return index === 0 ? item.foto_url : "";
+  } catch {
+    return index === 0 ? item.foto_url : "";
+  }
+}
+
+function getFotos(item) {
+  if (!item || !item.foto_url) return [];
+  try {
+    const parsed = JSON.parse(item.foto_url);
+    if (Array.isArray(parsed)) return parsed.filter(Boolean);
+    return [item.foto_url];
+  } catch {
+    return [item.foto_url];
+  }
+}
+
+function removerFoto(index) {
+  document.getElementById(`foto-url-${index}`).value = "";
+  const dropzone = document.getElementById(`dropzone-${index}`);
+  dropzone.innerHTML = `
+    <div style="font-size:22px;">📷</div>
+    <div style="color:rgba(252,228,228,0.4); font-size:10px;">Foto ${index+1}</div>
+    <input type="file" id="file-${index}" accept="image/*" style="
+      position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%;
+    " />
+  `;
+  document.getElementById(`file-${index}`).addEventListener("change", async function() {
+    if (this.files[0]) await handleFileUploadSlot(this.files[0], index);
+  });
+}
+
+async function handleFileUploadSlot(file, index) {
+  const croppedBlob = await openCropModal(file);
+  if (!croppedBlob) return;
+
+  const croppedUrl = URL.createObjectURL(croppedBlob);
+  const dropzone = document.getElementById(`dropzone-${index}`);
+
+  dropzone.innerHTML = `
+    <img src="${croppedUrl}" style="width:100%; height:70px; object-fit:cover; border-radius:8px;" />
+    <button type="button" onclick="removerFoto(${index})" style="
+      position:absolute; top:4px; right:4px; width:20px; height:20px;
+      border-radius:50%; border:none; background:rgba(239,68,68,0.9);
+      color:white; font-size:11px; cursor:pointer; line-height:1;
+    ">×</button>
+    <input type="file" id="file-${index}" accept="image/*" style="
+      position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%;
+    " />
+  `;
+
+  document.getElementById(`file-${index}`).addEventListener("change", async function() {
+    if (this.files[0]) await handleFileUploadSlot(this.files[0], index);
+  });
+
+  try {
+    const formData = new FormData();
+    formData.append('file', croppedBlob, 'foto.jpg');
+    const resp = await fetch(`${API_BASE}/api/v1/upload-image`, { method: 'POST', body: formData });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Erro no upload');
+    document.getElementById(`foto-url-${index}`).value = data.url;
+    dropzone.querySelector('img').src = data.url;
+  } catch (e) {
+    alert('Erro ao enviar imagem: ' + e.message);
+    document.getElementById(`foto-url-${index}`).value = "";
+  }
+}
+
+function openItemDetailModal(item) {
+  const existing = document.getElementById("item-detail-modal");
+  if (existing) existing.remove();
+
+  const fotos = getFotos(item);
+  const temFotos = fotos.length > 0;
+
+  const modal = document.createElement("div");
+  modal.id = "item-detail-modal";
+  modal.className = "modal-backdrop open";
+
+  modal.innerHTML = `
+    <div class="modal" style="max-width:480px;">
+      <div class="modal-header">
+        <h3>${escapeHtml(item.nome)}</h3>
+        <button class="icon-button" id="close-item-detail">×</button>
+      </div>
+      <div class="modal-body" style="gap:16px;">
+
+        ${temFotos ? `
+        <!-- CARROSSEL -->
+        <div style="position:relative; border-radius:14px; overflow:hidden; background:rgba(0,0,0,0.3);">
+          <div id="carrossel-track" style="display:flex; transition:transform 0.3s ease;">
+            ${fotos.map(url => `
+              <img src="${url}" style="min-width:100%; height:220px; object-fit:cover; flex-shrink:0;" />
+            `).join('')}
+          </div>
+
+          ${fotos.length > 1 ? `
+          <button onclick="carrosselAnterior()" style="
+            position:absolute; left:10px; top:50%; transform:translateY(-50%);
+            width:34px; height:34px; border-radius:50%; border:none;
+            background:rgba(0,0,0,0.6); color:white; font-size:18px;
+            cursor:pointer; display:flex; align-items:center; justify-content:center;
+          ">‹</button>
+          <button onclick="carrosselProximo(${fotos.length})" style="
+            position:absolute; right:10px; top:50%; transform:translateY(-50%);
+            width:34px; height:34px; border-radius:50%; border:none;
+            background:rgba(0,0,0,0.6); color:white; font-size:18px;
+            cursor:pointer; display:flex; align-items:center; justify-content:center;
+          ">›</button>
+
+          <!-- BOLINHAS -->
+          <div style="position:absolute; bottom:10px; left:50%; transform:translateX(-50%); display:flex; gap:6px;">
+            ${fotos.map((_, i) => `
+              <div id="bolinha-${i}" style="
+                width:8px; height:8px; border-radius:50%;
+                background:${i === 0 ? 'white' : 'rgba(255,255,255,0.4)'};
+                cursor:pointer; transition:all 0.2s;
+              " onclick="irParaFoto(${i}, ${fotos.length})"></div>
+            `).join('')}
+          </div>
+          ` : ''}
+        </div>
+        ` : ''}
+
+        <!-- INFORMAÇÕES -->
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="color:rgba(252,228,228,0.7); font-size:13px; font-weight:700; 
+            background:rgba(91,28,28,0.5); padding:4px 12px; border-radius:999px;">
+            ${escapeHtml(item.categoria || "Geral")}
+          </span>
+          <span style="color:rgba(251,191,36,1); font-size:26px; font-weight:900; 
+            font-family:'Space Grotesk',sans-serif;">
+            ${formatCurrency(item.preco)}
+          </span>
+        </div>
+
+        ${item.descricao ? `
+        <p style="color:rgba(252,228,228,0.75); font-size:14px; line-height:1.6; margin:0;
+          padding:12px; background:rgba(46,8,8,0.35); border-radius:10px; border:1px solid rgba(91,28,28,0.55);">
+          ${escapeHtml(item.descricao)}
+        </p>
+        ` : ''}
+
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="width:10px; height:10px; border-radius:50%; 
+            background:${item.ativo ? 'rgba(34,197,94,1)' : 'rgba(107,114,128,1)'}"></div>
+          <span style="color:rgba(252,228,228,0.6); font-size:13px;">
+            ${item.ativo ? 'Disponível' : 'Indisponível'}
+          </span>
+        </div>
+
+      </div>
+      <div class="modal-actions">
+        <button class="ghost-button" id="close-item-detail-2">Fechar</button>
+        <button class="primary-button" onclick="document.getElementById('item-detail-modal').remove(); openItemModal(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+          ✏️ Editar
+        </button>
+      </div>
+    </div>
+  `;
+
+  // Estado do carrossel
+  window._carrosselIndex = 0;
+
+  document.body.appendChild(modal);
+  document.getElementById("close-item-detail").addEventListener("click", () => modal.remove());
+  document.getElementById("close-item-detail-2").addEventListener("click", () => modal.remove());
+  modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
+}
+
+// Funções do carrossel
+function irParaFoto(index, total) {
+  window._carrosselIndex = index;
+  const track = document.getElementById("carrossel-track");
+  if (track) track.style.transform = `translateX(-${index * 100}%)`;
+  for (let i = 0; i < total; i++) {
+    const b = document.getElementById(`bolinha-${i}`);
+    if (b) b.style.background = i === index ? 'white' : 'rgba(255,255,255,0.4)';
+  }
+}
+
+function carrosselProximo(total) {
+  const next = (window._carrosselIndex + 1) % total;
+  irParaFoto(next, total);
+}
+
+function carrosselAnterior() {
+  const track = document.getElementById("carrossel-track");
+  if (!track) return;
+  const total = track.children.length;
+  const prev = (window._carrosselIndex - 1 + total) % total;
+  irParaFoto(prev, total);
 }
 
 function setupFotoDropzone(existingUrl = "") {
