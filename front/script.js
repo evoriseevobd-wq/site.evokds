@@ -690,11 +690,10 @@ modal.innerHTML = `
         <h3>💳 Forma de Pagamento</h3>
       </div>
       <div class="modal-body">
-        <div style="display:flex; align-items:center; gap:8px; background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px; padding:0 14px; margin-bottom:12px;">
-          <span style="color:rgba(252,228,228,0.7); font-weight:700;">R$</span>
-          <input type="text" id="payment-value" placeholder="0,00" inputmode="decimal"
-            style="flex:1; border:none; background:transparent; padding:12px 0; color:rgba(252,228,228,1); outline:none; font-size:16px; font-weight:700; font-family:inherit;" />
-        </div>
+       <div style="background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px; padding:12px 14px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+  <span style="color:rgba(252,228,228,0.7); font-weight:700;">Valor Total</span>
+  <span style="color:rgba(252,228,228,1); font-size:18px; font-weight:900;">${formatCurrency(o.total_price || 0)}</span>
+</div>
         <p style="color: rgba(252,228,228,0.8); margin-bottom: 12px;">Como o cliente vai pagar?</p>
         <select id="payment-select" style="width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; font-family:inherit; outline:none;">
           <option value="">Selecione...</option>
