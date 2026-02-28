@@ -2261,7 +2261,6 @@ function renderCardapio() {
     return;
   }
 
-  // Agrupa por categoria
   const categorias = {};
   cardapioItems.forEach(item => {
     const cat = item.categoria || "Geral";
@@ -2272,31 +2271,89 @@ function renderCardapio() {
   lista.innerHTML = Object.entries(categorias).map(([cat, itens]) => `
     <div style="margin-bottom:24px;">
       <h4 style="color:rgba(252,228,228,0.6); font-size:12px; text-transform:uppercase; letter-spacing:2px; margin-bottom:12px;">${cat}</h4>
-      ${itens.map(item => `
-        <div onclick="openItemDetailModal(${JSON.stringify(item).replace(/"/g, '&quot;')})" style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px; background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px; margin-bottom:8px; cursor:pointer;">
-          <div style="display:flex; align-items:center; gap:12px;">
-            <div style="width:10px; height:10px; border-radius:50%; background:${item.ativo ? 'rgba(34,197,94,1)' : 'rgba(107,114,128,1)'}"></div>
-            <div>
-              <div style="color:rgba(252,228,228,0.95); font-weight:700; font-size:14px;">${escapeHtml(item.nome)}</div>
-              ${item.descricao ? `<div style="color:rgba(252,228,228,0.5); font-size:12px;">${escapeHtml(item.descricao)}</div>` : ""}
+      <div class="sortable-list" data-categoria="${cat}">
+        ${itens.map(item => `
+          <div class="sortable-item" data-id="${item.id}" draggable="true"
+            onclick="openItemDetailModal(${JSON.stringify(item).replace(/"/g, '&quot;')})"
+            style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px; background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px; margin-bottom:8px; cursor:pointer;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <span class="drag-handle" style="cursor:grab; font-size:16px; color:rgba(252,228,228,0.3); padding:0 4px;">⠿</span>
+              <div style="width:10px; height:10px; border-radius:50%; background:${item.ativo ? 'rgba(34,197,94,1)' : 'rgba(107,114,128,1)'}"></div>
+              <div>
+                <div style="color:rgba(252,228,228,0.95); font-weight:700; font-size:14px;">${escapeHtml(item.nome)}</div>
+                ${item.descricao ? `<div style="color:rgba(252,228,228,0.5); font-size:12px;">${escapeHtml(item.descricao)}</div>` : ""}
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px;">
+              <span style="color:rgba(251,191,36,1); font-weight:900; font-size:16px;">${formatCurrency(item.preco)}</span>
+              <button onclick="event.stopPropagation(); toggleAtivo('${item.id}', ${item.ativo})" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:transparent; color:rgba(252,228,228,0.7); cursor:pointer; font-size:11px;">
+                ${item.ativo ? "Desativar" : "Ativar"}
+              </button>
+              <button onclick="event.stopPropagation(); openItemModal(${JSON.stringify(item).replace(/"/g, '&quot;')})" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:transparent; color:rgba(252,228,228,0.7); cursor:pointer; font-size:11px;">
+                Editar
+              </button>
+              <button onclick="event.stopPropagation(); deletarItem('${item.id}')" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(239,68,68,0.5); background:transparent; color:rgba(239,68,68,0.8); cursor:pointer; font-size:11px;">
+                Excluir
+              </button>
             </div>
           </div>
-          <div style="display:flex; align-items:center; gap:12px;">
-            <span style="color:rgba(251,191,36,1); font-weight:900; font-size:16px;">${formatCurrency(item.preco)}</span>
-            <button onclick="toggleAtivo('${item.id}', ${item.ativo})" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:transparent; color:rgba(252,228,228,0.7); cursor:pointer; font-size:11px;">
-              ${item.ativo ? "Desativar" : "Ativar"}
-            </button>
-            <button onclick="openItemModal(${JSON.stringify(item).replace(/"/g, '&quot;')})" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:transparent; color:rgba(252,228,228,0.7); cursor:pointer; font-size:11px;">
-              Editar
-            </button>
-            <button onclick="deletarItem('${item.id}')" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(239,68,68,0.5); background:transparent; color:rgba(239,68,68,0.8); cursor:pointer; font-size:11px;">
-              Excluir
-            </button>
-          </div>
-        </div>
-      `).join("")}
+        `).join("")}
+      </div>
     </div>
   `).join("");
+
+  // Ativa drag and drop em todas as listas
+  document.querySelectorAll('.sortable-list').forEach(list => setupDragDrop(list));
+}
+
+function setupDragDrop(list) {
+  let dragEl = null;
+
+  list.querySelectorAll('.sortable-item').forEach(item => {
+    item.addEventListener('dragstart', (e) => {
+      dragEl = item;
+      setTimeout(() => item.style.opacity = '0.4', 0);
+    });
+
+    item.addEventListener('dragend', () => {
+      item.style.opacity = '1';
+      dragEl = null;
+      salvarOrdem(list);
+    });
+
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (!dragEl || dragEl === item) return;
+      const rect = item.getBoundingClientRect();
+      const mid = rect.top + rect.height / 2;
+      if (e.clientY < mid) {
+        list.insertBefore(dragEl, item);
+      } else {
+        list.insertBefore(dragEl, item.nextSibling);
+      }
+    });
+  });
+}
+
+async function salvarOrdem(list) {
+  const ids = [...list.querySelectorAll('.sortable-item')].map(el => el.dataset.id);
+  
+  try {
+    await Promise.all(ids.map((id, index) =>
+      fetch(`${API_BASE}/api/v1/cardapio/${id}`, {
+        method: "PATCH",
+        headers: buildHeaders(),
+        body: JSON.stringify({ ordem: index })
+      })
+    ));
+    // Atualiza a ordem local sem re-renderizar tudo
+    ids.forEach((id, index) => {
+      const item = cardapioItems.find(i => i.id === id);
+      if (item) item.ordem = index;
+    });
+  } catch (e) {
+    console.error("Erro ao salvar ordem:", e);
+  }
 }
 
 function openItemModal(item = null) {
