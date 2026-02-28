@@ -2367,9 +2367,9 @@ const foto_url = document.getElementById("item-foto").value.trim() || null;
   try {
     if (id) {
       await fetch(`${API_BASE}/api/v1/cardapio/${id}`, {
-        method: "PATCH", headers: buildHeaders(),
-        body: JSON.stringify({ nome, descricao, preco, categoria })
-      });
+  method: "PATCH", headers: buildHeaders(),
+  body: JSON.stringify({ nome, descricao, preco, categoria, foto_url })
+});
     } else {
       await fetch(`${API_BASE}/api/v1/cardapio`, {
         method: "POST", headers: buildHeaders(),
