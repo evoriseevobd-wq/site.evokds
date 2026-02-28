@@ -397,6 +397,16 @@ function showResults() {
   fetchAndRenderMetrics();
 }
 
+function showAutoatendimento() {
+  board?.classList.add("hidden");
+  crmView?.classList.add("hidden");
+  resultsView?.classList.add("hidden");
+  document.getElementById("autoatendimento-view")?.classList.remove("hidden");
+  hideTabsBar();
+  closeDrawer();
+  initAutoatendimento();
+}
+
 // ✅ ADICIONE esta função NOVA aqui (antes de "CORE LOGIC"):
 function setupPeriodButtons() {
   const periodButtons = document.querySelectorAll('.period-btn');
@@ -1354,6 +1364,8 @@ function setupDrawer() {
   if (ordersBtn) ordersBtn.addEventListener("click", showBoard);
   if (crmBtn) crmBtn.addEventListener("click", showCRM);
   if (resultsBtn) resultsBtn.addEventListener("click", showResults);
+  const autoatendimentoBtn = document.getElementById("drawer-autoatendimento");
+if (autoatendimentoBtn) autoatendimentoBtn.addEventListener("click", showAutoatendimento);
 
   console.log("✅ Drawer totalmente configurado!");
 }
@@ -1421,6 +1433,8 @@ if (tabEntregas) tabEntregas.addEventListener("click", () => changeView("entrega
 // Event listeners dos botões de voltar
 if (crmBackBtn) crmBackBtn.addEventListener("click", showBoard);
 if (resultsBackBtn) resultsBackBtn.addEventListener("click", showBoard);
+  const autoatendimentoBackBtn = document.getElementById("autoatendimento-back-btn");
+if (autoatendimentoBackBtn) autoatendimentoBackBtn.addEventListener("click", showBoard);
 
 // Logout
 if (logoutBtn) logoutBtn.addEventListener("click", logout);
@@ -2195,6 +2209,212 @@ function formatCurrency(value) {
     currency: 'BRL'
   }).format(value);
 }
+
+// ========================================
+// 📱 AUTOATENDIMENTO
+// ========================================
+let cardapioItems = [];
+
+async function initAutoatendimento() {
+  await fetchCardapio();
+  setupAutoatendimentoTabs();
+}
+
+function setupAutoatendimentoTabs() {
+  const tabCardapio = document.getElementById("tab-cardapio");
+  const tabMesas = document.getElementById("tab-mesas");
+  const painelCardapio = document.getElementById("painel-cardapio");
+  const painelMesas = document.getElementById("painel-mesas");
+
+  tabCardapio?.addEventListener("click", () => {
+    tabCardapio.classList.add("active");
+    tabMesas.classList.remove("active");
+    painelCardapio.classList.remove("hidden");
+    painelMesas.classList.add("hidden");
+  });
+
+  tabMesas?.addEventListener("click", () => {
+    tabMesas.classList.add("active");
+    tabCardapio.classList.remove("active");
+    painelMesas.classList.remove("hidden");
+    painelCardapio.classList.add("hidden");
+  });
+
+  document.getElementById("btn-novo-item")?.addEventListener("click", () => openItemModal());
+  document.getElementById("btn-gerar-qr")?.addEventListener("click", gerarQrCodes);
+}
+
+async function fetchCardapio() {
+  const rid = getRestaurantId();
+  if (!rid) return;
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/cardapio/${rid}`);
+    const data = await resp.json();
+    cardapioItems = Array.isArray(data) ? data : [];
+    renderCardapio();
+  } catch (e) {
+    console.error("Erro ao buscar cardápio:", e);
+  }
+}
+
+function renderCardapio() {
+  const lista = document.getElementById("lista-cardapio");
+  if (!lista) return;
+
+  if (cardapioItems.length === 0) {
+    lista.innerHTML = `<p style="color:rgba(252,228,228,0.5); text-align:center; padding:40px 0;">Nenhum item cadastrado. Clique em "+ Novo Item" para começar.</p>`;
+    return;
+  }
+
+  // Agrupa por categoria
+  const categorias = {};
+  cardapioItems.forEach(item => {
+    const cat = item.categoria || "Geral";
+    if (!categorias[cat]) categorias[cat] = [];
+    categorias[cat].push(item);
+  });
+
+  lista.innerHTML = Object.entries(categorias).map(([cat, itens]) => `
+    <div style="margin-bottom:24px;">
+      <h4 style="color:rgba(252,228,228,0.6); font-size:12px; text-transform:uppercase; letter-spacing:2px; margin-bottom:12px;">${cat}</h4>
+      ${itens.map(item => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px; background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px; margin-bottom:8px;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:10px; height:10px; border-radius:50%; background:${item.ativo ? 'rgba(34,197,94,1)' : 'rgba(107,114,128,1)'}"></div>
+            <div>
+              <div style="color:rgba(252,228,228,0.95); font-weight:700; font-size:14px;">${escapeHtml(item.nome)}</div>
+              ${item.descricao ? `<div style="color:rgba(252,228,228,0.5); font-size:12px;">${escapeHtml(item.descricao)}</div>` : ""}
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="color:rgba(251,191,36,1); font-weight:900; font-size:16px;">${formatCurrency(item.preco)}</span>
+            <button onclick="toggleAtivo('${item.id}', ${item.ativo})" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:transparent; color:rgba(252,228,228,0.7); cursor:pointer; font-size:11px;">
+              ${item.ativo ? "Desativar" : "Ativar"}
+            </button>
+            <button onclick="openItemModal(${JSON.stringify(item).replace(/"/g, '&quot;')})" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:transparent; color:rgba(252,228,228,0.7); cursor:pointer; font-size:11px;">
+              Editar
+            </button>
+            <button onclick="deletarItem('${item.id}')" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(239,68,68,0.5); background:transparent; color:rgba(239,68,68,0.8); cursor:pointer; font-size:11px;">
+              Excluir
+            </button>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `).join("");
+}
+
+function openItemModal(item = null) {
+  const existing = document.getElementById("item-modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "item-modal";
+  modal.className = "modal-backdrop open";
+
+  modal.innerHTML = `
+    <div class="modal confirm-modal">
+      <div class="modal-header">
+        <h3>${item ? "✏️ Editar Item" : "➕ Novo Item"}</h3>
+      </div>
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:12px;">
+        <label style="color:rgba(252,228,228,0.8); font-size:13px;">Nome *
+          <input id="item-nome" value="${item ? escapeHtml(item.nome) : ""}" placeholder="Ex: X-Burguer"
+            style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
+        </label>
+        <label style="color:rgba(252,228,228,0.8); font-size:13px;">Descrição
+          <input id="item-descricao" value="${item ? escapeHtml(item.descricao || "") : ""}" placeholder="Ex: Pão, carne, queijo..."
+            style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
+        </label>
+        <label style="color:rgba(252,228,228,0.8); font-size:13px;">Preço *
+          <input id="item-preco" value="${item ? item.preco : ""}" placeholder="0,00" inputmode="decimal"
+            style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
+        </label>
+        <label style="color:rgba(252,228,228,0.8); font-size:13px;">Categoria
+          <input id="item-categoria" value="${item ? escapeHtml(item.categoria || "") : ""}" placeholder="Ex: Lanches, Bebidas..."
+            style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="ghost-button" id="item-cancel">Cancelar</button>
+        <button class="primary-button" id="item-save">Salvar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  document.getElementById("item-preco").addEventListener("input", function() { formatMoneyInput(this); });
+  document.getElementById("item-cancel").addEventListener("click", () => modal.remove());
+  document.getElementById("item-save").addEventListener("click", () => salvarItem(item?.id));
+  modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
+}
+
+async function salvarItem(id = null) {
+  const rid = getRestaurantId();
+  const nome = document.getElementById("item-nome").value.trim();
+  const descricao = document.getElementById("item-descricao").value.trim();
+  const precoRaw = document.getElementById("item-preco").value;
+  const preco = parseFloat(precoRaw.replace(/\./g, "").replace(",", ".")) || 0;
+  const categoria = document.getElementById("item-categoria").value.trim() || "Geral";
+
+  if (!nome || !preco) { alert("Nome e preço são obrigatórios."); return; }
+
+  try {
+    if (id) {
+      await fetch(`${API_BASE}/api/v1/cardapio/${id}`, {
+        method: "PATCH", headers: buildHeaders(),
+        body: JSON.stringify({ nome, descricao, preco, categoria })
+      });
+    } else {
+      await fetch(`${API_BASE}/api/v1/cardapio`, {
+        method: "POST", headers: buildHeaders(),
+        body: JSON.stringify({ restaurant_id: rid, nome, descricao, preco, categoria })
+      });
+    }
+    document.getElementById("item-modal")?.remove();
+    await fetchCardapio();
+  } catch (e) {
+    alert("Erro ao salvar item.");
+  }
+}
+
+async function toggleAtivo(id, ativoAtual) {
+  await fetch(`${API_BASE}/api/v1/cardapio/${id}`, {
+    method: "PATCH", headers: buildHeaders(),
+    body: JSON.stringify({ ativo: !ativoAtual })
+  });
+  await fetchCardapio();
+}
+
+async function deletarItem(id) {
+  showConfirmModal("Tem certeza que deseja excluir este item?", async () => {
+    await fetch(`${API_BASE}/api/v1/cardapio/${id}`, { method: "DELETE", headers: buildHeaders() });
+    await fetchCardapio();
+  });
+}
+
+function gerarQrCodes() {
+  const qtd = parseInt(document.getElementById("input-mesas").value) || 10;
+  const rid = getRestaurantId();
+  const lista = document.getElementById("lista-qrcodes");
+  if (!lista) return;
+
+  const baseUrl = window.location.origin;
+  lista.innerHTML = "";
+
+  for (let i = 1; i <= qtd; i++) {
+    const url = `${baseUrl}/mesa/${rid}/${i}`;
+    const div = document.createElement("div");
+    div.style.cssText = "display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px; background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px;";
+    div.innerHTML = `
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(url)}" alt="QR Mesa ${i}" style="border-radius:8px;" />
+      <span style="color:rgba(252,228,228,0.9); font-weight:700; font-size:13px;">Mesa ${i}</span>
+      <a href="${url}" target="_blank" style="color:rgba(249,115,115,0.8); font-size:10px; text-decoration:none;">Ver link</a>
+    `;
+    lista.appendChild(div);
+  }
+}
+
 // Garante que init() só roda depois do DOM estar pronto
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
