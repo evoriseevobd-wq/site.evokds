@@ -589,7 +589,6 @@ function openOrderModal(orderId) {
   const modalTotalPriceEl = document.getElementById("modal-total-price");
   const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
 
-  if (paymentPriceRow && modalPaymentEl && modalTotalPriceEl) {
    if (paymentPriceRow && modalPaymentEl && modalTotalPriceEl) {
   paymentPriceRow.style.display = "";
   modalPaymentEl.textContent = String(order.payment_method || "—");
