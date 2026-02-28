@@ -148,12 +148,15 @@ app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
       total_revenue: 0,
       average_ticket: 0,
       unique_clients: 0,
-      orders_by_origin: {
-        ia_whatsapp: 0,
-        pdv: 0,
-        balcao: 0,
-        outros: 0
-      },
+     // DEPOIS
+orders_by_origin: {
+  ia_whatsapp: 0,
+  pdv: 0,
+  balcao: 0,
+  autoatendimento: 0,
+  outros: 0
+}
+  
       orders_by_status: {
         pending: 0,
         preparing: 0,
