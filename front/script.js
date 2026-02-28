@@ -2273,7 +2273,7 @@ function renderCardapio() {
     <div style="margin-bottom:24px;">
       <h4 style="color:rgba(252,228,228,0.6); font-size:12px; text-transform:uppercase; letter-spacing:2px; margin-bottom:12px;">${cat}</h4>
       ${itens.map(item => `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px; background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px; margin-bottom:8px;">
+        <div onclick="openItemDetailModal(${JSON.stringify(item).replace(/"/g, '&quot;')})" style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px; background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px; margin-bottom:8px; cursor:pointer;">
           <div style="display:flex; align-items:center; gap:12px;">
             <div style="width:10px; height:10px; border-radius:50%; background:${item.ativo ? 'rgba(34,197,94,1)' : 'rgba(107,114,128,1)'}"></div>
             <div>
