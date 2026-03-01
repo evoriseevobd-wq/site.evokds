@@ -527,7 +527,7 @@ app.post("/api/v1/pedidos", async (req, res) => {
 
     const normalizedItems = Array.isArray(items) ? items : Array.isArray(itens) ? itens : [];
     const phone = normalizePhone(client_phone);
-    const finalOrigin = origin || "outros";
+ const finalOrigin = origin || "outros";
     const finalStatus = status || "pending";
 
     if (!restaurant_id || !client_name) {
@@ -537,6 +537,17 @@ app.post("/api/v1/pedidos", async (req, res) => {
     const exists = await restaurantExists(restaurant_id);
     if (!exists) return sendError(res, 404, "Restaurante não encontrado");
 
+    // 🔒 Restrição: autoatendimento só para Executive e Custom
+    if (finalOrigin === "autoatendimento") {
+      const plan = await getRestaurantPlan(restaurant_id);
+      if (!["executive", "custom"].includes(plan.toLowerCase())) {
+        return res.status(403).json({
+          error: "Autoatendimento disponível apenas nos planos Executive e Custom",
+          current_plan: plan,
+          upgrade_to: "executive"
+        });
+      }
+    }
     const now = new Date().toISOString();
     let resultData;
 
