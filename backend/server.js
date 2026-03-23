@@ -610,9 +610,6 @@ const shortRestaurantId = restaurant_id.substring(0, 8);
 const trackingCode = `${shortRestaurantId}_${resultData.order_number}`;
 const trackingLink = `https://rastreio.evoriseai.com.br?code=${trackingCode}`;
 
-const trackingCode = `${shortRestaurantId}_${resultData.order_number}`;
-const trackingLink = `https://rastreio.evoriseai.com.br?code=${trackingCode}`;
-
 // ⭐ FIDELIZAÇÃO — COLA AQUI
 try {
   if (phone && !order_id) {
