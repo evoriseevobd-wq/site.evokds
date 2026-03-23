@@ -2940,3 +2940,12 @@ function gerarQrCodes() {
     lista.appendChild(div);
   }
 }
+
+// ===== INICIALIZA =====
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+
+
