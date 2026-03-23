@@ -218,7 +218,6 @@ function getPlanPrice(plan) {
   };
   return prices[plan.toLowerCase()] || 1200;
 }
-
 function applyAccessUI() {
   const plan = restaurantPlan.toLowerCase();
   restaurantPlanPrice = getPlanPrice(plan);
@@ -238,8 +237,13 @@ function applyAccessUI() {
     features.results = true;
     features.roi = true;
     features.forecast = true;
+  } else if (plan === "executive" || plan === "custom") {
+    features.crm = true;
+    features.results = true;
+    features.roi = true;
+    features.forecast = true;
   }
-  
+
   drawerCrmBtn?.classList.toggle("locked", !features.crm);
   drawerResultsBtn?.classList.toggle("locked", !features.results);
 }
