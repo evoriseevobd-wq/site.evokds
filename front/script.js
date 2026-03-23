@@ -1241,23 +1241,28 @@ async function handleCredentialResponse(response) {
 
 function initGoogleLogin() {
   if (!googleBtnContainer) return;
-  
-  window.google?.accounts.id.initialize({
-    client_id: GOOGLE_CLIENT_ID,
-    callback: handleCredentialResponse,
-  });
 
-  window.google?.accounts.id.renderButton(googleBtnContainer, {
-    theme: "outline",
-    size: "large",
-    width: 280,
-  });
+  if (window.google?.accounts?.id) {
+    window.google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleCredentialResponse,
+    });
+    window.google.accounts.id.renderButton(googleBtnContainer, {
+      theme: "outline",
+      size: "large",
+      width: 280,
+    });
+  } else {
+    // Google ainda não carregou, tenta de novo em 300ms
+    setTimeout(initGoogleLogin, 300);
+  }
 }
 
 function logout() {
   localStorage.clear();
   location.reload();
 }
+
 // ===== MODAL DE CONFIRMAÇÃO CUSTOMIZADO =====
 function showConfirmModal(message, onConfirm) {
   // Remove modal existente se houver
