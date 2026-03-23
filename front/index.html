@@ -447,83 +447,67 @@
       <div id="lista-cardapio"></div>
     </div>
 
-    <!-- ABA MESAS -->
-    <div id="painel-mesas" class="hidden">
-      <div style="display:flex; gap:12px; align-items:center; margin-bottom:20px;">
-        <label style="color:rgba(252,228,228,0.8); font-size:14px;">Quantidade de mesas:</label>
-        <input type="number" id="input-mesas" min="1" max="100" value="10"
-          style="width:80px; padding:8px 12px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
-        <button class="primary-button" id="btn-gerar-qr">Gerar QR Codes</button>
+   <!-- ABA MESAS -->
+<div id="painel-mesas" class="hidden">
+
+  <!-- HEADER COM 3 PONTINHOS -->
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+    <div style="display:flex; gap:12px; align-items:center;">
+      <label style="color:rgba(252,228,228,0.8); font-size:14px;">Quantidade de mesas:</label>
+      <input type="number" id="input-mesas" min="1" max="100" value="10"
+        style="width:80px; padding:8px 12px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
+      <button class="primary-button" id="btn-gerar-qr">Gerar QR Codes</button>
+    </div>
+
+    <!-- BOTÃO 3 PONTINHOS -->
+    <div style="position:relative;">
+      <button id="btn-config-dominio" onclick="toggleDominioConfig()" style="
+        width:36px; height:36px; border-radius:8px;
+        border:1px solid rgba(91,28,28,0.85);
+        background:rgba(46,8,8,0.45);
+        color:rgba(252,228,228,0.7);
+        font-size:18px; cursor:pointer;
+        display:flex; align-items:center; justify-content:center;
+        transition:all 0.2s;
+      " title="Configurações">⋯</button>
+
+      <!-- POPOVER -->
+      <div id="dominio-popover" style="
+        display:none;
+        position:absolute; right:0; top:44px;
+        width:320px;
+        background:rgba(30,6,6,0.98);
+        border:1px solid rgba(91,28,28,0.85);
+        border-radius:12px;
+        padding:16px;
+        box-shadow:0 12px 40px rgba(0,0,0,0.6);
+        z-index:999;
+      ">
+        <div style="font-size:12px; font-weight:700; color:rgba(252,228,228,0.5); letter-spacing:2px; text-transform:uppercase; margin-bottom:10px;">
+          ⚙️ Configuração
+        </div>
+        <label style="color:rgba(252,228,228,0.8); font-size:13px; font-weight:600; display:block; margin-bottom:6px;">
+          Domínio do cardápio
+        </label>
+        <input type="text" id="input-dominio-cardapio"
+          placeholder="cardapio.seunegocio.com.br"
+          style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.6); color:rgba(252,228,228,1); font-size:13px; outline:none; font-family:inherit;"
+        />
+        <small style="color:rgba(252,228,228,0.35); font-size:11px; margin-top:6px; display:block; line-height:1.5;">
+          QR vai apontar para:<br/>https://[domínio]?mesa=1
+        </small>
+        <button onclick="salvarDominio()" style="
+          margin-top:12px; width:100%; padding:8px;
+          border-radius:8px; border:none;
+          background:rgba(249,115,115,0.85);
+          color:#000; font-weight:700; font-size:13px;
+          cursor:pointer; font-family:inherit;
+        ">Salvar</button>
       </div>
-      <div id="lista-qrcodes" style="display:flex; flex-wrap:wrap; gap:16px;"></div>
     </div>
   </div>
-</main>
 
-<!-- MODAL DE PEDIDO -->
-<div class="modal-backdrop" id="modal">
-  <div class="modal">
-    <div class="modal-header">
-      <div>
-        <p class="modal-label">Pedido</p>
-        <h3 id="modal-id"></h3>
-      </div>
-      <button class="icon-button" id="close-modal" aria-label="Fechar modal">&times;</button>
-    </div>
-
-    <div class="modal-body">
-      <div class="modal-row-inline">
-        <span class="muted" style="min-width: 90px;">Cliente</span>
-        <span id="modal-customer"></span>
-      </div>
-
-     <div style="display: flex; gap: 10px;">
-  <div class="modal-row-inline" style="flex: 1;">
-    <span class="muted" style="min-width: 90px;">Número</span>
-    <span id="modal-phone"></span>
-  </div>
-  <div class="modal-row-inline" style="flex: 1;">
-    <span class="muted" style="min-width: 70px;">Data</span>
-    <span id="modal-time"></span>
-  </div>
-</div>
-
-<div id="modal-payment-price-row" style="display: none;">
-  <div style="display: flex; gap: 10px;">
-    <div class="modal-row-inline" style="flex: 1;">
-      <span class="muted" style="min-width: 110px;">Pagamento</span>
-      <span id="modal-payment"></span>
-    </div>
-    <div class="modal-row-inline" style="flex: 1;">
-      <span class="muted" style="min-width: 70px;">Valor</span>
-      <span id="modal-total-price"></span>
-    </div>
-  </div>
-</div>
-
-      <div class="modal-row-inline" id="modal-address-row" style="display:none;">
-        <span class="muted" style="min-width: 90px;">Endereço</span>
-        <span id="modal-address"></span>
-      </div>
-
-      <div class="modal-section">
-        <p class="modal-label">Itens</p>
-        <ul id="modal-items" class="item-list"></ul>
-      </div>
-
-      <div class="modal-section">
-        <p class="modal-label">Observações</p>
-        <p id="modal-notes" class="notes"></p>
-      </div>
-    </div>
-
-    <div class="modal-actions">
-      <button class="ghost-button" id="close-modal-secondary">Fechar</button>
-      <button class="danger-button" id="modal-cancel">Cancelar Pedido</button>
-      <button class="ghost-button" id="modal-prev">Voltar etapa</button>
-      <button class="primary-button" id="modal-next"></button>
-    </div>
-  </div>
+  <div id="lista-qrcodes" style="display:flex; flex-wrap:wrap; gap:16px;"></div>
 </div>
 
   <!-- MODAL DE CRIAÇÃO DE PEDIDO -->
