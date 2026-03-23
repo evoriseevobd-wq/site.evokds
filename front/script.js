@@ -1437,6 +1437,13 @@ if (unauthClose) unauthClose.addEventListener("click", () => closeBackdrop(unaut
 // Polling de pedidos
 setInterval(fetchOrders, 5000);
 fetchOrders();
+
+const dominioSalvo = localStorage.getItem("cardapio_dominio");
+if (dominioSalvo) {
+  const el = document.getElementById("input-dominio-cardapio");
+  if (el) el.value = dominioSalvo;
+}
+
 renderBoard();
 }
 // ========================================
@@ -2873,31 +2880,58 @@ async function deletarItem(id) {
   });
 }
 
+function toggleDominioConfig() {
+  const pop = document.getElementById("dominio-popover");
+  pop.style.display = pop.style.display === "none" ? "block" : "none";
+  setTimeout(() => {
+    document.addEventListener("click", closeDominioOnClickOutside, { once: true });
+  }, 10);
+}
+
+function closeDominioOnClickOutside(e) {
+  const pop = document.getElementById("dominio-popover");
+  const btn = document.getElementById("btn-config-dominio");
+  if (!pop?.contains(e.target) && !btn?.contains(e.target)) {
+    if (pop) pop.style.display = "none";
+  }
+}
+
+function salvarDominio() {
+  const val = document.getElementById("input-dominio-cardapio")?.value.trim();
+  if (!val) { alert("Digite o domínio antes de salvar."); return; }
+  localStorage.setItem("cardapio_dominio", val);
+  document.getElementById("dominio-popover").style.display = "none";
+  const btn = document.getElementById("btn-config-dominio");
+  btn.textContent = "✓";
+  btn.style.color = "rgba(34,197,94,1)";
+  setTimeout(() => { btn.textContent = "⋯"; btn.style.color = "rgba(252,228,228,0.7)"; }, 1500);
+}
+
 function gerarQrCodes() {
   const qtd = parseInt(document.getElementById("input-mesas").value) || 10;
-  const rid = getRestaurantId();
   const lista = document.getElementById("lista-qrcodes");
   if (!lista) return;
 
-  const baseUrl = window.location.origin;
+  let dominioRaw = (document.getElementById("input-dominio-cardapio")?.value || localStorage.getItem("cardapio_dominio") || "").trim();
+  if (!dominioRaw) {
+    document.getElementById("dominio-popover").style.display = "block";
+    document.getElementById("input-dominio-cardapio")?.focus();
+    alert("Configure o domínio do cardápio antes (botão ⋯).");
+    return;
+  }
+
+  const dominio = dominioRaw.startsWith("http") ? dominioRaw.replace(/\/$/, "") : `https://${dominioRaw.replace(/\/$/, "")}`;
   lista.innerHTML = "";
 
   for (let i = 1; i <= qtd; i++) {
-    const url = `${baseUrl}/mesa/${rid}/${i}`;
+    const url = `${dominio}?mesa=${i}`;
     const div = document.createElement("div");
     div.style.cssText = "display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px; background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px;";
     div.innerHTML = `
       <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(url)}" alt="QR Mesa ${i}" style="border-radius:8px;" />
       <span style="color:rgba(252,228,228,0.9); font-weight:700; font-size:13px;">Mesa ${i}</span>
-      <a href="${url}" target="_blank" style="color:rgba(249,115,115,0.8); font-size:10px; text-decoration:none;">Ver link</a>
+      <a href="${url}" target="_blank" style="color:rgba(249,115,115,0.8); font-size:10px; text-decoration:none; word-break:break-all; text-align:center; max-width:130px;">Ver link</a>
     `;
     lista.appendChild(div);
   }
-}
-
-// Garante que init() só roda depois do DOM estar pronto
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
-} else {
-  init();
 }
