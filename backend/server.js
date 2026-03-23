@@ -610,6 +610,56 @@ const shortRestaurantId = restaurant_id.substring(0, 8);
 const trackingCode = `${shortRestaurantId}_${resultData.order_number}`;
 const trackingLink = `https://rastreio.evoriseai.com.br?code=${trackingCode}`;
 
+const trackingCode = `${shortRestaurantId}_${resultData.order_number}`;
+const trackingLink = `https://rastreio.evoriseai.com.br?code=${trackingCode}`;
+
+// ⭐ FIDELIZAÇÃO — COLA AQUI
+try {
+  if (phone && !order_id) {
+    const pontosGanhos = Math.floor((parseFloat(total_price) || 0) * 50);
+
+    if (pontosGanhos > 0) {
+      const { data: perfil } = await supabase
+        .from("client_profiles")
+        .select("*")
+        .eq("restaurant_id", restaurant_id)
+        .eq("numero", phone)
+        .single();
+
+      if (perfil) {
+        await supabase
+          .from("client_profiles")
+          .update({ pontos: (perfil.pontos || 0) + pontosGanhos })
+          .eq("id", perfil.id);
+      } else {
+        const token = (Math.random().toString(36).substring(2, 8) + 
+                       Math.random().toString(36).substring(2, 8)).substring(0, 12);
+        await supabase
+          .from("client_profiles")
+          .insert([{
+            restaurant_id,
+            nome: client_name || "",
+            numero: phone,
+            pontos: pontosGanhos,
+            pontos_resgatados: 0,
+            token_fidelidade: token
+          }]);
+      }
+      console.log(`⭐ ${phone} ganhou ${pontosGanhos}pts | Pedido #${resultData.order_number}`);
+    }
+  }
+} catch (loyaltyErr) {
+  console.error("⚠️ Erro na fidelização:", loyaltyErr.message);
+}
+// ⭐ FIM FIDELIZAÇÃO
+
+return res.status(201).json({ 
+  success: true, 
+  order: resultData,
+  tracking_code: trackingCode,
+  tracking_link: trackingLink
+});
+    
 return res.status(201).json({ 
   success: true, 
   order: resultData,
