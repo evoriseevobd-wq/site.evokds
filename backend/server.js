@@ -610,14 +610,14 @@ const shortRestaurantId = restaurant_id.substring(0, 8);
 const trackingCode = `${shortRestaurantId}_${resultData.order_number}`;
 const trackingLink = `https://rastreio.evoriseai.com.br?code=${trackingCode}`;
 
-// ⭐ FIDELIZAÇÃO — COLA AQUI
+// ⭐ FIDELIZAÇÃO
 try {
   if (phone && !order_id) {
     const pontosGanhos = Math.floor((parseFloat(total_price) || 0) * 50);
 
     if (pontosGanhos > 0) {
       const { data: perfil } = await supabase
-        .from("client_profiles")
+        .from("base_clientes")
         .select("*")
         .eq("restaurant_id", restaurant_id)
         .eq("numero", phone)
@@ -625,21 +625,22 @@ try {
 
       if (perfil) {
         await supabase
-          .from("client_profiles")
+          .from("base_clientes")
           .update({ pontos: (perfil.pontos || 0) + pontosGanhos })
           .eq("id", perfil.id);
       } else {
-        const token = (Math.random().toString(36).substring(2, 8) + 
+        const token = (Math.random().toString(36).substring(2, 8) +
                        Math.random().toString(36).substring(2, 8)).substring(0, 12);
         await supabase
-          .from("client_profiles")
+          .from("base_clientes")
           .insert([{
             restaurant_id,
             nome: client_name || "",
             numero: phone,
             pontos: pontosGanhos,
             pontos_resgatados: 0,
-            token_fidelidade: token
+            token_fidelidade: token,
+            Status: "ATIVO"
           }]);
       }
       console.log(`⭐ ${phone} ganhou ${pontosGanhos}pts | Pedido #${resultData.order_number}`);
