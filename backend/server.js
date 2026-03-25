@@ -1266,6 +1266,19 @@ app.get("/api/v1/dominio/:dominio", async (req, res) => {
   return res.json({ restaurant_id: data.id });
 });
 
+app.patch("/api/v1/restaurante/:restaurant_id/dominio", async (req, res) => {
+  const { restaurant_id } = req.params;
+  const { dominio } = req.body;
+  
+  const { data, error } = await supabase
+    .from("restaurants")
+    .update({ dominio })
+    .eq("id", restaurant_id);
+    
+  if (error) return sendError(res, 500, "Erro ao salvar domínio");
+  return res.json({ success: true });
+});
+
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
