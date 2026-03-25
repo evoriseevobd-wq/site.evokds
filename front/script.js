@@ -651,7 +651,7 @@ printBtn.classList.toggle("hidden", order._frontStatus !== "recebido");
       : s === "caminho" ? "Finalizar"
       : "OK";
     modalNextBtn.textContent = nextLabel;
-modalNextBtn.classList.toggle("hidden", s === "recebido" || s === "finalizado" || s === "cancelado");
+modalNextBtn.classList.toggle("hidden", s === "finalizado" || s === "cancelado");
   }
 
   openBackdrop(modalBackdrop);
