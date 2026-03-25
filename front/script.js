@@ -629,6 +629,17 @@ function openOrderModal(orderId) {
   if (modalNotes) modalNotes.textContent = order.notes || "";
 
   modalPrevBtn?.classList.toggle("hidden", ["cancelado", "finalizado", "recebido"].includes(order._frontStatus));
+  // Botão imprimir — só aparece em "recebido"
+let printBtn = document.getElementById("modal-print-btn");
+if (!printBtn) {
+  printBtn = document.createElement("button");
+  printBtn.id = "modal-print-btn";
+  printBtn.className = "primary-button";
+  printBtn.innerHTML = "🖨️ Imprimir & Preparar";
+  modalNextBtn?.parentElement?.insertBefore(printBtn, modalNextBtn);
+}
+printBtn.onclick = () => imprimirPedido(activeOrderId);
+printBtn.classList.toggle("hidden", order._frontStatus !== "recebido");
   modalCancelBtn?.classList.toggle("hidden", ["cancelado", "finalizado"].includes(order._frontStatus));
 
   if (modalNextBtn) {
@@ -640,7 +651,7 @@ function openOrderModal(orderId) {
       : s === "caminho" ? "Finalizar"
       : "OK";
     modalNextBtn.textContent = nextLabel;
-    modalNextBtn.classList.toggle("hidden", s === "finalizado" || s === "cancelado");
+modalNextBtn.classList.toggle("hidden", s === "recebido" || s === "finalizado" || s === "cancelado");
   }
 
   openBackdrop(modalBackdrop);
@@ -761,6 +772,54 @@ function regressStatus(orderId) {
   // ✅ FECHA O MODAL
   closeOrderModal();
 }
+
+function imprimirPedido(orderId) {
+  const order = orders.find(o => o.id === orderId);
+  if (!order) return;
+
+  const itens = (order.itens || []).map(it => 
+    `<tr><td>${it.name || it.nome}</td><td style="text-align:center">${it.qty || it.quantidade || 1}</td><td style="text-align:right">${formatCurrency(it.price || it.preco || 0)}</td></tr>`
+  ).join('');
+
+  const win = window.open('', '_blank', 'width=400,height=600');
+  win.document.write(`
+    <html><head><title>Comanda #${order.order_number}</title>
+    <style>
+      body { font-family: monospace; font-size: 14px; padding: 20px; max-width: 300px; }
+      h2 { text-align: center; }
+      table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+      td { padding: 4px 0; }
+      hr { border: 1px dashed #000; }
+      .total { font-weight: bold; font-size: 16px; }
+      .obs { background: #f5f5f5; padding: 8px; border-radius: 4px; margin: 8px 0; }
+    </style></head>
+    <body>
+      <h2>PEDIDO #${order.order_number}</h2>
+      <hr/>
+      <p><b>Cliente:</b> ${order.client_name || ''}</p>
+      <p><b>Horário:</b> ${formatTime(order.created_at)}</p>
+      <p><b>Tipo:</b> ${order.service_type === 'delivery' ? '🚚 Delivery' : '🏪 Local'}</p>
+      ${order.address ? `<p><b>Endereço:</b> ${order.address}</p>` : ''}
+      <hr/>
+      <table>
+        <tr><th style="text-align:left">Item</th><th>Qtd</th><th style="text-align:right">Valor</th></tr>
+        ${itens}
+      </table>
+      <hr/>
+      ${order.notes ? `<div class="obs"><b>Obs:</b> ${order.notes}</div>` : ''}
+      <p class="total" style="text-align:right">Total: ${formatCurrency(order.total_price)}</p>
+      <script>window.onload = function(){ window.print(); window.onafterprint = function(){ window.close(); } }</script>
+    </body></html>
+  `);
+  win.document.close();
+
+  // Avança pra preparo após pequeno delay
+  setTimeout(() => {
+    updateOrderStatus(orderId, 'preparo');
+    closeOrderModal();
+  }, 500);
+}
+
 function cancelOrder(orderId) {
   updateOrderStatus(orderId, "cancelado");
 }
