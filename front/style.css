@@ -370,7 +370,11 @@ body {
   padding: 18px;
   animation: slideUp 0.3s ease;
 }
-
+  /* ADICIONA ISSO: */
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
 
 .modal-header {
   display: flex;
@@ -384,6 +388,10 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+.modal-body {
+  overflow-y: auto;
+  flex: 1;
 }
 
 .modal-row {
