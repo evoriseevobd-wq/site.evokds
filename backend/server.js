@@ -613,7 +613,7 @@ const trackingLink = `https://rastreio.evoriseai.com.br?code=${trackingCode}`;
 // ⭐ FIDELIZAÇÃO
 try {
   if (phone && !order_id) {
-    const pontosGanhos = Math.floor((parseFloat(total_price) || 0) * 50);
+    const pontosGanhos = Math.floor((parseFloat(total_price) || 0) * 10);
 
     if (pontosGanhos > 0) {
       const { data: perfil } = await supabase
