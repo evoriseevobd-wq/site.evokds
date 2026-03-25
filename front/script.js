@@ -2967,7 +2967,16 @@ function closeDominioOnClickOutside(e) {
 function salvarDominio() {
   const val = document.getElementById("input-dominio-cardapio")?.value.trim();
   if (!val) { alert("Digite o domínio antes de salvar."); return; }
+  
   localStorage.setItem("cardapio_dominio", val);
+
+  // 🔥 Salva no banco
+  fetch(`${API_BASE}/api/v1/restaurante/${getRestaurantId()}/dominio`, {
+    method: "PATCH",
+    headers: buildHeaders(),
+    body: JSON.stringify({ dominio: val })
+  });
+
   document.getElementById("dominio-popover").style.display = "none";
   const btn = document.getElementById("btn-config-dominio");
   btn.textContent = "✓";
@@ -2991,17 +3000,86 @@ function gerarQrCodes() {
   const dominio = dominioRaw.startsWith("http") ? dominioRaw.replace(/\/$/, "") : `https://${dominioRaw.replace(/\/$/, "")}`;
   lista.innerHTML = "";
 
+  // 🔥 Botão imprimir todos
+  const printBar = document.createElement("div");
+  printBar.style.cssText = "width:100%; margin-bottom:16px; display:flex; justify-content:flex-end;";
+  printBar.innerHTML = `
+    <button onclick="imprimirQrCodes()" style="
+      padding:10px 20px; border-radius:10px; border:none;
+      background:rgba(249,115,115,0.85); color:#000;
+      font-weight:800; font-size:13px; cursor:pointer;
+      font-family:inherit;
+    ">🖨️ Imprimir todos</button>
+  `;
+  lista.appendChild(printBar);
+
+  // 🔥 Grid dos QR codes
+  const grid = document.createElement("div");
+  grid.id = "qr-grid";
+  grid.style.cssText = "display:flex; flex-wrap:wrap; gap:16px;";
+  lista.appendChild(grid);
+
   for (let i = 1; i <= qtd; i++) {
     const url = `${dominio}?mesa=${i}`;
     const div = document.createElement("div");
+    div.dataset.mesa = i;
+    div.dataset.url = url;
     div.style.cssText = "display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px; background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px;";
     div.innerHTML = `
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(url)}" alt="QR Mesa ${i}" style="border-radius:8px;" />
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}" alt="QR Mesa ${i}" style="border-radius:8px;" />
       <span style="color:rgba(252,228,228,0.9); font-weight:700; font-size:13px;">Mesa ${i}</span>
-      <a href="${url}" target="_blank" style="color:rgba(249,115,115,0.8); font-size:10px; text-decoration:none; word-break:break-all; text-align:center; max-width:130px;">Ver link</a>
+      <a href="${url}" target="_blank" style="color:rgba(249,115,115,0.8); font-size:10px; text-decoration:none; word-break:break-all; text-align:center; max-width:130px;">${url}</a>
     `;
-    lista.appendChild(div);
+    grid.appendChild(div);
   }
+}
+
+function imprimirQrCodes() {
+  const grid = document.getElementById("qr-grid");
+  if (!grid) return;
+
+  const items = grid.querySelectorAll("div[data-mesa]");
+  let html = `
+    <html><head><title>QR Codes - Mesas</title>
+    <style>
+      body { font-family: monospace; margin: 0; padding: 10px; }
+      .grid { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+      .item {
+        display: flex; flex-direction: column; align-items: center;
+        gap: 6px; padding: 12px;
+        border: 1px solid #ccc; border-radius: 8px;
+        width: 160px; page-break-inside: avoid;
+      }
+      .item img { width: 130px; height: 130px; }
+      .item .mesa { font-weight: bold; font-size: 14px; }
+      .item .url { font-size: 9px; word-break: break-all; text-align: center; color: #555; }
+      @media print {
+        @page { margin: 10mm; }
+        body { padding: 0; }
+      }
+    </style></head>
+    <body><div class="grid">
+  `;
+
+  items.forEach(item => {
+    const mesa = item.dataset.mesa;
+    const url = item.dataset.url;
+    html += `
+      <div class="item">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=${encodeURIComponent(url)}" />
+        <span class="mesa">Mesa ${mesa}</span>
+        <span class="url">${url}</span>
+      </div>
+    `;
+  });
+
+  html += `</div>
+    <script>window.onload = function(){ window.print(); }<\/script>
+    </body></html>`;
+
+  const win = window.open('', '_blank', 'width=900,height=700');
+  win.document.write(html);
+  win.document.close();
 }
 
 // ===== INICIALIZA =====
