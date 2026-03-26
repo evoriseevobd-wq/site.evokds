@@ -3096,8 +3096,9 @@ async function testarImpressora() {
   }
 }
 
-function salvarRastreio() {
+async function salvarRastreio() {
   const url = document.getElementById("settings-tracking-url").value.trim();
+  const rid = getRestaurantId();
   const status = document.getElementById("settings-tracking-status");
 
   if (!url) {
@@ -3107,8 +3108,20 @@ function salvarRastreio() {
   }
 
   localStorage.setItem("tracking_url", url);
-  status.textContent = "✅ URL salva com sucesso!";
-  status.style.color = "rgba(34,197,94,0.9)";
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/tracking-url`, {
+      method: "PATCH",
+      headers: buildHeaders(),
+      body: JSON.stringify({ tracking_url: url })
+    });
+
+    status.textContent = resp.ok ? "✅ URL salva!" : "❌ Erro ao salvar.";
+    status.style.color = resp.ok ? "rgba(34,197,94,0.9)" : "rgba(239,68,68,0.9)";
+  } catch (e) {
+    status.textContent = "❌ Erro de conexão.";
+    status.style.color = "rgba(239,68,68,0.9)";
+  }
 }
 
 function gerarQrCodes() {
