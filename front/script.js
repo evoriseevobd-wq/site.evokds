@@ -258,10 +258,6 @@ function applyAccessUI() {
   document.getElementById("drawer-autoatendimento")?.classList.toggle("locked", plan !== "executive" && plan !== "custom");
 }
 
-  drawerCrmBtn?.classList.toggle("locked", !features.crm);
-  drawerResultsBtn?.classList.toggle("locked", !features.results);
-}
-
 function closeDrawer() {
   drawer?.classList.remove("open");
   drawerBackdrop?.classList.remove("open");
