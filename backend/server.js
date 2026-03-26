@@ -61,11 +61,15 @@ async function getRestaurantPlan(restaurant_id) {
 }
 
 function canUseCRM(plan) {
-  return ["pro", "advanced", "executive", "custom"].includes(plan.toLowerCase());
+  return ["advanced", "executive", "custom"].includes(plan.toLowerCase());
 }
 
 function canUseResults(plan) {
-  return ["advanced", "executive", "custom"].includes(plan.toLowerCase());
+  return ["executive", "custom"].includes(plan.toLowerCase());
+}
+
+function canUseAutoatendimento(plan) {
+  return ["executive", "custom"].includes(plan.toLowerCase());
 }
 
 function normalizePhone(input) {
