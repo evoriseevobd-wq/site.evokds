@@ -1323,6 +1323,19 @@ app.patch("/api/v1/restaurante/:restaurant_id/dominio", async (req, res) => {
   return res.json({ success: true });
 });
 
+app.patch("/api/v1/restaurante/:restaurant_id/tracking-url", async (req, res) => {
+  const { restaurant_id } = req.params;
+  const { tracking_url } = req.body;
+
+  const { error } = await supabase
+    .from("restaurants")
+    .update({ tracking_url })
+    .eq("id", restaurant_id);
+
+  if (error) return sendError(res, 500, "Erro ao salvar tracking URL");
+  return res.json({ success: true });
+});
+
 /* ========================================
    🖨️ ROTAS DE IMPRESSORA (PrintNode)
 ======================================== */
