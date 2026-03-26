@@ -215,7 +215,7 @@ function getPlanPrice(plan) {
     essential: 1200,
     advanced: 2500,
     executive: 4000,
-    custom: 7000+
+    custom: 7000
   };
   return prices[plan.toLowerCase()] || 1400;
 }
