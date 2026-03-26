@@ -828,49 +828,157 @@ function imprimirPedido(orderId) {
   const order = orders.find(o => o.id === orderId);
   if (!order) return;
 
-  const itens = (order.itens || []).map(it => 
-    `<tr><td>${it.name || it.nome}</td><td style="text-align:center">${it.qty || it.quantidade || 1}</td><td style="text-align:right">${formatCurrency(it.price || it.preco || 0)}</td></tr>`
-  ).join('');
+  const isDelivery = String(order.service_type || '').toLowerCase() === 'delivery';
+  const itensRows = (order.itens || []).map(it => {
+    const nome = it.name || it.nome || 'Item';
+    const qty  = it.qty || it.quantidade || 1;
+    const preco = it.price || it.preco || 0;
+    return `
+      <div class="item-row">
+        <span class="item-name">${nome}</span>
+        <span class="item-qty">${qty}</span>
+        <span class="item-val">${formatCurrency(preco * qty)}</span>
+      </div>`;
+  }).join('');
 
-  const win = window.open('', '_blank', 'width=400,height=600');
-  win.document.write(`
-    <html><head><title>Comanda #${order.order_number}</title>
-    <style>
-      body { font-family: monospace; font-size: 14px; padding: 20px; max-width: 300px; }
-      h2 { text-align: center; }
-      table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-      td { padding: 4px 0; }
-      hr { border: 1px dashed #000; }
-      .total { font-weight: bold; font-size: 16px; }
-      .obs { background: #f5f5f5; padding: 8px; border-radius: 4px; margin: 8px 0; }
-    </style></head>
-    <body>
-      <h2>PEDIDO #${order.order_number}</h2>
-      <hr/>
-      <p><b>Cliente:</b> ${order.client_name || ''}</p>
-      <p><b>Horário:</b> ${formatTime(order.created_at)}</p>
-      <p><b>Tipo:</b> ${order.service_type === 'delivery' ? '🚚 Delivery' : '🏪 Local'}</p>
-      ${order.address ? `<p><b>Endereço:</b> ${order.address}</p>` : ''}
-      <hr/>
-      <table>
-        <tr><th style="text-align:left">Item</th><th>Qtd</th><th style="text-align:right">Valor</th></tr>
-        ${itens}
-      </table>
-      <hr/>
-      ${order.notes ? `<div class="obs"><b>Obs:</b> ${order.notes}</div>` : ''}
-      <p class="total" style="text-align:right">Total: ${formatCurrency(order.total_price)}</p>
-      <script>window.onload = function(){ window.print(); window.onafterprint = function(){ window.close(); } }</script>
-    </body></html>
-  `);
+  const now = new Date();
+  const dataHora = now.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  :root { --black:#1a1008; --dark:#2d1f0e; --mid:#5c3d1e; --light:#e8d5b7; --cream:#fdf6ec; }
+  body { background:#fff; font-family:'DM Sans',sans-serif; display:flex; justify-content:center; padding:10px; }
+  .receipt { width:302px; background:var(--cream); color:var(--black); }
+  .receipt::before { content:''; display:block; height:10px;
+    background: radial-gradient(circle at 50% 0%, var(--cream) 6px, transparent 6px),
+                radial-gradient(circle at 50% 100%, #fff 6px, transparent 6px);
+    background-size:14px 10px; background-position:0 0, 7px 0; }
+  .receipt::after { content:''; display:block; height:10px;
+    background: radial-gradient(circle at 50% 100%, var(--cream) 6px, transparent 6px),
+                radial-gradient(circle at 50% 0%, #fff 6px, transparent 6px);
+    background-size:14px 10px; background-position:0 0, 7px 0; }
+  .receipt-inner { padding:8px 16px 12px; }
+  .header { text-align:center; padding:10px 0 8px; border-bottom:2.5px double var(--dark); margin-bottom:10px; }
+  .restaurant-name { font-family:'Playfair Display',serif; font-size:20px; font-weight:900; color:var(--dark); }
+  .restaurant-sub { font-size:8px; letter-spacing:3px; text-transform:uppercase; color:var(--mid); margin-top:3px; }
+  .restaurant-info { font-size:8px; color:var(--mid); margin-top:5px; line-height:1.6; }
+  .pedido-numero { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .pedido-label { font-family:'Playfair Display',serif; font-size:22px; font-weight:700; color:var(--dark); }
+  .badge { font-size:8px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; padding:4px 10px; border-radius:2px; }
+  .badge-delivery { background:var(--dark); color:var(--cream); }
+  .badge-local { background:transparent; color:var(--dark); border:1.5px solid var(--dark); }
+  .info-row { display:flex; justify-content:space-between; font-size:9px; margin-bottom:3px; }
+  .info-label { color:var(--mid); font-weight:600; text-transform:uppercase; letter-spacing:0.8px; font-size:7.5px; }
+  .info-value { color:var(--dark); font-weight:500; font-size:9px; text-align:right; }
+  .address-row { display:flex; align-items:flex-start; gap:6px; font-size:9px; margin-bottom:3px; }
+  .address-value { color:var(--dark); font-weight:500; font-size:9px; line-height:1.4; }
+  .divider { border:none; border-top:1px dashed var(--mid); margin:8px 0; opacity:0.5; }
+  .divider-solid { border:none; border-top:1.5px solid var(--dark); margin:8px 0; }
+  .items-header { display:grid; grid-template-columns:1fr 32px 56px; gap:4px; font-size:7.5px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:var(--mid); margin-bottom:5px; padding-bottom:4px; border-bottom:1px solid var(--light); }
+  .item-row { display:grid; grid-template-columns:1fr 32px 56px; gap:4px; font-size:9px; margin-bottom:5px; align-items:baseline; }
+  .item-name { color:var(--dark); font-weight:500; }
+  .item-qty { text-align:center; color:var(--mid); font-family:'DM Mono',monospace; font-size:9px; }
+  .item-val { text-align:right; color:var(--dark); font-family:'DM Mono',monospace; font-size:9px; }
+  .obs-section { background:var(--light); border-left:2px solid var(--dark); padding:4px 8px; margin:6px 0; border-radius:0 2px 2px 0; }
+  .obs-label { font-size:7px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:var(--mid); }
+  .obs-text { font-size:9px; color:var(--dark); margin-top:1px; }
+  .total-section { display:flex; justify-content:space-between; align-items:baseline; margin-top:4px; padding-top:6px; }
+  .total-label { font-family:'Playfair Display',serif; font-size:13px; font-weight:700; color:var(--dark); }
+  .total-value { font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--dark); }
+  .footer { text-align:center; padding:10px 0 6px; border-top:2.5px double var(--dark); margin-top:10px; }
+  .footer-msg { font-family:'Playfair Display',serif; font-size:10px; color:var(--dark); font-style:italic; line-height:1.4; }
+  .footer-date { font-family:'DM Mono',monospace; font-size:7px; color:var(--mid); margin-top:5px; opacity:0.6; }
+  .ornament { font-size:10px; color:var(--mid); margin:4px 0; letter-spacing:4px; }
+  @media print { body { padding:0; } }
+</style>
+</head>
+<body>
+<div class="receipt">
+  <div class="receipt-inner">
+    <div class="header">
+      <div class="restaurant-name">${escapeHtml(localStorage.getItem('restaurant_name') || 'Restaurante')}</div>
+      <div class="restaurant-sub">Restaurante</div>
+    </div>
+
+    <div class="pedido-numero">
+      <div class="pedido-label">Pedido #${order.order_number || ''}</div>
+      <div class="badge ${isDelivery ? 'badge-delivery' : 'badge-local'}">${isDelivery ? '🛵 Delivery' : '✦ Retirada'}</div>
+    </div>
+
+    <div class="info-row">
+      <span class="info-label">Cliente</span>
+      <span class="info-value">${escapeHtml(order.client_name || '')}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Horário</span>
+      <span class="info-value">${formatTime(order.created_at)}</span>
+    </div>
+    ${order.payment_method ? `
+    <div class="info-row">
+      <span class="info-label">Pagamento</span>
+      <span class="info-value">${escapeHtml(order.payment_method)}</span>
+    </div>` : ''}
+
+    ${isDelivery && order.address ? `
+    <div class="address-row">
+      <span class="info-label" style="padding-top:1px">Endereço</span>
+      <span class="address-value">${escapeHtml(order.address)}</span>
+    </div>` : ''}
+
+    <hr class="divider">
+
+    <div class="items-header">
+      <span>Item</span>
+      <span style="text-align:center">Qtd</span>
+      <span style="text-align:right">Valor</span>
+    </div>
+
+    ${itensRows}
+
+    ${order.notes ? `
+    <div class="obs-section">
+      <div class="obs-label">Observação</div>
+      <div class="obs-text">${escapeHtml(order.notes)}</div>
+    </div>` : ''}
+
+    <hr class="divider-solid">
+
+    <div class="total-section">
+      <span class="total-label">Total</span>
+      <span class="total-value">${formatCurrency(order.total_price || 0)}</span>
+    </div>
+
+    <div class="footer">
+      <div class="ornament">— ✦ —</div>
+      <div class="footer-msg">Obrigado pela preferência!<br>Volte sempre 🤍</div>
+      <div class="footer-date">${dataHora}</div>
+    </div>
+  </div>
+</div>
+<script>
+  window.onload = function() {
+    setTimeout(function() {
+      window.print();
+      window.onafterprint = function() { window.close(); };
+    }, 800);
+  };
+<\/script>
+</body></html>`;
+
+  const win = window.open('', '_blank', 'width=420,height=650');
+  win.document.write(html);
   win.document.close();
 
-  // Avança pra preparo após pequeno delay
   setTimeout(() => {
     updateOrderStatus(orderId, 'preparo');
     closeOrderModal();
   }, 500);
 }
-
 function cancelOrder(orderId) {
   updateOrderStatus(orderId, "cancelado");
 }
