@@ -412,6 +412,36 @@ function showAutoatendimento() {
   initAutoatendimento();
 }
 
+function showSettings() {
+  board?.classList.add("hidden");
+  crmView?.classList.add("hidden");
+  resultsView?.classList.add("hidden");
+  document.getElementById("autoatendimento-view")?.classList.add("hidden");
+  document.getElementById("settings-view")?.classList.remove("hidden");
+  hideTabsBar();
+  closeDrawer();
+  loadSettingsData();
+}
+
+async function loadSettingsData() {
+  const rid = getRestaurantId();
+  if (!rid) return;
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/impressora`);
+    const data = await resp.json();
+    if (data.printnode_api_key)
+      document.getElementById("settings-printnode-key").value = data.printnode_api_key;
+    if (data.printnode_printer_id)
+      document.getElementById("settings-printnode-printer").value = data.printnode_printer_id;
+  } catch (e) {
+    console.error("Erro ao carregar config impressora:", e);
+  }
+
+  const trackingUrl = localStorage.getItem("tracking_url") || "https://rastreio.evoriseai.com.br";
+  document.getElementById("settings-tracking-url").value = trackingUrl;
+}
+
 function setupPeriodButtons() {
   const periodButtons = document.querySelectorAll('.period-btn');
   
