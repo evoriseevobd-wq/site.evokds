@@ -362,6 +362,7 @@ function showBoard() {
   crmView?.classList.add("hidden");
   resultsView?.classList.add("hidden");
   document.getElementById("autoatendimento-view")?.classList.add("hidden");
+  document.getElementById("settings-view")?.classList.add("hidden"); // ← ADICIONA
   board?.classList.remove("hidden");
   showTabsBar();
   closeDrawer();
@@ -370,12 +371,13 @@ function showBoard() {
 
 function showCRM() {
   if (!features.crm) {
-    showUpgradeModal("pro", "CRM de Clientes");
+    showUpgradeModal("advanced", "CRM de Clientes");
     return;
   }
-  board?.classList.add("hidden");
+ board?.classList.add("hidden");
   resultsView?.classList.add("hidden");
   document.getElementById("autoatendimento-view")?.classList.add("hidden");
+  document.getElementById("settings-view")?.classList.add("hidden"); // ← ADICIONA
   crmView?.classList.remove("hidden");
   hideTabsBar();
   closeDrawer();
@@ -384,12 +386,13 @@ function showCRM() {
 
 function showResults() {
   if (!features.results) {
-    showUpgradeModal("advanced", "Dashboard de Resultados");
+    showUpgradeModal("executive", "Dashboard de Resultados");
     return;
   }
   board?.classList.add("hidden");
   crmView?.classList.add("hidden");
   document.getElementById("autoatendimento-view")?.classList.add("hidden");
+  document.getElementById("settings-view")?.classList.add("hidden"); // ← ADICIONA
   resultsView?.classList.remove("hidden");
   hideTabsBar();
   closeDrawer();
@@ -406,6 +409,7 @@ function showAutoatendimento() {
   board?.classList.add("hidden");
   crmView?.classList.add("hidden");
   resultsView?.classList.add("hidden");
+  document.getElementById("settings-view")?.classList.add("hidden"); // ← ADICIONA
   document.getElementById("autoatendimento-view")?.classList.remove("hidden");
   hideTabsBar();
   closeDrawer();
