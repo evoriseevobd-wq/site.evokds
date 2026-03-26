@@ -1527,6 +1527,16 @@ if (crmBackBtn) crmBackBtn.addEventListener("click", showBoard);
 if (resultsBackBtn) resultsBackBtn.addEventListener("click", showBoard);
   const autoatendimentoBackBtn = document.getElementById("autoatendimento-back-btn");
 if (autoatendimentoBackBtn) autoatendimentoBackBtn.addEventListener("click", showBoard);
+// ← COLE AQUI
+const settingsBtn = document.getElementById("drawer-settings");
+if (settingsBtn) settingsBtn.addEventListener("click", showSettings);
+
+const settingsBackBtn = document.getElementById("settings-back-btn");
+if (settingsBackBtn) settingsBackBtn.addEventListener("click", showBoard);
+
+document.getElementById("btn-salvar-impressora")?.addEventListener("click", salvarImpressora);
+document.getElementById("btn-testar-impressora")?.addEventListener("click", testarImpressora);
+document.getElementById("btn-salvar-rastreio")?.addEventListener("click", salvarRastreio);
 
 // Logout
 if (logoutBtn) logoutBtn.addEventListener("click", logout);
@@ -3012,6 +3022,72 @@ function salvarDominio() {
   btn.textContent = "✓";
   btn.style.color = "rgba(34,197,94,1)";
   setTimeout(() => { btn.textContent = "⋯"; btn.style.color = "rgba(252,228,228,0.7)"; }, 1500);
+}
+
+async function salvarImpressora() {
+  const rid = getRestaurantId();
+  const key = document.getElementById("settings-printnode-key").value.trim();
+  const printer = document.getElementById("settings-printnode-printer").value.trim();
+  const status = document.getElementById("settings-printer-status");
+
+  if (!key || !printer) {
+    status.textContent = "❌ Preencha API Key e Printer ID.";
+    status.style.color = "rgba(239,68,68,0.9)";
+    return;
+  }
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/impressora`, {
+      method: "PATCH",
+      headers: buildHeaders(),
+      body: JSON.stringify({ printnode_api_key: key, printnode_printer_id: printer })
+    });
+    if (!resp.ok) throw new Error();
+    status.textContent = "✅ Impressora salva com sucesso!";
+    status.style.color = "rgba(34,197,94,0.9)";
+  } catch (e) {
+    status.textContent = "❌ Erro ao salvar. Tente novamente.";
+    status.style.color = "rgba(239,68,68,0.9)";
+  }
+}
+
+async function testarImpressora() {
+  const rid = getRestaurantId();
+  const status = document.getElementById("settings-printer-status");
+  status.textContent = "⏳ Enviando teste...";
+  status.style.color = "rgba(252,228,228,0.6)";
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/impressora/teste`, {
+      method: "POST",
+      headers: buildHeaders()
+    });
+    const data = await resp.json();
+    if (data.success) {
+      status.textContent = "✅ Teste enviado! Verifique sua impressora.";
+      status.style.color = "rgba(34,197,94,0.9)";
+    } else {
+      throw new Error();
+    }
+  } catch (e) {
+    status.textContent = "❌ Falha no teste. Verifique API Key e Printer ID.";
+    status.style.color = "rgba(239,68,68,0.9)";
+  }
+}
+
+function salvarRastreio() {
+  const url = document.getElementById("settings-tracking-url").value.trim();
+  const status = document.getElementById("settings-tracking-status");
+
+  if (!url) {
+    status.textContent = "❌ Digite a URL de rastreio.";
+    status.style.color = "rgba(239,68,68,0.9)";
+    return;
+  }
+
+  localStorage.setItem("tracking_url", url);
+  status.textContent = "✅ URL salva com sucesso!";
+  status.style.color = "rgba(34,197,94,0.9)";
 }
 
 function gerarQrCodes() {
