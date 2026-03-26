@@ -321,8 +321,8 @@ function showUpgradeModal(requiredPlan, featureName) {
     "Dashboard de ROI em tempo real",
     "Previsão de demanda por IA",
     "Automação de campanhas",
-    "Controle de metas"
-    "Programa de fidelização"
+    "Controle de metas",
+    "Programa de fidelização",
     "Acompanhamento quinzenal com equipe Evorise"
   ];
 }
