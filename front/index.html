@@ -651,10 +651,19 @@
           />
         </label>
 
-        <label>Itens (separe por vírgula)
-          <input id="new-items" required placeholder="Burger, Batata, Refrigerante" />
+    <label>Itens
+          <div style="position:relative;">
+            <input id="new-items-search" autocomplete="off" placeholder="Buscar item no cardápio..." 
+              style="width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); outline:none; font-size:14px; font-family:inherit;" />
+            <div id="autocomplete-dropdown" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:9999;
+              background:rgba(30,6,6,0.98); border:1px solid rgba(91,28,28,0.85); border-radius:12px; 
+              margin-top:4px; max-height:220px; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.6);"></div>
+          </div>
+          <div id="itens-selecionados" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;"></div>
+          <input type="hidden" id="new-items" />
         </label>
 
+        
         <!-- 🔥 CAMPO VALOR TOTAL -->
         <label style="margin-top: 12px;">
           💰 Valor Total do Pedido
