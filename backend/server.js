@@ -53,23 +53,37 @@ async function restaurantExists(restaurant_id) {
 async function getRestaurantPlan(restaurant_id) {
   try {
     const { data, error } = await supabase.from("restaurants").select("plan").eq("id", restaurant_id).single();
-    if (error) return "basic";
-    return (data?.plan || "basic").toLowerCase();
+   if (error) return "essential";
+return (data?.plan || "essential").toLowerCase();
   } catch (err) {
-    return "basic";
+    return "essencial";
   }
 }
 
-function canUseCRM(plan) {
-  return ["advanced", "executive", "custom"].includes(plan.toLowerCase());
+const PLAN_HIERARCHY = ["essential", "advanced", "executive", "custom"];
+
+function planLevel(plan) {
+  const idx = PLAN_HIERARCHY.indexOf((plan || "essential").toLowerCase());
+  return idx === -1 ? 0 : idx;
 }
 
-function canUseResults(plan) {
-  return ["executive", "custom"].includes(plan.toLowerCase());
-}
+function canUseTracking(plan)        { return planLevel(plan) >= planLevel("advanced");  }
+function canUseCRM(plan)             { return planLevel(plan) >= planLevel("advanced");  }
+function canUsePDV(plan)             { return planLevel(plan) >= planLevel("advanced");  }
+function canUseEstoque(plan)         { return planLevel(plan) >= planLevel("advanced");  }
+function canUseCarrinho(plan)        { return planLevel(plan) >= planLevel("advanced");  }
+function canUseResults(plan)         { return planLevel(plan) >= planLevel("executive"); }
+function canUseAutoatendimento(plan) { return planLevel(plan) >= planLevel("executive"); }
+function canUseFidelizacao(plan)     { return planLevel(plan) >= planLevel("executive"); }
+function canUseMetas(plan)           { return planLevel(plan) >= planLevel("executive"); }
+function canUseMultiUnidades(plan)   { return planLevel(plan) >= planLevel("custom");    }
 
-function canUseAutoatendimento(plan) {
-  return ["executive", "custom"].includes(plan.toLowerCase());
+function planError(res, current_plan, required) {
+  return res.status(403).json({
+    error: `Recurso disponível apenas no plano ${required} ou superior`,
+    current_plan,
+    upgrade_to: required
+  });
 }
 
 function normalizePhone(input) {
