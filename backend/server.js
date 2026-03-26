@@ -1345,28 +1345,66 @@ app.patch("/api/v1/restaurante/:restaurant_id/tracking-url", async (req, res) =>
 // Função para imprimir pedido
 async function printOrder(order, apiKey, printerId) {
   try {
-    const items = Array.isArray(order.itens) ? order.itens : [];
-    
-    const itemsText = items.map(i => 
-      `${i.quantity || i.quantidade || 1}x ${i.name || i.produto || "Item"} - R$ ${parseFloat(i.price || i.preco || 0).toFixed(2)}`
-    ).join("\n");
+    const isDelivery = String(order.service_type || '').toLowerCase() === 'delivery';
+    const W = 32;
 
-    const content = [
-      "================================",
-      `PEDIDO #${order.order_number}`,
-      "================================",
-      `Cliente: ${order.client_name || "—"}`,
-      `Tipo: ${order.service_type === "delivery" ? "Delivery" : "Local"}`,
-      order.address ? `Endereço: ${order.address}` : null,
-      "--------------------------------",
-      itemsText,
-      "--------------------------------",
-      `TOTAL: R$ ${parseFloat(order.total_price || 0).toFixed(2)}`,
-      order.payment_method ? `Pagamento: ${order.payment_method}` : null,
-      order.notes ? `Obs: ${order.notes}` : null,
-      "================================",
-      new Date().toLocaleString("pt-BR")
-    ].filter(Boolean).join("\n");
+    function centralizar(texto) {
+      const espacos = Math.max(0, Math.floor((W - texto.length) / 2));
+      return ' '.repeat(espacos) + texto;
+    }
+
+    function colunas(esq, dir) {
+      const espaco = W - esq.length - dir.length;
+      return esq + ' '.repeat(Math.max(1, espaco)) + dir;
+    }
+
+    function linhaItem(nome, qty, valor) {
+      const nomeMax = 16;
+      const nomeTrunc = nome.length > nomeMax ? nome.substring(0, nomeMax) : nome.padEnd(nomeMax);
+      const qtyStr  = String(qty).padStart(3);
+      const valorStr = valor.padStart(9);
+      return `  ${nomeTrunc} ${qtyStr}  ${valorStr}`;
+    }
+
+    const itens = Array.isArray(order.itens) ? order.itens : [];
+    const itensLinhas = itens.map(it => {
+      const nome  = it.name  || it.nome  || 'Item';
+      const qty   = it.qty   || it.quantidade || it.quantity || 1;
+      const preco = it.price || it.preco || 0;
+      return linhaItem(nome, qty, `R$${(preco * qty).toFixed(2)}`);
+    }).join('\n');
+
+    const totalFormatado = `R$${parseFloat(order.total_price || 0).toFixed(2)}`;
+    const horario = new Date(order.created_at || Date.now())
+      .toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    let cupom = '';
+    cupom += '================================\n';
+    cupom += centralizar('Varanda do Sabor') + '\n';
+    cupom += centralizar('Restaurante') + '\n';
+    cupom += centralizar('(14) 99155-6542') + '\n';
+    cupom += '================================\n';
+    cupom += colunas(`  Pedido #${order.order_number || ''}`, isDelivery ? 'DELIVERY  ' : 'RETIRADA  ') + '\n';
+    cupom += `  Cliente : ${order.client_name || ''}` + '\n';
+    cupom += `  Horario : ${horario}` + '\n';
+    if (isDelivery && order.address) {
+      cupom += `  Endereco: ${order.address}` + '\n';
+    }
+    if (order.payment_method) {
+      cupom += `  Pagamento: ${order.payment_method}` + '\n';
+    }
+    cupom += '--------------------------------\n';
+    cupom += linhaItem('ITEM', 'QTD', 'VALOR') + '\n';
+    cupom += itensLinhas + '\n';
+    cupom += '--------------------------------\n';
+    if (order.notes) {
+      cupom += `  Obs: ${order.notes}` + '\n';
+      cupom += '\n';
+    }
+    cupom += colunas('  TOTAL:', totalFormatado + '  ') + '\n';
+    cupom += '\n';
+    cupom += centralizar('Obrigado pela preferencia!') + '\n';
+    cupom += centralizar('@varandadosabor.arere') + '\n';
 
     const response = await fetch("https://api.printnode.com/printjobs", {
       method: "POST",
@@ -1378,13 +1416,13 @@ async function printOrder(order, apiKey, printerId) {
         printerId: parseInt(printerId),
         title: `Pedido #${order.order_number}`,
         contentType: "raw_base64",
-        content: Buffer.from(content).toString("base64"),
+        content: Buffer.from(cupom, "utf-8").toString("base64"),
         source: "FluxON"
       })
     });
 
     const result = await response.json();
-    console.log(`🖨️ Pedido #${order.order_number} enviado para impressão:`, result);
+    console.log(`🖨️ Pedido #${order.order_number} impresso:`, result);
     return true;
   } catch (err) {
     console.error("⚠️ Erro ao imprimir:", err.message);
@@ -1453,6 +1491,53 @@ app.post("/api/v1/restaurante/:restaurant_id/impressora/teste", async (req, res)
     return res.json({ success, message: success ? "Teste enviado!" : "Falha ao imprimir" });
   } catch (err) {
     return sendError(res, 500, "Erro interno");
+  }
+});
+
+// POST - Imprime pedido manualmente pelo operador
+app.post("/api/v1/restaurante/:restaurant_id/imprimir-pedido", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { order_id, cupom_texto } = req.body;
+
+    if (!order_id) return sendError(res, 400, "order_id é obrigatório");
+
+    const { data: config, error } = await supabase
+      .from("restaurants")
+      .select("printnode_api_key, printnode_printer_id, name, phone")
+      .eq("id", restaurant_id)
+      .single();
+
+    if (error || !config?.printnode_api_key || !config?.printnode_printer_id)
+      return sendError(res, 400, "Impressora não configurada");
+
+    const response = await fetch("https://api.printnode.com/printjobs", {
+      method: "POST",
+      headers: {
+        "Authorization": "Basic " + Buffer.from(`${config.printnode_api_key}:`).toString("base64"),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        printerId: parseInt(config.printnode_printer_id),
+        title: `Pedido #${order_id}`,
+        contentType: "raw_base64",
+        content: Buffer.from(cupom_texto, "utf-8").toString("base64"),
+        source: "FluxON"
+      })
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      console.error("❌ PrintNode erro:", result);
+      return sendError(res, 500, result?.message || "Erro ao enviar para impressora");
+    }
+
+    console.log(`🖨️ Pedido ${order_id} impresso manualmente:`, result);
+    return res.json({ success: true, printjob_id: result });
+
+  } catch (err) {
+    console.error("❌ Erro em /imprimir-pedido:", err);
+    return sendError(res, 500, "Erro interno ao imprimir");
   }
 });
 
