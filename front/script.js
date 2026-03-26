@@ -302,28 +302,30 @@ function showUpgradeModal(requiredPlan, featureName) {
   let planDisplay = "";
   let planPrice = "";
   
-  if (requiredPlan === "pro") {
-    planDisplay = "PRO";
-    planPrice = "R$ 2.500/mês";
-    featuresList = [
-      "CRM completo de clientes",
-      "Recuperação de carrinho abandonado",
-      "Link de rastreio em tempo real",
-      "Relatórios PDF via WhatsApp (quinzenais)",
-      "Integração PDV manual"
-    ];
-  } else if (requiredPlan === "advanced") {
-    planDisplay = "ADVANCED";
-    planPrice = "R$ 4.000/mês";
-    featuresList = [
-      "Tudo do plano PRO",
-      "Dashboard de ROI em tempo real",
-      "Sincronização PDV automática",
-      "Previsão de demanda por IA",
-      "Automação de campanhas",
-      "Acompanhamento quinzenal com equipe Evorise"
-    ];
-  }
+ if (requiredPlan === "pro" || requiredPlan === "advanced") {
+  planDisplay = "ADVANCED";
+  planPrice = "R$ 2.500/mês";
+  featuresList = [
+    "CRM completo de clientes",
+    "Recuperação de carrinho abandonado",
+    "Link de rastreio em tempo real",
+    "Relatórios PDF via WhatsApp (quinzenais)",
+    "Integração PDV",
+    "Controle de estoque"
+  ];
+} else if (requiredPlan === "executive") {
+  planDisplay = "EXECUTIVE";
+  planPrice = "R$ 4.000/mês";
+  featuresList = [
+    "Tudo do plano Advanced",
+    "Dashboard de ROI em tempo real",
+    "Previsão de demanda por IA",
+    "Automação de campanhas",
+    "Controle de metas"
+    "Programa de fidelização"
+    "Acompanhamento quinzenal com equipe Evorise"
+  ];
+}
 
   backdrop.innerHTML = `
     <div class="upgrade-modal">
