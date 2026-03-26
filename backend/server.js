@@ -655,6 +655,24 @@ try {
 }
 // ⭐ FIM FIDELIZAÇÃO
 
+    // 🖨️ IMPRESSÃO AUTOMÁTICA
+try {
+  if (!order_id) {
+    const { data: printConfig } = await supabase
+      .from("restaurants")
+      .select("printnode_api_key, printnode_printer_id")
+      .eq("id", restaurant_id)
+      .single();
+
+    if (printConfig?.printnode_api_key && printConfig?.printnode_printer_id) {
+      await printOrder(resultData, printConfig.printnode_api_key, printConfig.printnode_printer_id);
+    }
+  }
+} catch (printErr) {
+  console.error("⚠️ Erro na impressão:", printErr.message);
+}
+// 🖨️ FIM IMPRESSÃO
+    
 return res.status(201).json({ 
   success: true, 
   order: resultData,
@@ -1281,6 +1299,124 @@ app.patch("/api/v1/restaurante/:restaurant_id/dominio", async (req, res) => {
     
   if (error) return sendError(res, 500, "Erro ao salvar domínio");
   return res.json({ success: true });
+});
+
+/* ========================================
+   🖨️ ROTAS DE IMPRESSORA (PrintNode)
+======================================== */
+
+// Função para imprimir pedido
+async function printOrder(order, apiKey, printerId) {
+  try {
+    const items = Array.isArray(order.itens) ? order.itens : [];
+    
+    const itemsText = items.map(i => 
+      `${i.quantity || i.quantidade || 1}x ${i.name || i.produto || "Item"} - R$ ${parseFloat(i.price || i.preco || 0).toFixed(2)}`
+    ).join("\n");
+
+    const content = [
+      "================================",
+      `PEDIDO #${order.order_number}`,
+      "================================",
+      `Cliente: ${order.client_name || "—"}`,
+      `Tipo: ${order.service_type === "delivery" ? "Delivery" : "Local"}`,
+      order.address ? `Endereço: ${order.address}` : null,
+      "--------------------------------",
+      itemsText,
+      "--------------------------------",
+      `TOTAL: R$ ${parseFloat(order.total_price || 0).toFixed(2)}`,
+      order.payment_method ? `Pagamento: ${order.payment_method}` : null,
+      order.notes ? `Obs: ${order.notes}` : null,
+      "================================",
+      new Date().toLocaleString("pt-BR")
+    ].filter(Boolean).join("\n");
+
+    const response = await fetch("https://api.printnode.com/printjobs", {
+      method: "POST",
+      headers: {
+        "Authorization": "Basic " + Buffer.from(`${apiKey}:`).toString("base64"),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        printerId: parseInt(printerId),
+        title: `Pedido #${order.order_number}`,
+        contentType: "raw_base64",
+        content: Buffer.from(content).toString("base64"),
+        source: "FluxON"
+      })
+    });
+
+    const result = await response.json();
+    console.log(`🖨️ Pedido #${order.order_number} enviado para impressão:`, result);
+    return true;
+  } catch (err) {
+    console.error("⚠️ Erro ao imprimir:", err.message);
+    return false;
+  }
+}
+
+// GET - Busca config da impressora
+app.get("/api/v1/restaurante/:restaurant_id/impressora", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { data, error } = await supabase
+      .from("restaurants")
+      .select("printnode_api_key, printnode_printer_id")
+      .eq("id", restaurant_id)
+      .single();
+    if (error) return sendError(res, 500, "Erro ao buscar config");
+    return res.json({
+      printnode_api_key: data?.printnode_api_key || null,
+      printnode_printer_id: data?.printnode_printer_id || null,
+      configured: !!(data?.printnode_api_key && data?.printnode_printer_id)
+    });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
+// PATCH - Salva config da impressora
+app.patch("/api/v1/restaurante/:restaurant_id/impressora", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { printnode_api_key, printnode_printer_id } = req.body;
+    const { error } = await supabase
+      .from("restaurants")
+      .update({ printnode_api_key, printnode_printer_id })
+      .eq("id", restaurant_id);
+    if (error) return sendError(res, 500, "Erro ao salvar config");
+    return res.json({ success: true });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
+// POST - Testa impressão
+app.post("/api/v1/restaurante/:restaurant_id/impressora/teste", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { data, error } = await supabase
+      .from("restaurants")
+      .select("printnode_api_key, printnode_printer_id")
+      .eq("id", restaurant_id)
+      .single();
+    if (error || !data?.printnode_api_key || !data?.printnode_printer_id)
+      return sendError(res, 400, "Impressora não configurada");
+
+    const testOrder = {
+      order_number: "TESTE",
+      client_name: "Teste FluxON",
+      service_type: "local",
+      itens: [{ quantity: 1, name: "Item Teste", price: 10.00 }],
+      total_price: 10.00,
+      notes: "Impressão de teste"
+    };
+
+    const success = await printOrder(testOrder, data.printnode_api_key, data.printnode_printer_id);
+    return res.json({ success, message: success ? "Teste enviado!" : "Falha ao imprimir" });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
 });
 
 app.get("/health", (req, res) => {
