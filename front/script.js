@@ -1523,6 +1523,105 @@ if (totalPriceField) {
   });
 }
 
+  // 🔍 AUTOCOMPLETE DE ITENS
+  const searchInput = document.getElementById("new-items-search");
+  const dropdown = document.getElementById("autocomplete-dropdown");
+  const itensSelecionados = document.getElementById("itens-selecionados");
+  const hiddenItems = document.getElementById("new-items");
+  let itensPedido = [];
+
+  function atualizarHiddenItems() {
+    hiddenItems.value = JSON.stringify(itensPedido);
+  }
+
+  function renderItensSelecionados() {
+    itensSelecionados.innerHTML = itensPedido.map((it, i) => `
+      <div style="display:inline-flex; align-items:center; gap:6px; padding:6px 12px;
+        background:rgba(91,28,28,0.55); border:1px solid rgba(249,115,115,0.4);
+        border-radius:999px; font-size:13px; font-weight:700; color:rgba(252,228,228,0.95);">
+        ${it.name} x${it.qty}
+        ${it.price > 0 ? `<span style="color:rgba(251,191,36,0.9);">R$${(it.price * it.qty).toFixed(2)}</span>` : ''}
+        <button onclick="removerItemPedido(${i})" style="background:none; border:none; color:rgba(249,115,115,0.8);
+          cursor:pointer; font-size:16px; line-height:1; padding:0 2px;">×</button>
+      </div>
+    `).join('');
+    atualizarHiddenItems();
+  }
+
+  window.removerItemPedido = function(index) {
+    itensPedido.splice(index, 1);
+    renderItensSelecionados();
+  };
+
+  function adicionarItem(item) {
+    const existente = itensPedido.find(i => i.name === item.nome);
+    if (existente) {
+      existente.qty++;
+    } else {
+      itensPedido.push({ name: item.nome, qty: 1, price: parseFloat(item.preco || 0), quantidade: 1 });
+    }
+    renderItensSelecionados();
+    searchInput.value = '';
+    dropdown.style.display = 'none';
+
+    // Atualiza o total automaticamente se estiver vazio
+    const totalField = document.getElementById("new-total-price");
+    if (totalField && !totalField.value) {
+      const soma = itensPedido.reduce((acc, i) => acc + (i.price * i.qty), 0);
+      if (soma > 0) {
+        totalField.value = soma.toFixed(2).replace('.', ',');
+      }
+    }
+  }
+
+  let autocompleteTimer = null;
+  searchInput?.addEventListener("input", () => {
+    clearTimeout(autocompleteTimer);
+    const q = searchInput.value.trim();
+    if (q.length < 1) { dropdown.style.display = 'none'; return; }
+
+    autocompleteTimer = setTimeout(async () => {
+      const rid = getRestaurantId();
+      if (!rid) return;
+      try {
+        const resp = await fetch(`${API_BASE}/api/v1/cardapio/${rid}/busca?q=${encodeURIComponent(q)}`);
+        const itens = await resp.json();
+
+        if (!itens.length) { dropdown.style.display = 'none'; return; }
+
+        dropdown.innerHTML = itens.map(it => `
+          <div onclick="window._selecionarItem(${JSON.stringify(it).replace(/"/g, '&quot;')})"
+            style="padding:12px 16px; cursor:pointer; border-bottom:1px solid rgba(91,28,28,0.4);
+              display:flex; justify-content:space-between; align-items:center;
+              transition:background 0.15s;"
+            onmouseover="this.style.background='rgba(91,28,28,0.5)'"
+            onmouseout="this.style.background='transparent'">
+            <span style="color:rgba(252,228,228,0.95); font-weight:700; font-size:14px;">${it.nome}</span>
+            <span style="color:rgba(251,191,36,0.9); font-weight:800; font-size:13px;">R$${parseFloat(it.preco).toFixed(2)}</span>
+          </div>
+        `).join('');
+        dropdown.style.display = 'block';
+      } catch(e) { dropdown.style.display = 'none'; }
+    }, 250);
+  });
+
+  window._selecionarItem = adicionarItem;
+
+  document.addEventListener("click", (e) => {
+    if (!searchInput?.contains(e.target) && !dropdown?.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
+
+  // Limpa itens ao fechar o modal
+  const origClose = closeCreateModal;
+  closeCreateModal = function() {
+    itensPedido = [];
+    renderItensSelecionados();
+    if (searchInput) searchInput.value = '';
+    origClose();
+  };
+
 // Event listeners das tabs
 if (tabAtivos) tabAtivos.addEventListener("click", () => changeView("ativos"));
 if (tabFinalizados) tabFinalizados.addEventListener("click", () => changeView("finalizados"));
