@@ -1237,6 +1237,28 @@ app.get("/api/v1/cardapio/:restaurant_id", async (req, res) => {
   return res.json(data);
 });
 
+// GET - Busca itens do cardápio por nome (autocomplete)
+app.get("/api/v1/cardapio/:restaurant_id/busca", async (req, res) => {
+  const { restaurant_id } = req.params;
+  const { q = "" } = req.query;
+
+  if (!q || q.trim().length < 1) {
+    return res.json([]);
+  }
+
+  const { data, error } = await supabase
+    .from("cardapio")
+    .select("id, nome, preco, categoria")
+    .eq("restaurant_id", restaurant_id)
+    .eq("ativo", true)
+    .ilike("nome", `%${q.trim()}%`)
+    .order("nome")
+    .limit(10);
+
+  if (error) return sendError(res, 500, "Erro ao buscar itens");
+  return res.json(data || []);
+});
+
 // POST - Cria item no cardápio
 app.post("/api/v1/cardapio", async (req, res) => {
   const { restaurant_id, nome, descricao, preco, categoria, foto_url, ordem } = req.body;
@@ -1366,15 +1388,37 @@ async function printOrder(order, apiKey, printerId) {
       return `  ${nomeTrunc} ${qtyStr}  ${valorStr}`;
     }
 
-    const itens = Array.isArray(order.itens) ? order.itens : [];
-    const itensLinhas = itens.map(it => {
+const itens = Array.isArray(order.itens) ? order.itens : [];
+    let totalRecalculado = 0;
+
+    const itensLinhas = (await Promise.all(itens.map(async (it) => {
       const nome  = it.name  || it.nome  || 'Item';
       const qty   = it.qty   || it.quantidade || it.quantity || 1;
-      const preco = it.price || it.preco || 0;
-      return linhaItem(nome, qty, `R$${(preco * qty).toFixed(2)}`);
-    }).join('\n');
+      let preco   = parseFloat(it.price || it.preco || 0);
 
-    const totalFormatado = `R$${parseFloat(order.total_price || 0).toFixed(2)}`;
+      if (preco === 0 && order.restaurant_id) {
+        const { data: cardapioItem } = await supabase
+          .from("cardapio")
+          .select("preco")
+          .eq("restaurant_id", order.restaurant_id)
+          .ilike("nome", nome)
+          .limit(1)
+          .single();
+
+        if (cardapioItem?.preco) {
+          preco = parseFloat(cardapioItem.preco);
+        }
+      }
+
+      totalRecalculado += preco * qty;
+      return linhaItem(nome, qty, `R$${(preco * qty).toFixed(2)}`);
+    }))).join('\n');
+    
+    const totalFinal = parseFloat(order.total_price || 0) > 0
+  ? parseFloat(order.total_price)
+  : totalRecalculado;
+const totalFormatado = `R$${totalFinal.toFixed(2)}`;
+    
     const horario = new Date(order.created_at || Date.now())
       .toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
