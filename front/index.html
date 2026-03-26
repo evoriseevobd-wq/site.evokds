@@ -512,6 +512,43 @@
 </div> 
 </main> 
 
+<!-- SETTINGS VIEW -->
+<main class="crm-view hidden" id="settings-view">
+  <div class="crm-header">
+    <div class="crm-title">⚙️ Configurações</div>
+    <button class="ghost-button" type="button" id="settings-back-btn">Voltar</button>
+  </div>
+  <div class="crm-content">
+
+    <div class="settings-section">
+      <h3 class="settings-section-title">🖨️ Impressora (PrintNode)</h3>
+      <p class="settings-section-desc">Configure sua impressora para imprimir pedidos automaticamente.</p>
+      <label>API Key
+        <input type="text" id="settings-printnode-key" placeholder="Sua API Key do PrintNode" />
+      </label>
+      <label style="margin-top:10px;">Printer ID
+        <input type="text" id="settings-printnode-printer" placeholder="ID da impressora (ex: 12345)" />
+      </label>
+      <div style="display:flex; gap:12px; margin-top:12px;">
+        <button class="primary-button" id="btn-salvar-impressora">Salvar</button>
+        <button class="ghost-button" id="btn-testar-impressora">🖨️ Testar</button>
+      </div>
+      <p id="settings-printer-status" style="margin-top:8px; font-size:13px;"></p>
+    </div>
+
+    <div class="settings-section" style="margin-top:32px;">
+      <h3 class="settings-section-title">🔗 Link de Rastreio</h3>
+      <p class="settings-section-desc">URL enviada ao cliente para acompanhar o pedido em tempo real.</p>
+      <label>URL base
+        <input type="text" id="settings-tracking-url" placeholder="https://rastreio.seudominio.com.br" />
+      </label>
+      <button class="primary-button" id="btn-salvar-rastreio" style="margin-top:12px;">Salvar</button>
+      <p id="settings-tracking-status" style="margin-top:8px; font-size:13px;"></p>
+    </div>
+
+  </div>
+</main>
+  
 <!-- MODAL DE PEDIDO -->
 <div class="modal-backdrop" id="modal">
   <div class="modal">
