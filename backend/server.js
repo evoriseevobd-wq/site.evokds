@@ -626,16 +626,18 @@ app.post("/api/v1/pedidos", async (req, res) => {
     // Gera código único: primeiros 8 caracteres do restaurant_id + order_number
 const shortRestaurantId = restaurant_id.substring(0, 8);
 const trackingCode = `${shortRestaurantId}_${resultData.order_number}`;
-// Busca o tracking_url do restaurante no Supabase
+
 const { data: restData } = await supabase
   .from("restaurants")
   .select("tracking_url")
   .eq("id", restaurant_id)
   .single();
 
-const baseUrl = restData?.tracking_url || "https://rastreio.evoriseai.com.br";
-const trackingLink = `${baseUrl}?code=${trackingCode}`;
+const baseUrl = restData?.tracking_url;
 
+// Só gera o link se tiver tracking_url cadastrado
+const trackingLink = baseUrl ? `${baseUrl}?code=${trackingCode}` : null;
+    
 // ⭐ FIDELIZAÇÃO
 try {
   if (phone && !order_id) {
