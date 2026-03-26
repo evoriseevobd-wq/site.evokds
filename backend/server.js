@@ -1497,19 +1497,24 @@ app.post("/api/v1/restaurante/:restaurant_id/impressora/teste", async (req, res)
 // POST - Imprime pedido manualmente pelo operador
 app.post("/api/v1/restaurante/:restaurant_id/imprimir-pedido", async (req, res) => {
   try {
-    const { restaurant_id } = req.params;
-    const { order_id, cupom_texto } = req.body;
+   const { restaurant_id } = req.params;
+const { order_id, cupom_texto } = req.body;
 
-    if (!order_id) return sendError(res, 400, "order_id é obrigatório");
+console.log("🖨️ Tentando imprimir:", { restaurant_id, order_id });
 
-    const { data: config, error } = await supabase
-      .from("restaurants")
-      .select("printnode_api_key, printnode_printer_id, name, phone")
-      .eq("id", restaurant_id)
-      .single();
+if (!order_id) return sendError(res, 400, "order_id é obrigatório");
 
-    if (error || !config?.printnode_api_key || !config?.printnode_printer_id)
-      return sendError(res, 400, "Impressora não configurada");
+const { data: config, error } = await supabase
+  .from("restaurants")
+  .select("printnode_api_key, printnode_printer_id")
+  .eq("id", restaurant_id)
+  .single();
+
+console.log("📦 Config encontrada:", JSON.stringify(config));
+console.log("❌ Erro supabase:", error);
+
+if (error || !config?.printnode_api_key || !config?.printnode_printer_id)
+  return sendError(res, 400, "Impressora não configurada");
 
     const response = await fetch("https://api.printnode.com/printjobs", {
       method: "POST",
