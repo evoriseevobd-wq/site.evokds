@@ -520,32 +520,55 @@
   </div>
   <div class="crm-content">
 
-    <div class="settings-section">
-      <h3 class="settings-section-title">🖨️ Impressora (PrintNode)</h3>
-      <p class="settings-section-desc">Configure sua impressora para imprimir pedidos automaticamente.</p>
-      <label>API Key
-        <input type="text" id="settings-printnode-key" placeholder="Sua API Key do PrintNode" />
-      </label>
-      <label style="margin-top:10px;">Printer ID
-        <input type="text" id="settings-printnode-printer" placeholder="ID da impressora (ex: 12345)" />
-      </label>
-      <div style="display:flex; gap:12px; margin-top:12px;">
-        <button class="primary-button" id="btn-salvar-impressora">Salvar</button>
-        <button class="ghost-button" id="btn-testar-impressora">🖨️ Testar</button>
+    <div style="max-width:640px; display:flex; flex-direction:column; gap:20px;">
+
+      <!-- 🖨️ IMPRESSORA -->
+      <div style="background:rgba(46,8,8,0.5); border:1px solid rgba(91,28,28,0.85); border-radius:16px; padding:24px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+          <span style="font-size:20px;">🖨️</span>
+          <h3 style="color:rgba(252,228,228,1); font-size:16px; font-weight:800; margin:0;">Impressora (PrintNode)</h3>
+        </div>
+        <p style="color:rgba(252,228,228,0.45); font-size:13px; margin:0 0 20px 0;">Configure sua impressora para imprimir pedidos automaticamente.</p>
+
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <label style="display:flex; flex-direction:column; gap:6px;">
+            <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">API Key</span>
+            <input type="text" id="settings-printnode-key" placeholder="Sua API Key do PrintNode"
+              style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+          </label>
+          <label style="display:flex; flex-direction:column; gap:6px;">
+            <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Printer ID</span>
+            <input type="text" id="settings-printnode-printer" placeholder="ID da impressora (ex: 12345)"
+              style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+          </label>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:16px;">
+          <button class="primary-button" id="btn-salvar-impressora" style="flex:1;">Salvar configuração</button>
+          <button class="ghost-button" id="btn-testar-impressora">🖨️ Testar</button>
+        </div>
+        <p id="settings-printer-status" style="margin-top:10px; font-size:13px; min-height:18px;"></p>
       </div>
-      <p id="settings-printer-status" style="margin-top:8px; font-size:13px;"></p>
-    </div>
 
-    <div class="settings-section" style="margin-top:32px;">
-      <h3 class="settings-section-title">🔗 Link de Rastreio</h3>
-      <p class="settings-section-desc">URL enviada ao cliente para acompanhar o pedido em tempo real.</p>
-      <label>URL base
-        <input type="text" id="settings-tracking-url" placeholder="https://rastreio.seudominio.com.br" />
-      </label>
-      <button class="primary-button" id="btn-salvar-rastreio" style="margin-top:12px;">Salvar</button>
-      <p id="settings-tracking-status" style="margin-top:8px; font-size:13px;"></p>
-    </div>
+      <!-- 🔗 RASTREIO -->
+      <div style="background:rgba(46,8,8,0.5); border:1px solid rgba(91,28,28,0.85); border-radius:16px; padding:24px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+          <span style="font-size:20px;">🔗</span>
+          <h3 style="color:rgba(252,228,228,1); font-size:16px; font-weight:800; margin:0;">Link de Rastreio</h3>
+        </div>
+        <p style="color:rgba(252,228,228,0.45); font-size:13px; margin:0 0 20px 0;">URL enviada ao cliente para acompanhar o pedido em tempo real.</p>
 
+        <label style="display:flex; flex-direction:column; gap:6px;">
+          <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">URL base</span>
+          <input type="text" id="settings-tracking-url" placeholder="https://rastreio.seudominio.com.br"
+            style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+        </label>
+
+        <button class="primary-button" id="btn-salvar-rastreio" style="margin-top:16px; width:100%;">Salvar URL</button>
+        <p id="settings-tracking-status" style="margin-top:10px; font-size:13px; min-height:18px;"></p>
+      </div>
+
+    </div>
   </div>
 </main>
   
