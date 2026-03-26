@@ -1497,48 +1497,37 @@ app.post("/api/v1/restaurante/:restaurant_id/impressora/teste", async (req, res)
 // POST - Imprime pedido manualmente pelo operador
 app.post("/api/v1/restaurante/:restaurant_id/imprimir-pedido", async (req, res) => {
   try {
-   const { restaurant_id } = req.params;
-const { order_id, cupom_texto } = req.body;
+    const { restaurant_id } = req.params;
+    const { order_id } = req.body;
 
-console.log("🖨️ Tentando imprimir:", { restaurant_id, order_id });
+    if (!order_id) return sendError(res, 400, "order_id é obrigatório");
 
-if (!order_id) return sendError(res, 400, "order_id é obrigatório");
+    // Busca config da impressora
+    const { data: config, error: configError } = await supabase
+      .from("restaurants")
+      .select("printnode_api_key, printnode_printer_id")
+      .eq("id", restaurant_id)
+      .single();
 
-const { data: config, error } = await supabase
-  .from("restaurants")
-  .select("printnode_api_key, printnode_printer_id")
-  .eq("id", restaurant_id)
-  .single();
+    if (configError || !config?.printnode_api_key || !config?.printnode_printer_id)
+      return sendError(res, 400, "Impressora não configurada");
 
-console.log("📦 Config encontrada:", JSON.stringify(config));
-console.log("❌ Erro supabase:", error);
+    // Busca os dados do pedido
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("id", order_id)
+      .single();
 
-if (error || !config?.printnode_api_key || !config?.printnode_printer_id)
-  return sendError(res, 400, "Impressora não configurada");
+    if (orderError || !order)
+      return sendError(res, 404, "Pedido não encontrado");
 
-    const response = await fetch("https://api.printnode.com/printjobs", {
-      method: "POST",
-      headers: {
-        "Authorization": "Basic " + Buffer.from(`${config.printnode_api_key}:`).toString("base64"),
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        printerId: parseInt(config.printnode_printer_id),
-        title: `Pedido #${order_id}`,
-        contentType: "raw_base64",
-        content: Buffer.from(cupom_texto, "utf-8").toString("base64"),
-        source: "FluxON"
-      })
-    });
+    // Usa a função printOrder que já gera o cupom corretamente
+    const success = await printOrder(order, config.printnode_api_key, config.printnode_printer_id);
 
-    const result = await response.json();
-    if (!response.ok) {
-      console.error("❌ PrintNode erro:", result);
-      return sendError(res, 500, result?.message || "Erro ao enviar para impressora");
-    }
+    if (!success) return sendError(res, 500, "Erro ao enviar para impressora");
 
-    console.log(`🖨️ Pedido ${order_id} impresso manualmente:`, result);
-    return res.json({ success: true, printjob_id: result });
+    return res.json({ success: true });
 
   } catch (err) {
     console.error("❌ Erro em /imprimir-pedido:", err);
