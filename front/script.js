@@ -212,37 +212,51 @@ function normalizePhone(phone) {
 // ===== PLAN FEATURES & PRICES =====
 function getPlanPrice(plan) {
   const prices = {
-    basic: 1200,
-    pro: 2500,
-    advanced: 4000
+    essential: 1200,
+    advanced: 2500,
+    executive: 4000,
+    custom: 7000+
   };
-  return prices[plan.toLowerCase()] || 1200;
+  return prices[plan.toLowerCase()] || 1400;
 }
+
 function applyAccessUI() {
   const plan = restaurantPlan.toLowerCase();
   restaurantPlanPrice = getPlanPrice(plan);
-  
-  if (plan === "basic") {
+
+  // Essential — só pedidos
+  if (plan === "essential") {
     features.crm = false;
     features.results = false;
     features.roi = false;
     features.forecast = false;
-  } else if (plan === "pro") {
+  }
+  // Advanced — + rastreio, CRM, PDV
+  else if (plan === "advanced") {
     features.crm = true;
     features.results = false;
     features.roi = false;
     features.forecast = false;
-  } else if (plan === "advanced") {
-    features.crm = true;
-    features.results = true;
-    features.roi = true;
-    features.forecast = true;
-  } else if (plan === "executive" || plan === "custom") {
+  }
+  // Executive — + dashboard, fidelização, autoatendimento
+  else if (plan === "executive") {
     features.crm = true;
     features.results = true;
     features.roi = true;
     features.forecast = true;
   }
+  // Custom — tudo
+  else if (plan === "custom") {
+    features.crm = true;
+    features.results = true;
+    features.roi = true;
+    features.forecast = true;
+  }
+
+  drawerCrmBtn?.classList.toggle("locked", !features.crm);
+  drawerResultsBtn?.classList.toggle("locked", !features.results);
+  document.getElementById("drawer-autoatendimento")?.classList.toggle("locked", plan !== "executive" && plan !== "custom");
+}
 
   drawerCrmBtn?.classList.toggle("locked", !features.crm);
   drawerResultsBtn?.classList.toggle("locked", !features.results);
@@ -406,6 +420,11 @@ function showResults() {
 }
 
 function showAutoatendimento() {
+  const plan = restaurantPlan.toLowerCase();
+  if (plan !== "executive" && plan !== "custom") {
+    showUpgradeModal("executive", "Autoatendimento");
+    return;
+  }
   board?.classList.add("hidden");
   crmView?.classList.add("hidden");
   resultsView?.classList.add("hidden");
