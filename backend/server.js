@@ -1447,10 +1447,12 @@ async function printOrder(order, apiKey, printerId) {
     b(ESC, 0x45, 0x00);
 
     txt(`Cliente : ${order.client_name || ''}`); lf();
-    txt(`Horario : ${horario}`); lf();
-    if (isDelivery && order.address) { txt(`Endereco: ${order.address}`); lf(); }
-    if (order.payment_method)        { txt(`Pagament: ${order.payment_method}`); lf(); }
+txt(`Horario : ${horario}`); lf();
+if (isDelivery && order.address) { txt(`Endereco: ${order.address}`); lf(); }
+if (order.payment_method)        { txt(`Pagament: ${order.payment_method}`); lf(); }
+if (order.client_phone)          { txt(`Telefone: ${order.client_phone}`); lf(); }
 
+    
     // ── DIVISOR FINO ───────────────────────────────
     lineDash();
 
