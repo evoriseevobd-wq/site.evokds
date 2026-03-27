@@ -1408,10 +1408,7 @@ async function printOrder(order, apiKey, printerId) {
       <head>
         <meta charset="UTF-8">
         <style>
-           @page {
-            size: 72mm auto;
-            margin: 0;
-          }
+          @page { size: 72mm auto; margin: 0; }
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body {
             font-family: 'Courier New', monospace;
@@ -1491,6 +1488,20 @@ async function printOrder(order, apiKey, printerId) {
       </html>
     `;
 
+    // Gera PDF com Puppeteer
+    const browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      headless: true
+    });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const pdfBuffer = await page.pdf({
+      width: '72mm',
+      printBackground: true,
+      margin: { top: 0, bottom: 0, left: 0, right: 0 }
+    });
+    await browser.close();
+
     const response = await fetch("https://api.printnode.com/printjobs", {
       method: "POST",
       headers: {
@@ -1500,8 +1511,8 @@ async function printOrder(order, apiKey, printerId) {
       body: JSON.stringify({
         printerId: parseInt(printerId),
         title: `Pedido #${order.order_number}`,
-        contentType: "html",
-        content: Buffer.from(html, "utf-8").toString("base64"),
+        contentType: "pdf_base64",
+        content: pdfBuffer.toString("base64"),
         source: "FluxON"
       })
     });
@@ -1514,7 +1525,6 @@ async function printOrder(order, apiKey, printerId) {
     return false;
   }
 }
-
 // PATCH - Salva config da impressora
 app.patch("/api/v1/restaurante/:restaurant_id/impressora", async (req, res) => {
   try {
