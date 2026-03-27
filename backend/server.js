@@ -1402,8 +1402,11 @@ async function printOrder(order, apiKey, printerId) {
         .split('').forEach(c => bytes.push(c.charCodeAt(0)));
     };
 
-    const lf   = () => b(0x0A);
-    const line  = (char = '-', n = 42) => { txt(char.repeat(n)); lf(); };
+    const lf    = () => b(0x0A);
+    // Linha grossa (dupla): simula border 2px — repete '=' na largura total
+    const lineEq   = (n = 48) => { txt('='.repeat(n)); lf(); };
+    // Linha fina (simples): simula border 1px — repete '-' na largura total
+    const lineDash = (n = 48) => { txt('-'.repeat(n)); lf(); };
 
     // ── Reset ──────────────────────────────────────
     b(ESC, 0x40);
@@ -1411,10 +1414,10 @@ async function printOrder(order, apiKey, printerId) {
     // ── CABEÇALHO ──────────────────────────────────
     b(ESC, 0x61, 0x01); // centralizar
 
-    b(GS, 0x21, 0x11);  // fonte dupla
-    b(ESC, 0x45, 0x01);
+    b(GS, 0x21, 0x11);  // fonte dupla largura+altura
+    b(ESC, 0x45, 0x01); // negrito
     txt('Varanda do Sabor'); lf();
-    b(GS, 0x21, 0x00);
+    b(GS, 0x21, 0x00);  // volta normal
     b(ESC, 0x45, 0x00);
 
     txt('- Restaurante -'); lf();
@@ -1422,9 +1425,9 @@ async function printOrder(order, apiKey, printerId) {
     txt('(14) 99155-6542'); lf();
     lf();
 
-    // ── DIVISOR ────────────────────────────────────
+    // ── DIVISOR GROSSO ─────────────────────────────
     b(ESC, 0x61, 0x00); // esquerda
-    line('=');
+    lineEq();
 
     // ── DADOS DO PEDIDO ────────────────────────────
     b(ESC, 0x45, 0x01);
@@ -1436,23 +1439,25 @@ async function printOrder(order, apiKey, printerId) {
     if (isDelivery && order.address) { txt(`Endereco: ${order.address}`); lf(); }
     if (order.payment_method)        { txt(`Pagament: ${order.payment_method}`); lf(); }
 
-    line('-');
+    // ── DIVISOR FINO ───────────────────────────────
+    lineDash();
 
     // ── CABEÇALHO DOS ITENS ────────────────────────
     b(ESC, 0x45, 0x01);
-    txt('ITEM                          QTD   VALOR'); lf();
+    txt('ITEM                              QTD    VALOR'); lf();
     b(ESC, 0x45, 0x00);
-    line('-');
+
+    lineDash();
 
     // ── ITENS ──────────────────────────────────────
     for (const it of itensComPreco) {
-      const nome  = it.nome.substring(0, 28).padEnd(28);
+      const nome  = it.nome.substring(0, 32).padEnd(32);
       const qty   = String(it.qty).padStart(5);
-      const valor = `R$${(it.preco * it.qty).toFixed(2)}`.padStart(8);
+      const valor = `R$${(it.preco * it.qty).toFixed(2)}`.padStart(9);
       txt(`${nome}${qty} ${valor}`); lf();
     }
 
-    line('-');
+    lineDash();
 
     // ── OBSERVAÇÕES ────────────────────────────────
     if (order.notes) {
@@ -1463,17 +1468,17 @@ async function printOrder(order, apiKey, printerId) {
     }
 
     // ── TOTAL ──────────────────────────────────────
-    line('=');
+    lineEq();
     b(ESC, 0x45, 0x01);
-    b(GS, 0x21, 0x01);
+    b(GS, 0x21, 0x01); // altura dupla no total
     txt(`TOTAL: R$ ${totalFinal.toFixed(2)}`); lf();
     b(GS, 0x21, 0x00);
     b(ESC, 0x45, 0x00);
-    line('=');
+    lineEq();
 
     // ── RODAPÉ ─────────────────────────────────────
     lf();
-    b(ESC, 0x61, 0x01);
+    b(ESC, 0x61, 0x01); // centralizar
     txt('Obrigado pela preferencia!'); lf();
     txt('Volte sempre :)'); lf();
     lf();
@@ -1514,22 +1519,6 @@ async function printOrder(order, apiKey, printerId) {
     return false;
   }
 }
-
-// PATCH - Salva config da impressora
-app.patch("/api/v1/restaurante/:restaurant_id/impressora", async (req, res) => {
-  try {
-    const { restaurant_id } = req.params;
-    const { printnode_api_key, printnode_printer_id } = req.body;
-    const { error } = await supabase
-      .from("restaurants")
-      .update({ printnode_api_key, printnode_printer_id })
-      .eq("id", restaurant_id);
-    if (error) return sendError(res, 500, "Erro ao salvar config");
-    return res.json({ success: true });
-  } catch (err) {
-    return sendError(res, 500, "Erro interno");
-  }
-});
 
 // POST - Testa impressão
 app.post("/api/v1/restaurante/:restaurant_id/impressora/teste", async (req, res) => {
