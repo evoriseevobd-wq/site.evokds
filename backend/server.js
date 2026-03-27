@@ -3,6 +3,7 @@ import cors from "cors";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import multer from "multer";
+import PDFDocument from "pdfkit";
 
 dotenv.config();
 
@@ -1347,37 +1348,18 @@ app.patch("/api/v1/restaurante/:restaurant_id/tracking-url", async (req, res) =>
    🖨️ ROTAS DE IMPRESSORA (PrintNode)
 ======================================== */
 
-// Função para imprimir pedido
 async function printOrder(order, apiKey, printerId) {
   try {
     const isDelivery = String(order.service_type || '').toLowerCase() === 'delivery';
-    const W = 32;
 
-    function centralizar(texto) {
-      const espacos = Math.max(0, Math.floor((W - texto.length) / 2));
-      return ' '.repeat(espacos) + texto;
-    }
-
-    function colunas(esq, dir) {
-      const espaco = W - esq.length - dir.length;
-      return esq + ' '.repeat(Math.max(1, espaco)) + dir;
-    }
-
-    function linhaItem(nome, qty, valor) {
-      const nomeMax = 16;
-      const nomeTrunc = nome.length > nomeMax ? nome.substring(0, nomeMax) : nome.padEnd(nomeMax);
-      const qtyStr  = String(qty).padStart(3);
-      const valorStr = valor.padStart(9);
-      return `  ${nomeTrunc} ${qtyStr}  ${valorStr}`;
-    }
-
-const itens = Array.isArray(order.itens) ? order.itens : [];
+    // Busca preços no cardápio para itens zerados
+    const itens = Array.isArray(order.itens) ? order.itens : [];
     let totalRecalculado = 0;
 
-    const itensLinhas = (await Promise.all(itens.map(async (it) => {
-      const nome  = it.name  || it.nome  || 'Item';
-      const qty   = it.qty   || it.quantidade || it.quantity || 1;
-      let preco   = parseFloat(it.price || it.preco || 0);
+    const itensComPreco = await Promise.all(itens.map(async (it) => {
+      const nome = it.name || it.nome || 'Item';
+      const qty  = it.qty || it.quantidade || it.quantity || 1;
+      let preco  = parseFloat(it.price || it.preco || 0);
 
       if (preco === 0 && order.restaurant_id) {
         const { data: cardapioItem } = await supabase
@@ -1387,52 +1369,165 @@ const itens = Array.isArray(order.itens) ? order.itens : [];
           .ilike("nome", nome)
           .limit(1)
           .single();
-
-        if (cardapioItem?.preco) {
-          preco = parseFloat(cardapioItem.preco);
-        }
+        if (cardapioItem?.preco) preco = parseFloat(cardapioItem.preco);
       }
 
       totalRecalculado += preco * qty;
-      return linhaItem(nome, qty, `R$${(preco * qty).toFixed(2)}`);
-    }))).join('\n');
-    
+      return { nome, qty, preco };
+    }));
+
     const totalFinal = parseFloat(order.total_price || 0) > 0
-  ? parseFloat(order.total_price)
-  : totalRecalculado;
-const totalFormatado = `R$${totalFinal.toFixed(2)}`;
-    
+      ? parseFloat(order.total_price)
+      : totalRecalculado;
+
     const horario = new Date(order.created_at || Date.now())
       .toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-    let cupom = '';
-    cupom += '================================\n';
-    cupom += centralizar('Varanda do Sabor') + '\n';
-    cupom += centralizar('Restaurante') + '\n';
-    cupom += centralizar('(14) 99155-6542') + '\n';
-    cupom += '================================\n';
-    cupom += colunas(`  Pedido #${order.order_number || ''}`, isDelivery ? 'DELIVERY  ' : 'RETIRADA  ') + '\n';
-    cupom += `  Cliente : ${order.client_name || ''}` + '\n';
-    cupom += `  Horario : ${horario}` + '\n';
-    if (isDelivery && order.address) {
-      cupom += `  Endereco: ${order.address}` + '\n';
-    }
-    if (order.payment_method) {
-      cupom += `  Pagamento: ${order.payment_method}` + '\n';
-    }
-    cupom += '--------------------------------\n';
-    cupom += linhaItem('ITEM', 'QTD', 'VALOR') + '\n';
-    cupom += itensLinhas + '\n';
-    cupom += '--------------------------------\n';
-    if (order.notes) {
-      cupom += `  Obs: ${order.notes}` + '\n';
-      cupom += '\n';
-    }
-    cupom += colunas('  TOTAL:', totalFormatado + '  ') + '\n';
-    cupom += '\n';
-    cupom += centralizar('Obrigado pela preferencia!') + '\n';
-    cupom += centralizar('@varandadosabor.arere') + '\n';
+    // ========================================
+    // 🎨 GERA O PDF
+    // ========================================
+    const MM = 2.8346; // 1mm em pontos
+    const W  = 80 * MM; // 80mm em pontos
 
+    const doc = new PDFDocument({
+      size: [W, 2000], // altura generosa, vai cortar depois
+      margins: { top: 8, bottom: 8, left: 8 * MM, right: 8 * MM }
+    });
+
+    const chunks = [];
+    doc.on('data', chunk => chunks.push(chunk));
+
+    const innerW = W - 16 * MM;
+    const X = 8 * MM;
+    let Y = 10;
+
+    // ── CABEÇALHO ──
+    doc.fontSize(18).font('Helvetica-Bold')
+       .text('Varanda do Sabor', X, Y, { width: innerW, align: 'center' });
+    Y = doc.y + 2;
+
+    doc.fontSize(9).font('Helvetica')
+       .text('Restaurante', X, Y, { width: innerW, align: 'center' });
+    Y = doc.y + 2;
+
+    doc.fontSize(9).font('Helvetica')
+       .text('(14) 99155-6542', X, Y, { width: innerW, align: 'center' });
+    Y = doc.y + 6;
+
+    // Linha decorativa dupla
+    doc.moveTo(X, Y).lineTo(X + innerW, Y).lineWidth(2).stroke();
+    Y += 3;
+    doc.moveTo(X, Y).lineTo(X + innerW, Y).lineWidth(0.5).stroke();
+    Y += 8;
+
+    // ── DADOS DO PEDIDO ──
+    doc.fontSize(13).font('Helvetica-Bold')
+       .text(`Pedido #${order.order_number || ''}`, X, Y, { width: innerW * 0.55 });
+
+    const tipoText = isDelivery ? 'DELIVERY' : 'RETIRADA';
+    doc.fontSize(11).font('Helvetica-Bold')
+       .text(tipoText, X + innerW * 0.55, Y, { width: innerW * 0.45, align: 'right' });
+    Y = doc.y + 6;
+
+    doc.fontSize(10).font('Helvetica')
+       .text(`Cliente:  ${order.client_name || ''}`, X, Y, { width: innerW });
+    Y = doc.y + 3;
+
+    doc.fontSize(10).font('Helvetica')
+       .text(`Horário:  ${horario}`, X, Y, { width: innerW });
+    Y = doc.y + 3;
+
+    if (isDelivery && order.address) {
+      doc.fontSize(10).font('Helvetica')
+         .text(`Endereço: ${order.address}`, X, Y, { width: innerW });
+      Y = doc.y + 3;
+    }
+
+    if (order.payment_method) {
+      doc.fontSize(10).font('Helvetica')
+         .text(`Pagamento: ${order.payment_method}`, X, Y, { width: innerW });
+      Y = doc.y + 3;
+    }
+
+    Y += 4;
+
+    // Linha separadora tracejada
+    doc.dash(3, { space: 3 })
+       .moveTo(X, Y).lineTo(X + innerW, Y).lineWidth(0.8).stroke();
+    doc.undash();
+    Y += 8;
+
+    // ── CABEÇALHO DOS ITENS ──
+    doc.fontSize(9).font('Helvetica-Bold')
+       .text('ITEM', X, Y, { width: innerW * 0.55 });
+    doc.fontSize(9).font('Helvetica-Bold')
+       .text('QTD', X + innerW * 0.55, Y, { width: innerW * 0.15, align: 'center' });
+    doc.fontSize(9).font('Helvetica-Bold')
+       .text('VALOR', X + innerW * 0.70, Y, { width: innerW * 0.30, align: 'right' });
+    Y = doc.y + 4;
+
+    doc.dash(2, { space: 2 })
+       .moveTo(X, Y).lineTo(X + innerW, Y).lineWidth(0.5).stroke();
+    doc.undash();
+    Y += 6;
+
+    // ── ITENS ──
+    for (const it of itensComPreco) {
+      doc.fontSize(10).font('Helvetica')
+         .text(it.nome, X, Y, { width: innerW * 0.55 });
+      doc.fontSize(10).font('Helvetica')
+         .text(String(it.qty), X + innerW * 0.55, Y, { width: innerW * 0.15, align: 'center' });
+      doc.fontSize(10).font('Helvetica')
+         .text(`R$${(it.preco * it.qty).toFixed(2)}`, X + innerW * 0.70, Y, { width: innerW * 0.30, align: 'right' });
+      Y = doc.y + 4;
+    }
+
+    Y += 2;
+    doc.dash(2, { space: 2 })
+       .moveTo(X, Y).lineTo(X + innerW, Y).lineWidth(0.5).stroke();
+    doc.undash();
+    Y += 8;
+
+    // ── OBSERVAÇÕES ──
+    if (order.notes) {
+      doc.fontSize(9).font('Helvetica-Oblique')
+         .text(`Obs: ${order.notes}`, X, Y, { width: innerW });
+      Y = doc.y + 6;
+    }
+
+    // ── TOTAL ──
+    doc.moveTo(X, Y).lineTo(X + innerW, Y).lineWidth(1.5).stroke();
+    Y += 6;
+
+    doc.fontSize(11).font('Helvetica')
+       .text('TOTAL:', X, Y, { width: innerW * 0.55 });
+    doc.fontSize(14).font('Helvetica-Bold')
+       .text(`R$${totalFinal.toFixed(2)}`, X + innerW * 0.55, Y - 2, { width: innerW * 0.45, align: 'right' });
+    Y = doc.y + 6;
+
+    doc.moveTo(X, Y).lineTo(X + innerW, Y).lineWidth(0.5).stroke();
+    Y += 3;
+    doc.moveTo(X, Y).lineTo(X + innerW, Y).lineWidth(2).stroke();
+    Y += 10;
+
+    // ── RODAPÉ ──
+    doc.fontSize(9).font('Helvetica')
+       .text('Obrigado pela preferência!', X, Y, { width: innerW, align: 'center' });
+    Y = doc.y + 2;
+
+    doc.fontSize(9).font('Helvetica')
+       .text('@varandadosabor.arere', X, Y, { width: innerW, align: 'center' });
+    Y = doc.y + 10;
+
+    // Finaliza o PDF
+    doc.end();
+
+    const pdfBuffer = await new Promise((resolve, reject) => {
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+    });
+
+    // ── ENVIA AO PRINTNODE ──
     const response = await fetch("https://api.printnode.com/printjobs", {
       method: "POST",
       headers: {
@@ -1442,8 +1537,8 @@ const totalFormatado = `R$${totalFinal.toFixed(2)}`;
       body: JSON.stringify({
         printerId: parseInt(printerId),
         title: `Pedido #${order.order_number}`,
-        contentType: "raw_base64",
-        content: Buffer.from(cupom, "utf-8").toString("base64"),
+        contentType: "pdf_base64",
+        content: pdfBuffer.toString("base64"),
         source: "FluxON"
       })
     });
