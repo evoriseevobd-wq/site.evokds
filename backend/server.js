@@ -1351,7 +1351,6 @@ app.patch("/api/v1/restaurante/:restaurant_id/tracking-url", async (req, res) =>
 async function printOrder(order, apiKey, printerId) {
   try {
     const isDelivery = String(order.service_type || '').toLowerCase() === 'delivery';
-
     const itens = Array.isArray(order.itens) ? order.itens : [];
     let totalRecalculado = 0;
 
@@ -1384,130 +1383,93 @@ async function printOrder(order, apiKey, printerId) {
 
     const itensHtml = itensComPreco.map(it => `
       <tr>
-        <td style="padding:3px 0; font-size:13px;">${it.nome}</td>
-        <td style="padding:3px 0; font-size:13px; text-align:center;">${it.qty}</td>
-        <td style="padding:3px 0; font-size:13px; text-align:right;">R$${(it.preco * it.qty).toFixed(2)}</td>
+        <td style="padding:2px 0;font-size:12px;">${it.nome}</td>
+        <td style="padding:2px 0;font-size:12px;text-align:center;">${it.qty}</td>
+        <td style="padding:2px 0;font-size:12px;text-align:right;">R$${(it.preco * it.qty).toFixed(2)}</td>
       </tr>
     `).join('');
 
-    const obsHtml = order.notes ? `
-      <p style="font-size:11px; font-style:italic; color:#555; margin:6px 0;">Obs: ${order.notes}</p>
-    ` : '';
+    const obsHtml = order.notes
+      ? `<p style="font-size:11px;font-style:italic;color:#555;margin:4px 0;">Obs: ${order.notes}</p>`
+      : '';
 
-    const enderecoHtml = isDelivery && order.address ? `
-      <p style="margin:2px 0; font-size:12px;">Endereço: ${order.address}</p>
-    ` : '';
+    const enderecoHtml = isDelivery && order.address
+      ? `<p style="margin:2px 0;font-size:12px;">Endereço: ${order.address}</p>`
+      : '';
 
-    const pagamentoHtml = order.payment_method ? `
-      <p style="margin:2px 0; font-size:12px;">Pagamento: ${order.payment_method}</p>
-    ` : '';
+    const pagamentoHtml = order.payment_method
+      ? `<p style="margin:2px 0;font-size:12px;">Pagamento: ${order.payment_method}</p>`
+      : '';
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          @page { size: 72mm auto; margin: 0; }
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          html, body { height: auto !important; overflow: visible !important; }
-          body {
-            font-family: 'Courier New', monospace;
-            width: 72mm;
-            padding: 6mm 4mm;
-            font-size: 12px;
-            color: #000;
-          }
-          .center { text-align: center; }
-          .linha-dupla-top { border-top: 2.5px solid #000; margin: 2px 0 1px; }
-          .linha-fina { border-top: 0.8px solid #000; margin: 1px 0 6px; }
-          .linha-tracejada { border-top: 1px dashed #888; margin: 6px 0; }
-          .linha-total-top { border-top: 1.5px solid #000; margin: 4px 0 3px; }
-          .linha-dupla-bot-1 { border-top: 0.8px solid #000; margin: 3px 0 2px; }
-          .linha-dupla-bot-2 { border-top: 2px solid #000; margin: 0 0 8px; }
-          table { width: 100%; border-collapse: collapse; }
-          td { vertical-align: top; }
-          .col-nome { width: 55%; }
-          .col-qty  { width: 15%; text-align: center; }
-          .col-val  { width: 30%; text-align: right; }
-        </style>
-      </head>
-      <body>
-        <div class="center">
-          <p style="font-size:18px; font-weight:bold; letter-spacing:0.5px;">Varanda do Sabor</p>
-          <p style="font-size:11px; color:#444;">Restaurante</p>
-          <p style="font-size:11px; color:#444;">(14) 99155-6542</p>
-        </div>
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Courier New', monospace;
+    width: 72mm;
+    font-size: 12px;
+    color: #000;
+    background: #fff;
+  }
+  .center { text-align:center; }
+  .sep-duplo { border-top:2px solid #000; margin:3px 0 1px; }
+  .sep-duplo2 { border-top:1px solid #000; margin:1px 0 4px; }
+  .sep-fino { border-top:1px solid #000; margin:3px 0; }
+  .sep-dash { border-top:1px dashed #aaa; margin:4px 0; }
+  table { width:100%; border-collapse:collapse; }
+  td { vertical-align:top; }
+</style>
+</head>
+<body>
+  <div class="center">
+    <p style="font-size:17px;font-weight:bold;">Varanda do Sabor</p>
+    <p style="font-size:11px;">Restaurante</p>
+    <p style="font-size:11px;">(14) 99155-6542</p>
+  </div>
+  <div class="sep-duplo"></div>
+  <div class="sep-duplo2"></div>
+  <table style="margin-bottom:3px;">
+    <tr>
+      <td style="font-size:14px;font-weight:bold;">Pedido #${order.order_number || ''}</td>
+      <td style="font-size:12px;font-weight:bold;text-align:right;">${isDelivery ? 'DELIVERY' : 'RETIRADA'}</td>
+    </tr>
+  </table>
+  <p style="margin:2px 0;font-size:12px;">Cliente: ${order.client_name || ''}</p>
+  <p style="margin:2px 0;font-size:12px;">Horário: ${horario}</p>
+  ${enderecoHtml}
+  ${pagamentoHtml}
+  <div class="sep-dash"></div>
+  <table style="margin-bottom:3px;">
+    <tr>
+      <td style="font-size:10px;font-weight:bold;width:55%;">ITEM</td>
+      <td style="font-size:10px;font-weight:bold;text-align:center;width:15%;">QTD</td>
+      <td style="font-size:10px;font-weight:bold;text-align:right;width:30%;">VALOR</td>
+    </tr>
+  </table>
+  <div class="sep-dash"></div>
+  <table>${itensHtml}</table>
+  <div class="sep-dash"></div>
+  ${obsHtml}
+  <div class="sep-fino"></div>
+  <table>
+    <tr>
+      <td style="font-size:12px;">TOTAL:</td>
+      <td style="font-size:15px;font-weight:bold;text-align:right;">R$${totalFinal.toFixed(2)}</td>
+    </tr>
+  </table>
+  <div class="sep-duplo2"></div>
+  <div class="sep-duplo"></div>
+  <div class="center" style="margin-top:4px;">
+    <p style="font-size:10px;color:#555;">Obrigado pela preferência!</p>
+    <p style="font-size:10px;color:#555;">@varandadosabor.arere</p>
+  </div>
+</body>
+</html>`;
 
-        <div class="linha-dupla-top"></div>
-        <div class="linha-fina"></div>
-
-        <table style="margin-bottom:4px;">
-          <tr>
-            <td style="font-size:14px; font-weight:bold;">Pedido #${order.order_number || ''}</td>
-            <td style="font-size:12px; font-weight:bold; text-align:right;">${isDelivery ? 'DELIVERY' : 'RETIRADA'}</td>
-          </tr>
-        </table>
-        <p style="margin:2px 0; font-size:12px;">Cliente: ${order.client_name || ''}</p>
-        <p style="margin:2px 0; font-size:12px;">Horário: ${horario}</p>
-        ${enderecoHtml}
-        ${pagamentoHtml}
-
-        <div class="linha-tracejada"></div>
-
-        <table style="margin-bottom:4px;">
-          <tr>
-            <td class="col-nome" style="font-size:10px; font-weight:bold;">ITEM</td>
-            <td class="col-qty" style="font-size:10px; font-weight:bold; text-align:center;">QTD</td>
-            <td class="col-val" style="font-size:10px; font-weight:bold; text-align:right;">VALOR</td>
-          </tr>
-        </table>
-        <div class="linha-tracejada"></div>
-
-        <table>
-          ${itensHtml}
-        </table>
-
-        <div class="linha-tracejada"></div>
-        ${obsHtml}
-
-        <div class="linha-total-top"></div>
-        <table>
-          <tr>
-            <td style="font-size:12px;">TOTAL:</td>
-            <td style="font-size:16px; font-weight:bold; text-align:right;">R$${totalFinal.toFixed(2)}</td>
-          </tr>
-        </table>
-        <div class="linha-dupla-bot-1"></div>
-        <div class="linha-dupla-bot-2"></div>
-
-        <div class="center">
-          <p style="font-size:10px; color:#555;">Obrigado pela preferência!</p>
-          <p style="font-size:10px; color:#555;">@varandadosabor.arere</p>
-        </div>
-      </body>
-      </html>
-    `;
-
-    // Gera PDF com Puppeteer
-    const browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      headless: true
-    });
-    const page = await browser.newPage();
-    await page.emulateMediaType('print'); // ← vai ANTES do setContent
-await page.setContent(html, { waitUntil: 'networkidle0' });
-
-// Mede a altura real do conteúdo
-const contentHeight = await page.evaluate(() => document.body.scrollHeight);
-
-const pdfBuffer = await page.pdf({
-  width: '72mm',
-  height: `${contentHeight}px`, // ← altura exata do conteúdo
-  printBackground: false,
-  margin: { top: '2mm', bottom: '2mm', left: '2mm', right: '2mm' }
-});
-    await browser.close();
+    const htmlBase64 = Buffer.from(html).toString('base64');
 
     const response = await fetch("https://api.printnode.com/printjobs", {
       method: "POST",
@@ -1518,8 +1480,8 @@ const pdfBuffer = await page.pdf({
       body: JSON.stringify({
         printerId: parseInt(printerId),
         title: `Pedido #${order.order_number}`,
-        contentType: "pdf_base64",
-        content: pdfBuffer.toString("base64"),
+        contentType: "html_base64",   // <-- aqui está a mudança chave
+        content: htmlBase64,
         source: "FluxON"
       })
     });
