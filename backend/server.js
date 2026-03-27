@@ -1347,6 +1347,8 @@ app.patch("/api/v1/restaurante/:restaurant_id/tracking-url", async (req, res) =>
    🖨️ ROTAS DE IMPRESSORA (PrintNode)
 ======================================== */
 
+import { Printer, InMemory, Alignment, Style } from 'escpos-buffer';
+
 async function printOrder(order, apiKey, printerId) {
   try {
     const isDelivery = String(order.service_type || '').toLowerCase() === 'delivery';
@@ -1380,95 +1382,70 @@ async function printOrder(order, apiKey, printerId) {
     const horario = new Date(order.created_at || Date.now())
       .toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-    const itensHtml = itensComPreco.map(it => `
-      <tr>
-        <td style="padding:2px 0;font-size:12px;">${it.nome}</td>
-        <td style="padding:2px 0;font-size:12px;text-align:center;">${it.qty}</td>
-        <td style="padding:2px 0;font-size:12px;text-align:right;">R$${(it.preco * it.qty).toFixed(2)}</td>
-      </tr>
-    `).join('');
+    const connection = new InMemory();
+    const printer = await Printer.CONNECT('MP-4200 TH', connection); // ajuste pro modelo se precisar
 
-    const obsHtml = order.notes
-      ? `<p style="font-size:11px;font-style:italic;color:#555;margin:4px 0;">Obs: ${order.notes}</p>`
-      : '';
+    // Cabeçalho
+    await printer.setAlignment(Alignment.Center);
+    await printer.setStyle(Style.Bold);
+    await printer.writeLine('Varanda do Sabor');
+    await printer.setStyle(Style.None);
+    await printer.writeLine('Restaurante');
+    await printer.writeLine('(14) 99155-6542');
+    await printer.feed(1);
 
-    const enderecoHtml = isDelivery && order.address
-      ? `<p style="margin:2px 0;font-size:12px;">Endereço: ${order.address}</p>`
-      : '';
+    // Separador
+    await printer.writeLine('================================');
 
-    const pagamentoHtml = order.payment_method
-      ? `<p style="margin:2px 0;font-size:12px;">Pagamento: ${order.payment_method}</p>`
-      : '';
+    // Pedido
+    await printer.setAlignment(Alignment.Left);
+    await printer.setStyle(Style.Bold);
+    await printer.writeLine(`Pedido #${order.order_number || ''}  ${isDelivery ? 'DELIVERY' : 'RETIRADA'}`);
+    await printer.setStyle(Style.None);
+    await printer.writeLine(`Cliente: ${order.client_name || ''}`);
+    await printer.writeLine(`Horario: ${horario}`);
+    if (isDelivery && order.address) await printer.writeLine(`Endereco: ${order.address}`);
+    if (order.payment_method) await printer.writeLine(`Pagamento: ${order.payment_method}`);
 
-    const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    font-family: 'Courier New', monospace;
-    width: 72mm;
-    font-size: 12px;
-    color: #000;
-    background: #fff;
-  }
-  .center { text-align:center; }
-  .sep-duplo { border-top:2px solid #000; margin:3px 0 1px; }
-  .sep-duplo2 { border-top:1px solid #000; margin:1px 0 4px; }
-  .sep-fino { border-top:1px solid #000; margin:3px 0; }
-  .sep-dash { border-top:1px dashed #aaa; margin:4px 0; }
-  table { width:100%; border-collapse:collapse; }
-  td { vertical-align:top; }
-</style>
-</head>
-<body>
-  <div class="center">
-    <p style="font-size:17px;font-weight:bold;">Varanda do Sabor</p>
-    <p style="font-size:11px;">Restaurante</p>
-    <p style="font-size:11px;">(14) 99155-6542</p>
-  </div>
-  <div class="sep-duplo"></div>
-  <div class="sep-duplo2"></div>
-  <table style="margin-bottom:3px;">
-    <tr>
-      <td style="font-size:14px;font-weight:bold;">Pedido #${order.order_number || ''}</td>
-      <td style="font-size:12px;font-weight:bold;text-align:right;">${isDelivery ? 'DELIVERY' : 'RETIRADA'}</td>
-    </tr>
-  </table>
-  <p style="margin:2px 0;font-size:12px;">Cliente: ${order.client_name || ''}</p>
-  <p style="margin:2px 0;font-size:12px;">Horário: ${horario}</p>
-  ${enderecoHtml}
-  ${pagamentoHtml}
-  <div class="sep-dash"></div>
-  <table style="margin-bottom:3px;">
-    <tr>
-      <td style="font-size:10px;font-weight:bold;width:55%;">ITEM</td>
-      <td style="font-size:10px;font-weight:bold;text-align:center;width:15%;">QTD</td>
-      <td style="font-size:10px;font-weight:bold;text-align:right;width:30%;">VALOR</td>
-    </tr>
-  </table>
-  <div class="sep-dash"></div>
-  <table>${itensHtml}</table>
-  <div class="sep-dash"></div>
-  ${obsHtml}
-  <div class="sep-fino"></div>
-  <table>
-    <tr>
-      <td style="font-size:12px;">TOTAL:</td>
-      <td style="font-size:15px;font-weight:bold;text-align:right;">R$${totalFinal.toFixed(2)}</td>
-    </tr>
-  </table>
-  <div class="sep-duplo2"></div>
-  <div class="sep-duplo"></div>
-  <div class="center" style="margin-top:4px;">
-    <p style="font-size:10px;color:#555;">Obrigado pela preferência!</p>
-    <p style="font-size:10px;color:#555;">@varandadosabor.arere</p>
-  </div>
-</body>
-</html>`;
+    await printer.writeLine('--------------------------------');
 
-    const htmlBase64 = Buffer.from(html).toString('base64');
+    // Cabeçalho itens
+    await printer.setStyle(Style.Bold);
+    await printer.writeLine('ITEM                  QTD  VALOR');
+    await printer.setStyle(Style.None);
+    await printer.writeLine('--------------------------------');
+
+    // Itens
+    itensComPreco.forEach(async (it) => {
+      const nome  = it.nome.substring(0, 20).padEnd(20);
+      const qty   = String(it.qty).padStart(4);
+      const valor = `R$${(it.preco * it.qty).toFixed(2)}`.padStart(7);
+      await printer.writeLine(`${nome}${qty} ${valor}`);
+    });
+
+    await printer.writeLine('--------------------------------');
+
+    // Obs
+    if (order.notes) {
+      await printer.writeLine(`Obs: ${order.notes}`);
+      await printer.feed(1);
+    }
+
+    // Total
+    await printer.setStyle(Style.Bold);
+    await printer.writeLine(`TOTAL:          R$${totalFinal.toFixed(2)}`);
+    await printer.setStyle(Style.None);
+    await printer.writeLine('================================');
+    await printer.feed(1);
+
+    // Rodapé
+    await printer.setAlignment(Alignment.Center);
+    await printer.writeLine('Obrigado pela preferencia!');
+    await printer.writeLine('@varandadosabor.arere');
+    await printer.feed(4); // avança papel pra corte
+    await printer.cut();
+
+    const rawBuffer = connection.buffer();
 
     const response = await fetch("https://api.printnode.com/printjobs", {
       method: "POST",
@@ -1479,8 +1456,8 @@ async function printOrder(order, apiKey, printerId) {
       body: JSON.stringify({
         printerId: parseInt(printerId),
         title: `Pedido #${order.order_number}`,
-        contentType: "html_base64",   // <-- aqui está a mudança chave
-        content: htmlBase64,
+        contentType: "raw_base64",
+        content: rawBuffer.toString("base64"),
         source: "FluxON"
       })
     });
