@@ -1382,7 +1382,7 @@ async function printOrder(order, apiKey, printerId) {
       .toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
     const connection = new InMemory();
-    const printer = await Printer.CONNECT('MP-4200 TH', connection); // ajuste pro modelo se precisar
+   const printer = await Printer.CONNECT('Non-specific', connection);
 
     // Cabeçalho
     await printer.setAlignment(Alignment.Center);
@@ -1415,12 +1415,12 @@ async function printOrder(order, apiKey, printerId) {
     await printer.writeLine('--------------------------------');
 
     // Itens
-    itensComPreco.forEach(async (it) => {
-      const nome  = it.nome.substring(0, 20).padEnd(20);
-      const qty   = String(it.qty).padStart(4);
-      const valor = `R$${(it.preco * it.qty).toFixed(2)}`.padStart(7);
-      await printer.writeLine(`${nome}${qty} ${valor}`);
-    });
+  for (const it of itensComPreco) {
+  const nome  = it.nome.substring(0, 20).padEnd(20);
+  const qty   = String(it.qty).padStart(4);
+  const valor = `R$${(it.preco * it.qty).toFixed(2)}`.padStart(7);
+  await printer.writeLine(`${nome}${qty} ${valor}`);
+}
 
     await printer.writeLine('--------------------------------');
 
