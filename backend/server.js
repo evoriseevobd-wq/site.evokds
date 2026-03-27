@@ -1375,7 +1375,18 @@ async function printOrder(order, apiKey, printerId) {
       : totalRecalculado;
 
     const horario = new Date(order.created_at || Date.now())
-      .toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      .toLocaleTimeString('pt-BR', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        timeZone: 'America/Sao_Paulo'
+      });
+
+    // ── Busca dados do restaurante ─────────────────
+    const { data: restData } = await supabase
+      .from("restaurants")
+      .select("tracking_url, name, subtitulo, telefone, instagram")
+      .eq("id", order.restaurant_id)
+      .single();
 
     const ESC = 0x1B;
     const GS  = 0x1D;
@@ -1402,10 +1413,8 @@ async function printOrder(order, apiKey, printerId) {
         .split('').forEach(c => bytes.push(c.charCodeAt(0)));
     };
 
-    const lf    = () => b(0x0A);
-    // Linha grossa (dupla): simula border 2px — repete '=' na largura total
+    const lf     = () => b(0x0A);
     const lineEq   = (n = 48) => { txt('='.repeat(n)); lf(); };
-    // Linha fina (simples): simula border 1px — repete '-' na largura total
     const lineDash = (n = 48) => { txt('-'.repeat(n)); lf(); };
 
     // ── Reset ──────────────────────────────────────
@@ -1414,15 +1423,15 @@ async function printOrder(order, apiKey, printerId) {
     // ── CABEÇALHO ──────────────────────────────────
     b(ESC, 0x61, 0x01); // centralizar
 
-    b(GS, 0x21, 0x11);  // fonte dupla largura+altura
-    b(ESC, 0x45, 0x01); // negrito
-    txt('Varanda do Sabor'); lf();
-    b(GS, 0x21, 0x00);  // volta normal
+    b(GS, 0x21, 0x11);
+    b(ESC, 0x45, 0x01);
+    txt(restData?.name || 'Restaurante'); lf();
+    b(GS, 0x21, 0x00);
     b(ESC, 0x45, 0x00);
 
-    txt('- Restaurante -'); lf();
+    if (restData?.subtitulo) { txt(`- ${restData.subtitulo} -`); lf(); }
     lf();
-    txt('(14) 99155-6542'); lf();
+    if (restData?.telefone) { txt(restData.telefone); lf(); }
     lf();
 
     // ── DIVISOR GROSSO ─────────────────────────────
@@ -1430,12 +1439,12 @@ async function printOrder(order, apiKey, printerId) {
     lineEq();
 
     // ── DADOS DO PEDIDO ────────────────────────────
-   b(ESC, 0x45, 0x01);
-const tipoLabel = isDelivery ? '[DELIVERY]' : '[RETIRADA]';
-const pedidoStr = `Pedido #${order.order_number || ''}`;
-const espacoPedido = 48 - pedidoStr.length - tipoLabel.length;
-txt(pedidoStr + ' '.repeat(Math.max(1, espacoPedido)) + tipoLabel); lf();
-b(ESC, 0x45, 0x00);
+    b(ESC, 0x45, 0x01);
+    const tipoLabel = isDelivery ? '[DELIVERY]' : '[RETIRADA]';
+    const pedidoStr = `Pedido #${order.order_number || ''}`;
+    const espacoPedido = 48 - pedidoStr.length - tipoLabel.length;
+    txt(pedidoStr + ' '.repeat(Math.max(1, espacoPedido)) + tipoLabel); lf();
+    b(ESC, 0x45, 0x00);
 
     txt(`Cliente : ${order.client_name || ''}`); lf();
     txt(`Horario : ${horario}`); lf();
@@ -1472,15 +1481,15 @@ b(ESC, 0x45, 0x00);
 
     // ── TOTAL ──────────────────────────────────────
     lineEq();
-b(ESC, 0x45, 0x01);
-b(GS, 0x21, 0x01);
-const totalLabel = 'TOTAL:';
-const totalValor = `R$ ${totalFinal.toFixed(2)}`;
-const espacoTotal = 48 - totalLabel.length - totalValor.length;
-txt(totalLabel + ' '.repeat(Math.max(1, espacoTotal)) + totalValor); lf();
-b(GS, 0x21, 0x00);
-b(ESC, 0x45, 0x00);
-lineEq();
+    b(ESC, 0x45, 0x01);
+    b(GS, 0x21, 0x01);
+    const totalLabel = 'TOTAL:';
+    const totalValor = `R$ ${totalFinal.toFixed(2)}`;
+    const espacoTotal = 48 - totalLabel.length - totalValor.length;
+    txt(totalLabel + ' '.repeat(Math.max(1, espacoTotal)) + totalValor); lf();
+    b(GS, 0x21, 0x00);
+    b(ESC, 0x45, 0x00);
+    lineEq();
 
     // ── RODAPÉ ─────────────────────────────────────
     lf();
@@ -1490,9 +1499,13 @@ lineEq();
     lf();
     txt('* * * * * * * * * * * * * * * * * * * *'); lf();
     lf();
-    b(ESC, 0x45, 0x01);
-    txt('@varandadosabor.arere'); lf();
-    b(ESC, 0x45, 0x00);
+    if (restData?.instagram) {
+      b(ESC, 0x45, 0x01);
+      txt(`@${restData.instagram}`); lf();
+      b(ESC, 0x45, 0x00);
+      lf();
+    }
+    txt('Feito com FluxON'); lf();
     lf();
 
     // ── CORTE ──────────────────────────────────────
