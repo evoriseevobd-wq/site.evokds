@@ -1402,16 +1402,8 @@ async function printOrder(order, apiKey, printerId) {
         .split('').forEach(c => bytes.push(c.charCodeAt(0)));
     };
 
-    const lf  = () => b(0x0A);
-    const line = (char = '-', n = 32) => { txt(char.repeat(n)); lf(); };
-
-    // Centraliza texto manualmente (32 colunas)
-    const center = (str, cols = 32) => {
-      const s = String(str).substring(0, cols);
-      const pad = Math.max(0, Math.floor((cols - s.length) / 2));
-      txt(' '.repeat(pad) + s);
-      lf();
-    };
+    const lf   = () => b(0x0A);
+    const line  = (char = '-', n = 42) => { txt(char.repeat(n)); lf(); };
 
     // ── Reset ──────────────────────────────────────
     b(ESC, 0x40);
@@ -1419,11 +1411,10 @@ async function printOrder(order, apiKey, printerId) {
     // ── CABEÇALHO ──────────────────────────────────
     b(ESC, 0x61, 0x01); // centralizar
 
-    // Nome em fonte GRANDE (double width + double height)
-    b(GS, 0x21, 0x11);  // dupla largura + dupla altura
-    b(ESC, 0x45, 0x01); // negrito
+    b(GS, 0x21, 0x11);  // fonte dupla
+    b(ESC, 0x45, 0x01);
     txt('Varanda do Sabor'); lf();
-    b(GS, 0x21, 0x00);  // volta fonte normal
+    b(GS, 0x21, 0x00);
     b(ESC, 0x45, 0x00);
 
     txt('- Restaurante -'); lf();
@@ -1431,7 +1422,7 @@ async function printOrder(order, apiKey, printerId) {
     txt('(14) 99155-6542'); lf();
     lf();
 
-    // ── DIVISOR DUPLO ──────────────────────────────
+    // ── DIVISOR ────────────────────────────────────
     b(ESC, 0x61, 0x00); // esquerda
     line('=');
 
@@ -1442,28 +1433,23 @@ async function printOrder(order, apiKey, printerId) {
 
     txt(`Cliente : ${order.client_name || ''}`); lf();
     txt(`Horario : ${horario}`); lf();
-
-    if (isDelivery && order.address) {
-      txt(`Endereco: ${order.address}`); lf();
-    }
-    if (order.payment_method) {
-      txt(`Pagament: ${order.payment_method}`); lf();
-    }
+    if (isDelivery && order.address) { txt(`Endereco: ${order.address}`); lf(); }
+    if (order.payment_method)        { txt(`Pagament: ${order.payment_method}`); lf(); }
 
     line('-');
 
     // ── CABEÇALHO DOS ITENS ────────────────────────
     b(ESC, 0x45, 0x01);
-    txt('ITEM                  QTD   VALOR'); lf();
+    txt('ITEM                          QTD   VALOR'); lf();
     b(ESC, 0x45, 0x00);
     line('-');
 
     // ── ITENS ──────────────────────────────────────
     for (const it of itensComPreco) {
-      const nome  = it.nome.substring(0, 20).padEnd(20);
-      const qty   = String(it.qty).padStart(4);
+      const nome  = it.nome.substring(0, 28).padEnd(28);
+      const qty   = String(it.qty).padStart(5);
       const valor = `R$${(it.preco * it.qty).toFixed(2)}`.padStart(8);
-      txt(`${nome}${qty}${valor}`); lf();
+      txt(`${nome}${qty} ${valor}`); lf();
     }
 
     line('-');
@@ -1471,9 +1457,7 @@ async function printOrder(order, apiKey, printerId) {
     // ── OBSERVAÇÕES ────────────────────────────────
     if (order.notes) {
       lf();
-      b(ESC, 0x45, 0x01);
-      txt('Obs:'); lf();
-      b(ESC, 0x45, 0x00);
+      b(ESC, 0x45, 0x01); txt('Obs:'); lf(); b(ESC, 0x45, 0x00);
       txt(order.notes); lf();
       lf();
     }
@@ -1481,7 +1465,7 @@ async function printOrder(order, apiKey, printerId) {
     // ── TOTAL ──────────────────────────────────────
     line('=');
     b(ESC, 0x45, 0x01);
-    b(GS, 0x21, 0x01); // double height só no total
+    b(GS, 0x21, 0x01);
     txt(`TOTAL: R$ ${totalFinal.toFixed(2)}`); lf();
     b(GS, 0x21, 0x00);
     b(ESC, 0x45, 0x00);
@@ -1489,22 +1473,21 @@ async function printOrder(order, apiKey, printerId) {
 
     // ── RODAPÉ ─────────────────────────────────────
     lf();
-    b(ESC, 0x61, 0x01); // centralizar
-
+    b(ESC, 0x61, 0x01);
     txt('Obrigado pela preferencia!'); lf();
     txt('Volte sempre :)'); lf();
     lf();
-    txt('* * * * * * * * * * * * * * * *'); lf();
+    txt('* * * * * * * * * * * * * * * * *'); lf();
     lf();
     b(ESC, 0x45, 0x01);
-    txt('Insta: @varandadosabor.arere'); lf();
+    txt('@varandadosabor.arere'); lf();
     b(ESC, 0x45, 0x00);
     lf();
-    txt('<3'); lf();
+    txt('Feito com FluxON'); lf();
     lf();
 
     // ── CORTE ──────────────────────────────────────
-    b(GS, 0x56, 0x41, 0x06); // corte parcial com avanço extra
+    b(GS, 0x56, 0x41, 0x06);
 
     const rawBuffer = Buffer.from(bytes);
 
