@@ -1389,8 +1389,14 @@ async function printOrder(order, apiKey, printerId) {
     const MM = 2.8346; // 1mm em pontos
     const W  = 80 * MM; // 80mm em pontos
 
+// Calcula altura aproximada do conteúdo
+    const alturaBase = 220; // cabeçalho + dados + separadores + rodapé
+    const alturaItens = itensComPreco.length * 18;
+    const alturaObs = order.notes ? 30 : 0;
+    const alturaTotal = alturaBase + alturaItens + alturaObs + 20; // margem extra
+
     const doc = new PDFDocument({
-      size: [W, 2000], // altura generosa, vai cortar depois
+      size: [W, alturaTotal],
       margins: { top: 8, bottom: 8, left: 8 * MM, right: 8 * MM }
     });
 
