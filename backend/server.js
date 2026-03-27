@@ -1500,13 +1500,14 @@ async function printOrder(order, apiKey, printerId) {
     txt('* * * * * * * * * * * * * * * * * * * *'); lf();
     lf();
     if (restData?.instagram) {
-      b(ESC, 0x45, 0x01);
-      txt(`@${restData.instagram}`); lf();
-      b(ESC, 0x45, 0x00);
-      lf();
-    }
-    txt('Feito com FluxON'); lf();
-    lf();
+  txt('Siga-nos no Instagram:'); lf();
+  b(ESC, 0x45, 0x01);
+  txt(`@${restData.instagram}`); lf();
+  b(ESC, 0x45, 0x00);
+  lf();
+}
+txt('Feito com FlowON'); lf();
+lf();
 
     // ── CORTE ──────────────────────────────────────
     b(GS, 0x56, 0x41, 0x06);
