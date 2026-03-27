@@ -1525,6 +1525,19 @@ async function printOrder(order, apiKey, printerId) {
     return false;
   }
 }
+
+// GET - Busca config da impressora
+app.get("/api/v1/restaurante/:restaurant_id/impressora", async (req, res) => {
+  const { restaurant_id } = req.params;
+  const { data, error } = await supabase
+    .from("restaurants")
+    .select("printnode_api_key, printnode_printer_id")
+    .eq("id", restaurant_id)
+    .single();
+  if (error) return sendError(res, 500, "Erro ao buscar config");
+  return res.json(data || {});
+});
+
 // PATCH - Salva config da impressora
 app.patch("/api/v1/restaurante/:restaurant_id/impressora", async (req, res) => {
   try {
