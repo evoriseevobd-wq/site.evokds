@@ -3,6 +3,7 @@ import cors from "cors";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import multer from "multer";
+import { Printer, InMemory, Alignment, Style } from 'escpos-buffer';
 
 dotenv.config();
 
@@ -1346,8 +1347,6 @@ app.patch("/api/v1/restaurante/:restaurant_id/tracking-url", async (req, res) =>
 /* ========================================
    🖨️ ROTAS DE IMPRESSORA (PrintNode)
 ======================================== */
-
-import { Printer, InMemory, Alignment, Style } from 'escpos-buffer';
 
 async function printOrder(order, apiKey, printerId) {
   try {
