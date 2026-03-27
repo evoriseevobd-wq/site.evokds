@@ -1497,10 +1497,10 @@ async function printOrder(order, apiKey, printerId) {
     txt('* * * * * * * * * * * * * * * *'); lf();
     lf();
     b(ESC, 0x45, 0x01);
-    txt('@varandadosabor.arere'); lf();
+    txt('Insta: @varandadosabor.arere'); lf();
     b(ESC, 0x45, 0x00);
     lf();
-    txt('Feito com FluxON'); lf();
+    txt('<3'); lf();
     lf();
 
     // ── CORTE ──────────────────────────────────────
