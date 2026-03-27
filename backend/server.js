@@ -1361,12 +1361,9 @@ async function printOrder(order, apiKey, printerId) {
 
       if (preco === 0 && order.restaurant_id) {
         const { data: cardapioItem } = await supabase
-          .from("cardapio")
-          .select("preco")
+          .from("cardapio").select("preco")
           .eq("restaurant_id", order.restaurant_id)
-          .ilike("nome", nome)
-          .limit(1)
-          .single();
+          .ilike("nome", nome).limit(1).single();
         if (cardapioItem?.preco) preco = parseFloat(cardapioItem.preco);
       }
 
@@ -1381,70 +1378,87 @@ async function printOrder(order, apiKey, printerId) {
     const horario = new Date(order.created_at || Date.now())
       .toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-    const connection = new InMemory();
-   const printer = await Printer.CONNECT('Non-specific', connection);
+    // Comandos ESC/POS
+    const ESC = 0x1B;
+    const GS  = 0x1D;
+    const bytes = [];
 
-    // Cabeçalho
-    await printer.setAlignment(Alignment.Center);
-    await printer.setStyle(Style.Bold);
-    await printer.writeLine('Varanda do Sabor');
-    await printer.setStyle(Style.None);
-    await printer.writeLine('Restaurante');
-    await printer.writeLine('(14) 99155-6542');
-    await printer.feed(1);
+    const b = (...args) => args.forEach(v => bytes.push(v));
+    const txt = (str) => {
+      const s = String(str || '').replace(/[^\x20-\x7E]/g, c => {
+        const map = { 'á':'a','à':'a','â':'a','ã':'a','é':'e','ê':'e','í':'i','ó':'o','ô':'o','õ':'o','ú':'u','ç':'c','Á':'A','É':'E','Í':'I','Ó':'O','Ú':'U','Ç':'C' };
+        return map[c] || '?';
+      });
+      s.split('').forEach(c => bytes.push(c.charCodeAt(0)));
+    };
+    const lf = () => b(0x0A);
+    const line = (char = '-', n = 32) => { txt(char.repeat(n)); lf(); };
 
-    // Separador
-    await printer.writeLine('================================');
+    // Init
+    b(ESC, 0x40); // reset
+
+    // Centro + negrito
+    b(ESC, 0x61, 0x01); // centralizar
+    b(ESC, 0x45, 0x01); // negrito on
+    txt('Varanda do Sabor'); lf();
+    b(ESC, 0x45, 0x00); // negrito off
+    txt('Restaurante'); lf();
+    txt('(14) 99155-6542'); lf();
+    lf();
+
+    // Linha dupla
+    b(ESC, 0x61, 0x00); // esquerda
+    line('=');
 
     // Pedido
-    await printer.setAlignment(Alignment.Left);
-    await printer.setStyle(Style.Bold);
-    await printer.writeLine(`Pedido #${order.order_number || ''}  ${isDelivery ? 'DELIVERY' : 'RETIRADA'}`);
-    await printer.setStyle(Style.None);
-    await printer.writeLine(`Cliente: ${order.client_name || ''}`);
-    await printer.writeLine(`Horario: ${horario}`);
-    if (isDelivery && order.address) await printer.writeLine(`Endereco: ${order.address}`);
-    if (order.payment_method) await printer.writeLine(`Pagamento: ${order.payment_method}`);
+    b(ESC, 0x45, 0x01);
+    txt(`Pedido #${order.order_number || ''}  ${isDelivery ? 'DELIVERY' : 'RETIRADA'}`); lf();
+    b(ESC, 0x45, 0x00);
+    txt(`Cliente: ${order.client_name || ''}`); lf();
+    txt(`Horario: ${horario}`); lf();
+    if (isDelivery && order.address) { txt(`Endereco: ${order.address}`); lf(); }
+    if (order.payment_method) { txt(`Pagamento: ${order.payment_method}`); lf(); }
 
-    await printer.writeLine('--------------------------------');
+    line('-');
 
     // Cabeçalho itens
-    await printer.setStyle(Style.Bold);
-    await printer.writeLine('ITEM                  QTD  VALOR');
-    await printer.setStyle(Style.None);
-    await printer.writeLine('--------------------------------');
+    b(ESC, 0x45, 0x01);
+    txt('ITEM                  QTD  VALOR'); lf();
+    b(ESC, 0x45, 0x00);
+    line('-');
 
     // Itens
-  for (const it of itensComPreco) {
-  const nome  = it.nome.substring(0, 20).padEnd(20);
-  const qty   = String(it.qty).padStart(4);
-  const valor = `R$${(it.preco * it.qty).toFixed(2)}`.padStart(7);
-  await printer.writeLine(`${nome}${qty} ${valor}`);
-}
+    for (const it of itensComPreco) {
+      const nome  = it.nome.substring(0, 20).padEnd(20);
+      const qty   = String(it.qty).padStart(4);
+      const valor = `R$${(it.preco * it.qty).toFixed(2)}`.padStart(7);
+      txt(`${nome}${qty} ${valor}`); lf();
+    }
 
-    await printer.writeLine('--------------------------------');
+    line('-');
 
     // Obs
     if (order.notes) {
-      await printer.writeLine(`Obs: ${order.notes}`);
-      await printer.feed(1);
+      txt(`Obs: ${order.notes}`); lf();
+      lf();
     }
 
     // Total
-    await printer.setStyle(Style.Bold);
-    await printer.writeLine(`TOTAL:          R$${totalFinal.toFixed(2)}`);
-    await printer.setStyle(Style.None);
-    await printer.writeLine('================================');
-    await printer.feed(1);
+    b(ESC, 0x45, 0x01);
+    txt(`TOTAL:          R$${totalFinal.toFixed(2)}`); lf();
+    b(ESC, 0x45, 0x00);
+    line('=');
+    lf();
 
-    // Rodapé
-    await printer.setAlignment(Alignment.Center);
-    await printer.writeLine('Obrigado pela preferencia!');
-    await printer.writeLine('@varandadosabor.arere');
-    await printer.feed(4); // avança papel pra corte
-    await printer.cut();
+    // Rodapé centralizado
+    b(ESC, 0x61, 0x01);
+    txt('Obrigado pela preferencia!'); lf();
+    txt('@varandadosabor.arere'); lf();
 
-    const rawBuffer = connection.buffer();
+    // Avança papel + corte
+    b(GS, 0x56, 0x41, 0x04); // corte parcial com avanço
+
+    const rawBuffer = Buffer.from(bytes);
 
     const response = await fetch("https://api.printnode.com/printjobs", {
       method: "POST",
