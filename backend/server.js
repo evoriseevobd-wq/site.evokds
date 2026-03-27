@@ -1502,7 +1502,7 @@ async function printOrder(order, apiKey, printerId) {
     if (restData?.instagram) {
   txt('Siga-nos no Instagram:'); lf();
   b(ESC, 0x45, 0x01);
-  txt(`@${restData.instagram}`); lf();
+  txt(`${restData.instagram}`); lf();
   b(ESC, 0x45, 0x00);
   lf();
 }
