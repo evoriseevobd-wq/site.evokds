@@ -1549,10 +1549,16 @@ if (totalPriceField) {
     atualizarHiddenItems();
   }
 
-  window.removerItemPedido = function(index) {
-    itensPedido.splice(index, 1);
-    renderItensSelecionados();
-  };
+ window.removerItemPedido = function(index) {
+  itensPedido.splice(index, 1);
+  renderItensSelecionados();
+  // Recalcula total
+  const totalField = document.getElementById("new-total-price");
+  if (totalField) {
+    const soma = itensPedido.reduce((acc, i) => acc + (i.price * i.qty), 0);
+    totalField.value = soma > 0 ? soma.toFixed(2).replace('.', ',') : '';
+  }
+};
 
   function adicionarItem(item) {
     const existente = itensPedido.find(i => i.name === item.nome);
@@ -1565,14 +1571,14 @@ if (totalPriceField) {
     searchInput.value = '';
     dropdown.style.display = 'none';
 
-    // Atualiza o total automaticamente se estiver vazio
-    const totalField = document.getElementById("new-total-price");
-    if (totalField && !totalField.value) {
-      const soma = itensPedido.reduce((acc, i) => acc + (i.price * i.qty), 0);
-      if (soma > 0) {
-        totalField.value = soma.toFixed(2).replace('.', ',');
-      }
-    }
+// Recalcula o total sempre
+const totalField = document.getElementById("new-total-price");
+if (totalField) {
+  const soma = itensPedido.reduce((acc, i) => acc + (i.price * i.qty), 0);
+  if (soma > 0) {
+    totalField.value = soma.toFixed(2).replace('.', ',');
+  }
+}
   }
 
   let autocompleteTimer = null;
