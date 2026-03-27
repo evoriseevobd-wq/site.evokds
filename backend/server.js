@@ -1488,13 +1488,11 @@ lineEq();
     txt('Obrigado pela preferencia!'); lf();
     txt('Volte sempre :)'); lf();
     lf();
-    txt('* * * * * * * * * * * * * * * * *'); lf();
+    txt('* * * * * * * * * * * * * * * * * * * *'); lf();
     lf();
     b(ESC, 0x45, 0x01);
     txt('@varandadosabor.arere'); lf();
     b(ESC, 0x45, 0x00);
-    lf();
-    txt('Feito com FluxON'); lf();
     lf();
 
     // ── CORTE ──────────────────────────────────────
