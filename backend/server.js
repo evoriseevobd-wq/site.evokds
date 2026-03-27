@@ -3,7 +3,7 @@ import cors from "cors";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import multer from "multer";
-import PDFDocument from "puppeteer";
+import puppeteer from "puppeteer";;
 
 dotenv.config();
 
