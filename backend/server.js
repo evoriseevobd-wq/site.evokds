@@ -1430,9 +1430,12 @@ async function printOrder(order, apiKey, printerId) {
     lineEq();
 
     // ── DADOS DO PEDIDO ────────────────────────────
-    b(ESC, 0x45, 0x01);
-    txt(`Pedido #${order.order_number || ''}  ${isDelivery ? '[DELIVERY]' : '[RETIRADA]'}`); lf();
-    b(ESC, 0x45, 0x00);
+   b(ESC, 0x45, 0x01);
+const tipoLabel = isDelivery ? '[DELIVERY]' : '[RETIRADA]';
+const pedidoStr = `Pedido #${order.order_number || ''}`;
+const espacoPedido = 48 - pedidoStr.length - tipoLabel.length;
+txt(pedidoStr + ' '.repeat(Math.max(1, espacoPedido)) + tipoLabel); lf();
+b(ESC, 0x45, 0x00);
 
     txt(`Cliente : ${order.client_name || ''}`); lf();
     txt(`Horario : ${horario}`); lf();
@@ -1469,12 +1472,15 @@ async function printOrder(order, apiKey, printerId) {
 
     // ── TOTAL ──────────────────────────────────────
     lineEq();
-    b(ESC, 0x45, 0x01);
-    b(GS, 0x21, 0x01); // altura dupla no total
-    txt(`TOTAL: R$ ${totalFinal.toFixed(2)}`); lf();
-    b(GS, 0x21, 0x00);
-    b(ESC, 0x45, 0x00);
-    lineEq();
+b(ESC, 0x45, 0x01);
+b(GS, 0x21, 0x01);
+const totalLabel = 'TOTAL:';
+const totalValor = `R$ ${totalFinal.toFixed(2)}`;
+const espacoTotal = 48 - totalLabel.length - totalValor.length;
+txt(totalLabel + ' '.repeat(Math.max(1, espacoTotal)) + totalValor); lf();
+b(GS, 0x21, 0x00);
+b(ESC, 0x45, 0x00);
+lineEq();
 
     // ── RODAPÉ ─────────────────────────────────────
     lf();
