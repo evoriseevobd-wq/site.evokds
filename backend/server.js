@@ -1410,6 +1410,7 @@ async function printOrder(order, apiKey, printerId) {
         <style>
           @page { size: 72mm auto; margin: 0; }
           * { margin: 0; padding: 0; box-sizing: border-box; }
+          html, body { height: auto !important; overflow: visible !important; }
           body {
             font-family: 'Courier New', monospace;
             width: 72mm;
