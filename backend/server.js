@@ -1495,11 +1495,14 @@ async function printOrder(order, apiKey, printerId) {
     });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
-    const pdfBuffer = await page.pdf({
-      width: '72mm',
-      printBackground: true,
-      margin: { top: 0, bottom: 0, left: 0, right: 0 }
-    });
+   await page.emulateMediaType('print');
+const pdfBuffer = await page.pdf({
+  width: '72mm',
+  height: 'auto',
+  printBackground: false,
+  margin: { top: '1mm', bottom: '1mm', left: '2mm', right: '2mm' },
+  pageRanges: '1'
+});
     await browser.close();
 
     const response = await fetch("https://api.printnode.com/printjobs", {
