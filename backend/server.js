@@ -1377,85 +1377,134 @@ async function printOrder(order, apiKey, printerId) {
     const horario = new Date(order.created_at || Date.now())
       .toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-    // Comandos ESC/POS
     const ESC = 0x1B;
     const GS  = 0x1D;
     const bytes = [];
 
     const b = (...args) => args.forEach(v => bytes.push(v));
+
     const txt = (str) => {
-      const s = String(str || '').replace(/[^\x20-\x7E]/g, c => {
-        const map = { 'á':'a','à':'a','â':'a','ã':'a','é':'e','ê':'e','í':'i','ó':'o','ô':'o','õ':'o','ú':'u','ç':'c','Á':'A','É':'E','Í':'I','Ó':'O','Ú':'U','Ç':'C' };
-        return map[c] || '?';
-      });
-      s.split('').forEach(c => bytes.push(c.charCodeAt(0)));
+      const map = {
+        'á':'a','à':'a','â':'a','ã':'a','ä':'a',
+        'é':'e','è':'e','ê':'e','ë':'e',
+        'í':'i','ì':'i','î':'i','ï':'i',
+        'ó':'o','ò':'o','ô':'o','õ':'o','ö':'o',
+        'ú':'u','ù':'u','û':'u','ü':'u',
+        'ç':'c','ñ':'n',
+        'Á':'A','À':'A','Â':'A','Ã':'A',
+        'É':'E','È':'E','Ê':'E',
+        'Í':'I','Î':'I',
+        'Ó':'O','Ô':'O','Õ':'O',
+        'Ú':'U','Û':'U',
+        'Ç':'C','Ñ':'N'
+      };
+      String(str || '').replace(/[^\x20-\x7E]/g, c => map[c] || '?')
+        .split('').forEach(c => bytes.push(c.charCodeAt(0)));
     };
-    const lf = () => b(0x0A);
+
+    const lf  = () => b(0x0A);
     const line = (char = '-', n = 32) => { txt(char.repeat(n)); lf(); };
 
-    // Init
-    b(ESC, 0x40); // reset
+    // Centraliza texto manualmente (32 colunas)
+    const center = (str, cols = 32) => {
+      const s = String(str).substring(0, cols);
+      const pad = Math.max(0, Math.floor((cols - s.length) / 2));
+      txt(' '.repeat(pad) + s);
+      lf();
+    };
 
-    // Centro + negrito
+    // ── Reset ──────────────────────────────────────
+    b(ESC, 0x40);
+
+    // ── CABEÇALHO ──────────────────────────────────
     b(ESC, 0x61, 0x01); // centralizar
-    b(ESC, 0x45, 0x01); // negrito on
+
+    // Nome em fonte GRANDE (double width + double height)
+    b(GS, 0x21, 0x11);  // dupla largura + dupla altura
+    b(ESC, 0x45, 0x01); // negrito
     txt('Varanda do Sabor'); lf();
-    b(ESC, 0x45, 0x00); // negrito off
-    txt('Restaurante'); lf();
+    b(GS, 0x21, 0x00);  // volta fonte normal
+    b(ESC, 0x45, 0x00);
+
+    txt('- Restaurante -'); lf();
+    lf();
     txt('(14) 99155-6542'); lf();
     lf();
 
-    // Linha dupla
+    // ── DIVISOR DUPLO ──────────────────────────────
     b(ESC, 0x61, 0x00); // esquerda
     line('=');
 
-    // Pedido
+    // ── DADOS DO PEDIDO ────────────────────────────
     b(ESC, 0x45, 0x01);
-    txt(`Pedido #${order.order_number || ''}  ${isDelivery ? 'DELIVERY' : 'RETIRADA'}`); lf();
+    txt(`Pedido #${order.order_number || ''}  ${isDelivery ? '[DELIVERY]' : '[RETIRADA]'}`); lf();
     b(ESC, 0x45, 0x00);
-    txt(`Cliente: ${order.client_name || ''}`); lf();
-    txt(`Horario: ${horario}`); lf();
-    if (isDelivery && order.address) { txt(`Endereco: ${order.address}`); lf(); }
-    if (order.payment_method) { txt(`Pagamento: ${order.payment_method}`); lf(); }
+
+    txt(`Cliente : ${order.client_name || ''}`); lf();
+    txt(`Horario : ${horario}`); lf();
+
+    if (isDelivery && order.address) {
+      txt(`Endereco: ${order.address}`); lf();
+    }
+    if (order.payment_method) {
+      txt(`Pagament: ${order.payment_method}`); lf();
+    }
 
     line('-');
 
-    // Cabeçalho itens
+    // ── CABEÇALHO DOS ITENS ────────────────────────
     b(ESC, 0x45, 0x01);
-    txt('ITEM                  QTD  VALOR'); lf();
+    txt('ITEM                  QTD   VALOR'); lf();
     b(ESC, 0x45, 0x00);
     line('-');
 
-    // Itens
+    // ── ITENS ──────────────────────────────────────
     for (const it of itensComPreco) {
       const nome  = it.nome.substring(0, 20).padEnd(20);
       const qty   = String(it.qty).padStart(4);
-      const valor = `R$${(it.preco * it.qty).toFixed(2)}`.padStart(7);
-      txt(`${nome}${qty} ${valor}`); lf();
+      const valor = `R$${(it.preco * it.qty).toFixed(2)}`.padStart(8);
+      txt(`${nome}${qty}${valor}`); lf();
     }
 
     line('-');
 
-    // Obs
+    // ── OBSERVAÇÕES ────────────────────────────────
     if (order.notes) {
-      txt(`Obs: ${order.notes}`); lf();
+      lf();
+      b(ESC, 0x45, 0x01);
+      txt('Obs:'); lf();
+      b(ESC, 0x45, 0x00);
+      txt(order.notes); lf();
       lf();
     }
 
-    // Total
+    // ── TOTAL ──────────────────────────────────────
+    line('=');
     b(ESC, 0x45, 0x01);
-    txt(`TOTAL:          R$${totalFinal.toFixed(2)}`); lf();
+    b(GS, 0x21, 0x01); // double height só no total
+    txt(`TOTAL: R$ ${totalFinal.toFixed(2)}`); lf();
+    b(GS, 0x21, 0x00);
     b(ESC, 0x45, 0x00);
     line('=');
+
+    // ── RODAPÉ ─────────────────────────────────────
+    lf();
+    b(ESC, 0x61, 0x01); // centralizar
+
+    txt('Obrigado pela preferencia!'); lf();
+    txt('Volte sempre :)'); lf();
+    lf();
+    txt('* * * * * * * * * * * * * * * *'); lf();
+    lf();
+    b(ESC, 0x45, 0x01);
+    txt('@varandadosabor.arere'); lf();
+    b(ESC, 0x45, 0x00);
+    lf();
+    txt('Feito com FluxON'); lf();
     lf();
 
-    // Rodapé centralizado
-    b(ESC, 0x61, 0x01);
-    txt('Obrigado pela preferencia!'); lf();
-    txt('@varandadosabor.arere'); lf();
-
-    // Avança papel + corte
-    b(GS, 0x56, 0x41, 0x04); // corte parcial com avanço
+    // ── CORTE ──────────────────────────────────────
+    b(GS, 0x56, 0x41, 0x06); // corte parcial com avanço extra
 
     const rawBuffer = Buffer.from(bytes);
 
@@ -1482,18 +1531,6 @@ async function printOrder(order, apiKey, printerId) {
     return false;
   }
 }
-
-// GET - Busca config da impressora
-app.get("/api/v1/restaurante/:restaurant_id/impressora", async (req, res) => {
-  const { restaurant_id } = req.params;
-  const { data, error } = await supabase
-    .from("restaurants")
-    .select("printnode_api_key, printnode_printer_id")
-    .eq("id", restaurant_id)
-    .single();
-  if (error) return sendError(res, 500, "Erro ao buscar config");
-  return res.json(data || {});
-});
 
 // PATCH - Salva config da impressora
 app.patch("/api/v1/restaurante/:restaurant_id/impressora", async (req, res) => {
