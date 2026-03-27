@@ -451,6 +451,7 @@ async function loadSettingsData() {
   try {
     const resp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/impressora`);
     const data = await resp.json();
+    console.log("🖨️ Config carregada:", data);
     if (data.printnode_api_key)
       document.getElementById("settings-printnode-key").value = data.printnode_api_key;
     if (data.printnode_printer_id)
