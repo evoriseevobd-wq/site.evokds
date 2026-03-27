@@ -1352,7 +1352,6 @@ async function printOrder(order, apiKey, printerId) {
   try {
     const isDelivery = String(order.service_type || '').toLowerCase() === 'delivery';
 
-    // Busca preços no cardápio para itens zerados
     const itens = Array.isArray(order.itens) ? order.itens : [];
     let totalRecalculado = 0;
 
@@ -1383,157 +1382,111 @@ async function printOrder(order, apiKey, printerId) {
     const horario = new Date(order.created_at || Date.now())
       .toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-    // ========================================
-    // 🎨 GERA O PDF
-    // ========================================
-    const MM = 2.8346; // 1mm em pontos
-    const W  = 80 * MM; // 80mm em pontos
+    const itensHtml = itensComPreco.map(it => `
+      <tr>
+        <td style="padding:3px 0; font-size:13px;">${it.nome}</td>
+        <td style="padding:3px 0; font-size:13px; text-align:center;">${it.qty}</td>
+        <td style="padding:3px 0; font-size:13px; text-align:right;">R$${(it.preco * it.qty).toFixed(2)}</td>
+      </tr>
+    `).join('');
 
-// Calcula altura aproximada do conteúdo
-    const alturaBase = 220; // cabeçalho + dados + separadores + rodapé
-    const alturaItens = itensComPreco.length * 18;
-    const alturaObs = order.notes ? 30 : 0;
-    const alturaTotal = alturaBase + alturaItens + alturaObs + 20; // margem extra
+    const obsHtml = order.notes ? `
+      <p style="font-size:11px; font-style:italic; color:#555; margin:6px 0;">Obs: ${order.notes}</p>
+    ` : '';
 
-    const doc = new PDFDocument({
-      size: [W, alturaTotal],
-      margins: { top: 8, bottom: 8, left: 8 * MM, right: 8 * MM }
-    });
+    const enderecoHtml = isDelivery && order.address ? `
+      <p style="margin:2px 0; font-size:12px;">Endereço: ${order.address}</p>
+    ` : '';
 
-    const chunks = [];
-    doc.on('data', chunk => chunks.push(chunk));
+    const pagamentoHtml = order.payment_method ? `
+      <p style="margin:2px 0; font-size:12px;">Pagamento: ${order.payment_method}</p>
+    ` : '';
 
-    const innerW = W - 16 * MM;
-    const X = 8 * MM;
-    let Y = 10;
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body {
+            font-family: 'Courier New', monospace;
+            width: 72mm;
+            padding: 6mm 4mm;
+            font-size: 12px;
+            color: #000;
+          }
+          .center { text-align: center; }
+          .linha-dupla-top { border-top: 2.5px solid #000; margin: 2px 0 1px; }
+          .linha-fina { border-top: 0.8px solid #000; margin: 1px 0 6px; }
+          .linha-tracejada { border-top: 1px dashed #888; margin: 6px 0; }
+          .linha-total-top { border-top: 1.5px solid #000; margin: 4px 0 3px; }
+          .linha-dupla-bot-1 { border-top: 0.8px solid #000; margin: 3px 0 2px; }
+          .linha-dupla-bot-2 { border-top: 2px solid #000; margin: 0 0 8px; }
+          table { width: 100%; border-collapse: collapse; }
+          td { vertical-align: top; }
+          .col-nome { width: 55%; }
+          .col-qty  { width: 15%; text-align: center; }
+          .col-val  { width: 30%; text-align: right; }
+        </style>
+      </head>
+      <body>
+        <div class="center">
+          <p style="font-size:18px; font-weight:bold; letter-spacing:0.5px;">Varanda do Sabor</p>
+          <p style="font-size:11px; color:#444;">Restaurante</p>
+          <p style="font-size:11px; color:#444;">(14) 99155-6542</p>
+        </div>
 
-    // ── CABEÇALHO ──
-    doc.fontSize(18).font('Helvetica-Bold')
-       .text('Varanda do Sabor', X, Y, { width: innerW, align: 'center' });
-    Y = doc.y + 2;
+        <div class="linha-dupla-top"></div>
+        <div class="linha-fina"></div>
 
-    doc.fontSize(9).font('Helvetica')
-       .text('Restaurante', X, Y, { width: innerW, align: 'center' });
-    Y = doc.y + 2;
+        <table style="margin-bottom:4px;">
+          <tr>
+            <td style="font-size:14px; font-weight:bold;">Pedido #${order.order_number || ''}</td>
+            <td style="font-size:12px; font-weight:bold; text-align:right;">${isDelivery ? 'DELIVERY' : 'RETIRADA'}</td>
+          </tr>
+        </table>
+        <p style="margin:2px 0; font-size:12px;">Cliente: ${order.client_name || ''}</p>
+        <p style="margin:2px 0; font-size:12px;">Horário: ${horario}</p>
+        ${enderecoHtml}
+        ${pagamentoHtml}
 
-    doc.fontSize(9).font('Helvetica')
-       .text('(14) 99155-6542', X, Y, { width: innerW, align: 'center' });
-    Y = doc.y + 6;
+        <div class="linha-tracejada"></div>
 
-    // Linha decorativa dupla
-    doc.moveTo(X, Y).lineTo(X + innerW, Y).lineWidth(2).stroke();
-    Y += 3;
-    doc.moveTo(X, Y).lineTo(X + innerW, Y).lineWidth(0.5).stroke();
-    Y += 8;
+        <table style="margin-bottom:4px;">
+          <tr>
+            <td class="col-nome" style="font-size:10px; font-weight:bold;">ITEM</td>
+            <td class="col-qty" style="font-size:10px; font-weight:bold; text-align:center;">QTD</td>
+            <td class="col-val" style="font-size:10px; font-weight:bold; text-align:right;">VALOR</td>
+          </tr>
+        </table>
+        <div class="linha-tracejada"></div>
 
-    // ── DADOS DO PEDIDO ──
-    doc.fontSize(13).font('Helvetica-Bold')
-       .text(`Pedido #${order.order_number || ''}`, X, Y, { width: innerW * 0.55 });
+        <table>
+          ${itensHtml}
+        </table>
 
-    const tipoText = isDelivery ? 'DELIVERY' : 'RETIRADA';
-    doc.fontSize(11).font('Helvetica-Bold')
-       .text(tipoText, X + innerW * 0.55, Y, { width: innerW * 0.45, align: 'right' });
-    Y = doc.y + 6;
+        <div class="linha-tracejada"></div>
+        ${obsHtml}
 
-    doc.fontSize(10).font('Helvetica')
-       .text(`Cliente:  ${order.client_name || ''}`, X, Y, { width: innerW });
-    Y = doc.y + 3;
+        <div class="linha-total-top"></div>
+        <table>
+          <tr>
+            <td style="font-size:12px;">TOTAL:</td>
+            <td style="font-size:16px; font-weight:bold; text-align:right;">R$${totalFinal.toFixed(2)}</td>
+          </tr>
+        </table>
+        <div class="linha-dupla-bot-1"></div>
+        <div class="linha-dupla-bot-2"></div>
 
-    doc.fontSize(10).font('Helvetica')
-       .text(`Horário:  ${horario}`, X, Y, { width: innerW });
-    Y = doc.y + 3;
+        <div class="center">
+          <p style="font-size:10px; color:#555;">Obrigado pela preferência!</p>
+          <p style="font-size:10px; color:#555;">@varandadosabor.arere</p>
+        </div>
+      </body>
+      </html>
+    `;
 
-    if (isDelivery && order.address) {
-      doc.fontSize(10).font('Helvetica')
-         .text(`Endereço: ${order.address}`, X, Y, { width: innerW });
-      Y = doc.y + 3;
-    }
-
-    if (order.payment_method) {
-      doc.fontSize(10).font('Helvetica')
-         .text(`Pagamento: ${order.payment_method}`, X, Y, { width: innerW });
-      Y = doc.y + 3;
-    }
-
-    Y += 4;
-
-    // Linha separadora tracejada
-    doc.dash(3, { space: 3 })
-       .moveTo(X, Y).lineTo(X + innerW, Y).lineWidth(0.8).stroke();
-    doc.undash();
-    Y += 8;
-
-    // ── CABEÇALHO DOS ITENS ──
-    doc.fontSize(9).font('Helvetica-Bold')
-       .text('ITEM', X, Y, { width: innerW * 0.55 });
-    doc.fontSize(9).font('Helvetica-Bold')
-       .text('QTD', X + innerW * 0.55, Y, { width: innerW * 0.15, align: 'center' });
-    doc.fontSize(9).font('Helvetica-Bold')
-       .text('VALOR', X + innerW * 0.70, Y, { width: innerW * 0.30, align: 'right' });
-    Y = doc.y + 4;
-
-    doc.dash(2, { space: 2 })
-       .moveTo(X, Y).lineTo(X + innerW, Y).lineWidth(0.5).stroke();
-    doc.undash();
-    Y += 6;
-
-    // ── ITENS ──
-    for (const it of itensComPreco) {
-      doc.fontSize(10).font('Helvetica')
-         .text(it.nome, X, Y, { width: innerW * 0.55 });
-      doc.fontSize(10).font('Helvetica')
-         .text(String(it.qty), X + innerW * 0.55, Y, { width: innerW * 0.15, align: 'center' });
-      doc.fontSize(10).font('Helvetica')
-         .text(`R$${(it.preco * it.qty).toFixed(2)}`, X + innerW * 0.70, Y, { width: innerW * 0.30, align: 'right' });
-      Y = doc.y + 4;
-    }
-
-    Y += 2;
-    doc.dash(2, { space: 2 })
-       .moveTo(X, Y).lineTo(X + innerW, Y).lineWidth(0.5).stroke();
-    doc.undash();
-    Y += 8;
-
-    // ── OBSERVAÇÕES ──
-    if (order.notes) {
-      doc.fontSize(9).font('Helvetica-Oblique')
-         .text(`Obs: ${order.notes}`, X, Y, { width: innerW });
-      Y = doc.y + 6;
-    }
-
-    // ── TOTAL ──
-    doc.moveTo(X, Y).lineTo(X + innerW, Y).lineWidth(1.5).stroke();
-    Y += 6;
-
-    doc.fontSize(11).font('Helvetica')
-       .text('TOTAL:', X, Y, { width: innerW * 0.55 });
-    doc.fontSize(14).font('Helvetica-Bold')
-       .text(`R$${totalFinal.toFixed(2)}`, X + innerW * 0.55, Y - 2, { width: innerW * 0.45, align: 'right' });
-    Y = doc.y + 6;
-
-    doc.moveTo(X, Y).lineTo(X + innerW, Y).lineWidth(0.5).stroke();
-    Y += 3;
-    doc.moveTo(X, Y).lineTo(X + innerW, Y).lineWidth(2).stroke();
-    Y += 10;
-
-    // ── RODAPÉ ──
-    doc.fontSize(9).font('Helvetica')
-       .text('Obrigado pela preferência!', X, Y, { width: innerW, align: 'center' });
-    Y = doc.y + 2;
-
-    doc.fontSize(9).font('Helvetica')
-       .text('@varandadosabor.arere', X, Y, { width: innerW, align: 'center' });
-    Y = doc.y + 10;
-
-    // Finaliza o PDF
-    doc.end();
-
-    const pdfBuffer = await new Promise((resolve, reject) => {
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-      doc.on('error', reject);
-    });
-
-    // ── ENVIA AO PRINTNODE ──
     const response = await fetch("https://api.printnode.com/printjobs", {
       method: "POST",
       headers: {
@@ -1543,8 +1496,8 @@ async function printOrder(order, apiKey, printerId) {
       body: JSON.stringify({
         printerId: parseInt(printerId),
         title: `Pedido #${order.order_number}`,
-        contentType: "pdf_base64",
-        content: pdfBuffer.toString("base64"),
+        contentType: "html",
+        content: Buffer.from(html, "utf-8").toString("base64"),
         source: "FluxON"
       })
     });
@@ -1557,26 +1510,6 @@ async function printOrder(order, apiKey, printerId) {
     return false;
   }
 }
-
-// GET - Busca config da impressora
-app.get("/api/v1/restaurante/:restaurant_id/impressora", async (req, res) => {
-  try {
-    const { restaurant_id } = req.params;
-    const { data, error } = await supabase
-      .from("restaurants")
-      .select("printnode_api_key, printnode_printer_id")
-      .eq("id", restaurant_id)
-      .single();
-    if (error) return sendError(res, 500, "Erro ao buscar config");
-    return res.json({
-      printnode_api_key: data?.printnode_api_key || null,
-      printnode_printer_id: data?.printnode_printer_id || null,
-      configured: !!(data?.printnode_api_key && data?.printnode_printer_id)
-    });
-  } catch (err) {
-    return sendError(res, 500, "Erro interno");
-  }
-});
 
 // PATCH - Salva config da impressora
 app.patch("/api/v1/restaurante/:restaurant_id/impressora", async (req, res) => {
