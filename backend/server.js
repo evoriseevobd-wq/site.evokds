@@ -1495,14 +1495,17 @@ async function printOrder(order, apiKey, printerId) {
       headless: true
     });
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-   await page.emulateMediaType('print');
+    await page.emulateMediaType('print'); // ← vai ANTES do setContent
+await page.setContent(html, { waitUntil: 'networkidle0' });
+
+// Mede a altura real do conteúdo
+const contentHeight = await page.evaluate(() => document.body.scrollHeight);
+
 const pdfBuffer = await page.pdf({
   width: '72mm',
-  height: 'auto',
+  height: `${contentHeight}px`, // ← altura exata do conteúdo
   printBackground: false,
-  margin: { top: '1mm', bottom: '1mm', left: '2mm', right: '2mm' },
-  pageRanges: '1'
+  margin: { top: '2mm', bottom: '2mm', left: '2mm', right: '2mm' }
 });
     await browser.close();
 
