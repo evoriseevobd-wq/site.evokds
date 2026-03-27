@@ -679,23 +679,6 @@ try {
 }
 // ⭐ FIM FIDELIZAÇÃO
 
-    // 🖨️ IMPRESSÃO AUTOMÁTICA
-try {
-  if (!order_id) {
-    const { data: printConfig } = await supabase
-      .from("restaurants")
-      .select("printnode_api_key, printnode_printer_id")
-      .eq("id", restaurant_id)
-      .single();
-
-    if (printConfig?.printnode_api_key && printConfig?.printnode_printer_id) {
-      await printOrder(resultData, printConfig.printnode_api_key, printConfig.printnode_printer_id);
-    }
-  }
-} catch (printErr) {
-  console.error("⚠️ Erro na impressão:", printErr.message);
-}
-// 🖨️ FIM IMPRESSÃO
     
 return res.status(201).json({ 
   success: true, 
