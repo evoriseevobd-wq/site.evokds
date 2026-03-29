@@ -500,12 +500,13 @@ async function fetchOrders() {
     } else if (!resultsView?.classList.contains("hidden")) {
       // Não renderiza (metrics já atualiza sozinho)
     } else {
-      renderBoard();
     }
   } catch (e) {
     console.error("Polling Error:", e);
-  } finally {
-    isFetching = false;
+ } finally {
+  isFetching = false;
+  if (!modalBackdrop?.classList.contains("open") && !createModal?.classList.contains("open")) {
+    renderBoard();
   }
 }
 
