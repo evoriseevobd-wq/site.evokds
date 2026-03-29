@@ -502,12 +502,13 @@ async function fetchOrders() {
     }
   } catch (e) {
     console.error("Polling Error:", e);
- } finally {
-  isFetching = false;
-  if (!modalBackdrop?.classList.contains("open") && !createModal?.classList.contains("open")) {
-    renderBoard();
+  } finally {
+    isFetching = false;
+    if (!modalBackdrop?.classList.contains("open") && !createModal?.classList.contains("open")) {
+      renderBoard();
+    }
   }
-}
+} // ← fecha fetchOrders
 
 async function updateOrderStatus(orderId, newFrontStatus) {
   const backStatus = toBackStatus(newFrontStatus);
