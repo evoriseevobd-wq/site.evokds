@@ -383,6 +383,14 @@ body {
   align-items: flex-start;
 }
 
+#create-modal .modal-header h3 {
+  flex: 1;
+}
+
+#create-modal .modal-header {
+  align-items: center;
+}
+
 .modal-body {
   margin-top: 14px;
   display: flex;
