@@ -1612,18 +1612,16 @@ function renderItensSelecionados() {
   }
 };
 
-  window.alterarQtd = function(index, delta) {
+window.alterarQtd = function(index, delta) {
   itensPedido[index].qty += delta;
   itensPedido[index].quantidade = itensPedido[index].qty;
 
-  // Remove se chegou a 0
   if (itensPedido[index].qty <= 0) {
     itensPedido.splice(index, 1);
   }
 
   renderItensSelecionados();
 
-  // Recalcula o total
   const totalField = document.getElementById("new-total-price");
   if (totalField) {
     const soma = itensPedido.reduce((acc, i) => acc + (i.price * i.qty), 0);
