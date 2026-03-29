@@ -1027,6 +1027,7 @@ async function saveNewOrder() {
 
   try {
 
+   const editOrderId = saveCreateBtn.dataset.editOrderId || null; 
     const body = {
   restaurant_id: rid,
   client_name: client,
