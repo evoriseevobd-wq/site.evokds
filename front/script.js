@@ -1517,8 +1517,10 @@ const modalEditBtn = document.getElementById("modal-edit-btn");
 if (modalEditBtn) modalEditBtn.addEventListener("click", () => {
   const order = orders.find(o => o.id === activeOrderId);
   if (!order) return;
- modalBackdrop.classList.remove("open");
+modalBackdrop.classList.remove("open");
 createModal.classList.add("open");
+isFetching = true;
+setTimeout(() => { isFetching = false; }, 2000);
   
   if (newCustomer) newCustomer.value = order.client_name || "";
   if (newPhone) newPhone.value = order.client_phone || "";
