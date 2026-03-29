@@ -1517,8 +1517,9 @@ const modalEditBtn = document.getElementById("modal-edit-btn");
 if (modalEditBtn) modalEditBtn.addEventListener("click", () => {
   const order = orders.find(o => o.id === activeOrderId);
   if (!order) return;
-  closeOrderModal();
-  openCreateModal();
+  closeBackdrop(modalBackdrop);
+  openBackdrop(createModal);
+  updateCreateDeliveryVisibility();
   
   if (newCustomer) newCustomer.value = order.client_name || "";
   if (newPhone) newPhone.value = order.client_phone || "";
