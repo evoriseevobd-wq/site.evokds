@@ -1514,41 +1514,48 @@ function init() {
 setupDrawer();
 // Event listeners dos modais
 if (closeModalBtn) closeModalBtn.addEventListener("click", closeOrderModal);
-const modalEditBtn = document.getElementById("modal-edit-btn");
-if (modalEditBtn) modalEditBtn.addEventListener("click", () => {
+
+if (modalEditBtn) modalEditBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  e.preventDefault();
+
   const order = orders.find(o => o.id === activeOrderId);
   if (!order) return;
-modalBackdrop.classList.remove("open");
-createModal.classList.add("open");
-isFetching = true;
-setTimeout(() => { isFetching = false; }, 2000);
-  
-  if (newCustomer) newCustomer.value = order.client_name || "";
-  if (newPhone) newPhone.value = order.client_phone || "";
-  if (newNotes) newNotes.value = order.notes || "";
-  
-  const totalField = document.getElementById("new-total-price");
-  if (totalField) totalField.value = order.total_price ? String(order.total_price).replace(".", ",") : "";
-  
-  const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
-  if (newDelivery) {
-    newDelivery.checked = isDelivery;
-    updateCreateDeliveryVisibility();
-  }
-  if (isDelivery && newAddress) newAddress.value = order.address || "";
-  if (isDelivery && newPayment) newPayment.value = order.payment_method || "";
 
-  // Carrega os itens do pedido
-  itensPedido = (order.itens || []).map(it => ({
-    name: it.name || it.nome || "",
-    qty: it.qty || it.quantidade || 1,
-    price: parseFloat(it.price || it.preco || 0),
-    quantidade: it.qty || it.quantidade || 1
-  }));
-  renderItensSelecionados();
+  closeOrderModal();
 
-  saveCreateBtn.dataset.editOrderId = activeOrderId;
+  setTimeout(() => {
+    openBackdrop(createModal);
+    isFetching = true;
+    setTimeout(() => { isFetching = false; }, 2000);
+
+    if (newCustomer) newCustomer.value = order.client_name || "";
+    if (newPhone) newPhone.value = order.client_phone || "";
+    if (newNotes) newNotes.value = order.notes || "";
+
+    const totalField = document.getElementById("new-total-price");
+    if (totalField) totalField.value = order.total_price ? String(order.total_price).replace(".", ",") : "";
+
+    const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
+    if (newDelivery) {
+      newDelivery.checked = isDelivery;
+      updateCreateDeliveryVisibility();
+    }
+    if (isDelivery && newAddress) newAddress.value = order.address || "";
+    if (isDelivery && newPayment) newPayment.value = order.payment_method || "";
+
+    itensPedido = (order.itens || []).map(it => ({
+      name: it.name || it.nome || "",
+      qty: it.qty || it.quantidade || 1,
+      price: parseFloat(it.price || it.preco || 0),
+      quantidade: it.qty || it.quantidade || 1
+    }));
+    renderItensSelecionados();
+
+    saveCreateBtn.dataset.editOrderId = activeOrderId;
+  }, 50);
 });
+  
   if (closeModalSecondaryBtn) closeModalSecondaryBtn.addEventListener("click", closeOrderModal);
 if (modalBackdrop) modalBackdrop.addEventListener("click", (e) => {
   if (e.target === modalBackdrop) closeOrderModal();
