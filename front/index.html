@@ -691,32 +691,49 @@
           </small>
         </label>
         
-        <label class="delivery-toggle">
-          <input id="new-delivery" type="checkbox" />
-          <span>Delivery</span>
-        </label>
+       <div style="
+  background:rgba(30,5,5,0.4);
+  border:1px solid rgba(91,28,28,0.6);
+  border-radius:12px;
+  padding:10px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+">
+  <!-- CHECKBOX DELIVERY -->
+  <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+    <input id="new-delivery" type="checkbox" style="width:16px; height:16px; accent-color:#f97373; cursor:pointer;" />
+    <span style="color:rgba(252,228,228,0.95); font-weight:700; font-size:14px;">Delivery</span>
+  </label>
 
-        <div class="delivery-address hidden" id="delivery-address-wrap">
-          <label>Endereço para entrega
-            <input
-              id="new-address"
-              type="text"
-              placeholder="Rua, número, bairro, complemento..."
-            />
-          </label>
-        </div>
+  <!-- CAMPOS QUE EXPANDEM -->
+  <div id="delivery-address-wrap" class="hidden" style="display:flex; flex-direction:column; gap:8px;">
+    
+    <!-- ENDEREÇO -->
+    <div style="display:flex; flex-direction:column; gap:6px;">
+      <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px;">Endereço para entrega</span>
+      <input
+        id="new-address"
+        type="text"
+        placeholder="Rua, número, bairro, complemento..."
+        style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.75); color:rgba(252,228,228,1); outline:none; font-size:14px; font-family:inherit;"
+      />
+    </div>
 
-        <div class="payment-wrap hidden" id="payment-wrap">
-          <label>Forma de pagamento
-            <select id="new-payment">
-              <option value="">Selecione...</option>
-              <option value="pix">PIX</option>
-              <option value="credito">Cartão de crédito</option>
-              <option value="debito">Cartão de débito</option>
-              <option value="dinheiro">Dinheiro</option>
-            </select>
-          </label>
-        </div>
+    <!-- FORMA DE PAGAMENTO -->
+    <div style="display:flex; flex-direction:column; gap:6px;">
+      <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px;">Forma de pagamento</span>
+      <select id="new-payment" style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.75); color:rgba(252,228,228,1); outline:none; font-size:14px; font-family:inherit; appearance:none; cursor:pointer;">
+        <option value="">Selecione...</option>
+        <option value="pix">PIX</option>
+        <option value="credito">Cartão de crédito</option>
+        <option value="debito">Cartão de débito</option>
+        <option value="dinheiro">Dinheiro</option>
+      </select>
+    </div>
+
+  </div>
+</div>
 
         <label>Observações
           <textarea id="new-notes" placeholder="Sem cebola, bebida sem gelo" style="min-height: 120px;"></textarea>
