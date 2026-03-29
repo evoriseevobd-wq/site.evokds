@@ -1517,9 +1517,9 @@ const modalEditBtn = document.getElementById("modal-edit-btn");
 if (modalEditBtn) modalEditBtn.addEventListener("click", () => {
   const order = orders.find(o => o.id === activeOrderId);
   if (!order) return;
-  closeBackdrop(modalBackdrop);
-  openBackdrop(createModal);
-  updateCreateDeliveryVisibility();
+ activeOrderId = null;
+modalBackdrop.classList.remove("open");
+createModal.classList.add("open");
   
   if (newCustomer) newCustomer.value = order.client_name || "";
   if (newPhone) newPhone.value = order.client_phone || "";
@@ -1535,6 +1535,15 @@ if (modalEditBtn) modalEditBtn.addEventListener("click", () => {
   }
   if (isDelivery && newAddress) newAddress.value = order.address || "";
   if (isDelivery && newPayment) newPayment.value = order.payment_method || "";
+
+  // Carrega os itens do pedido
+  itensPedido = (order.itens || []).map(it => ({
+    name: it.name || it.nome || "",
+    qty: it.qty || it.quantidade || 1,
+    price: parseFloat(it.price || it.preco || 0),
+    quantidade: it.qty || it.quantidade || 1
+  }));
+  renderItensSelecionados();
 
   saveCreateBtn.dataset.editOrderId = activeOrderId;
 });
