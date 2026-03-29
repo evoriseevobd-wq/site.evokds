@@ -1621,6 +1621,25 @@ window.alterarQtd = function(index, delta) {
     itensPedido.splice(index, 1);
   }
 
+  window.setQtd = function(index, value) {
+  const qty = parseInt(value) || 1;
+  
+  if (qty <= 0) {
+    itensPedido.splice(index, 1);
+  } else {
+    itensPedido[index].qty = qty;
+    itensPedido[index].quantidade = qty;
+  }
+
+  renderItensSelecionados();
+
+  const totalField = document.getElementById("new-total-price");
+  if (totalField) {
+    const soma = itensPedido.reduce((acc, i) => acc + (i.price * i.qty), 0);
+    totalField.value = soma > 0 ? soma.toFixed(2).replace('.', ',') : '';
+  }
+};
+  
   renderItensSelecionados();
 
   const totalField = document.getElementById("new-total-price");
