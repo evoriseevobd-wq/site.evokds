@@ -604,7 +604,7 @@ ${paymentText ? `<div class="order-payment-tag">${escapeHtml(paymentText)}</div>
 ${order.origin ? `<div class="order-origin-tag">${getOriginLabel(order.origin)}</div>` : ""}
   `;
 
-  card.addEventListener("click", () => openOrderModal(order.id), { once: true });
+  card.addEventListener("click", () => openOrderModal(order.id));
   return card;
 }
 
