@@ -1517,8 +1517,7 @@ const modalEditBtn = document.getElementById("modal-edit-btn");
 if (modalEditBtn) modalEditBtn.addEventListener("click", () => {
   const order = orders.find(o => o.id === activeOrderId);
   if (!order) return;
- activeOrderId = null;
-modalBackdrop.classList.remove("open");
+ modalBackdrop.classList.remove("open");
 createModal.classList.add("open");
   
   if (newCustomer) newCustomer.value = order.client_name || "";
