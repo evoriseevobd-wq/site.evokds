@@ -1535,7 +1535,7 @@ if (totalPriceField) {
     hiddenItems.value = JSON.stringify(itensPedido);
   }
 
-  function renderItensSelecionados() {
+function renderItensSelecionados() {
   itensSelecionados.innerHTML = itensPedido.map((it, i) => `
     <div style="
       display:flex; align-items:center; justify-content:space-between;
@@ -1546,85 +1546,55 @@ if (totalPriceField) {
       width:100%;
       gap:12px;
     ">
-      <!-- Nome + Preço unitário -->
+      <!-- ESQUERDA: Nome + preço -->
       <div style="flex:1; min-width:0;">
-        <div style="color:rgba(252,228,228,0.95); font-weight:700; font-size:14px; 
+        <div style="color:rgba(252,228,228,0.95); font-weight:700; font-size:14px;
           white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
           ${it.name}
         </div>
         ${it.price > 0 ? `
-          <div style="color:rgba(251,191,36,0.75); font-size:12px; font-weight:600; margin-top:2px;">
-            R$${it.price.toFixed(2)} / un
+          <div style="color:rgba(251,191,36,0.85); font-size:12px; font-weight:700; margin-top:2px;">
+            R$${(it.price * it.qty).toFixed(2)}
           </div>
         ` : ''}
       </div>
 
-      <!-- Controles de quantidade -->
+      <!-- DIREITA: − qtd + × -->
       <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-        <!-- Botão - -->
-        <button 
-          onclick="alterarQtd(${i}, -1)" 
-          style="
-            width:28px; height:28px; border-radius:8px;
-            border:1px solid rgba(249,115,115,0.5);
-            background:rgba(249,115,115,0.15);
-            color:rgba(249,115,115,1);
-            font-size:16px; font-weight:900;
-            cursor:pointer; line-height:1;
-            display:flex; align-items:center; justify-content:center;
-            transition:all 0.15s;
-          "
-          onmouseover="this.style.background='rgba(249,115,115,0.3)'"
-          onmouseout="this.style.background='rgba(249,115,115,0.15)'"
-        >−</button>
 
-        <!-- Quantidade -->
+        <button onclick="alterarQtd(${i}, -1)" style="
+          width:28px; height:28px; border-radius:8px;
+          border:1px solid rgba(249,115,115,0.5);
+          background:rgba(249,115,115,0.12);
+          color:rgba(249,115,115,1);
+          font-size:18px; font-weight:900; cursor:pointer;
+          display:flex; align-items:center; justify-content:center;
+        ">−</button>
+
         <span style="
-          color:rgba(252,228,228,1); font-weight:800; font-size:15px;
-          min-width:20px; text-align:center;
+          color:rgba(252,228,228,1); font-weight:800; font-size:14px;
+          min-width:28px; text-align:center;
           font-family:'Space Grotesk', sans-serif;
-        ">${it.qty}</span>
+        ">${it.qty}un</span>
 
-        <!-- Botão + -->
-        <button 
-          onclick="alterarQtd(${i}, 1)" 
-          style="
-            width:28px; height:28px; border-radius:8px;
-            border:1px solid rgba(34,197,94,0.5);
-            background:rgba(34,197,94,0.15);
-            color:rgba(34,197,94,1);
-            font-size:16px; font-weight:900;
-            cursor:pointer; line-height:1;
-            display:flex; align-items:center; justify-content:center;
-            transition:all 0.15s;
-          "
-          onmouseover="this.style.background='rgba(34,197,94,0.3)'"
-          onmouseout="this.style.background='rgba(34,197,94,0.15)'"
-        >+</button>
+        <button onclick="alterarQtd(${i}, 1)" style="
+          width:28px; height:28px; border-radius:8px;
+          border:1px solid rgba(34,197,94,0.5);
+          background:rgba(34,197,94,0.12);
+          color:rgba(34,197,94,1);
+          font-size:18px; font-weight:900; cursor:pointer;
+          display:flex; align-items:center; justify-content:center;
+        ">+</button>
 
-        <!-- Subtotal -->
-        ${it.price > 0 ? `
-          <span style="
-            color:rgba(251,191,36,1); font-weight:900; font-size:14px;
-            min-width:60px; text-align:right;
-            font-family:'Space Grotesk', sans-serif;
-          ">R$${(it.price * it.qty).toFixed(2)}</span>
-        ` : ''}
+        <button onclick="removerItemPedido(${i})" style="
+          width:26px; height:26px; border-radius:6px;
+          border:1px solid rgba(239,68,68,0.4);
+          background:rgba(239,68,68,0.12);
+          color:rgba(239,68,68,0.8);
+          font-size:15px; cursor:pointer;
+          display:flex; align-items:center; justify-content:center;
+        ">×</button>
 
-        <!-- Botão remover -->
-        <button 
-          onclick="removerItemPedido(${i})" 
-          style="
-            width:24px; height:24px; border-radius:6px;
-            border:none; background:rgba(239,68,68,0.2);
-            color:rgba(239,68,68,0.8);
-            font-size:14px; cursor:pointer; line-height:1;
-            display:flex; align-items:center; justify-content:center;
-            transition:all 0.15s;
-          "
-          onmouseover="this.style.background='rgba(239,68,68,0.4)'; this.style.color='rgba(239,68,68,1)'"
-          onmouseout="this.style.background='rgba(239,68,68,0.2)'; this.style.color='rgba(239,68,68,0.8)'"
-        >×</button>
       </div>
     </div>
   `).join('');
