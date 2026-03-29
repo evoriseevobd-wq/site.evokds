@@ -663,17 +663,25 @@ function openOrderModal(orderId) {
   }
 
   // Itens
-  if (modalItems) {
+if (modalItems) {
     modalItems.innerHTML = "";
     const itens = Array.isArray(order.itens) ? order.itens : [];
     itens.forEach((it) => {
-      const li = document.createElement("li");
       const name = it?.name || it?.nome || "Item";
       const qty = it?.qty || it?.quantidade || 1;
       const price = it?.price || it?.preco || 0;
-      li.textContent = qty > 1
-        ? `${name} x${qty}${price > 0 ? ` - ${formatCurrency(price * qty)}` : ""}`
-        : `${name}${price > 0 ? ` - ${formatCurrency(price)}` : ""}`;
+      const li = document.createElement("li");
+      li.style.cssText = "list-style:none; display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:rgba(46,8,8,0.75); border:1px solid rgba(91,28,28,0.85); border-radius:10px; gap:12px;";
+      li.innerHTML = `
+        <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
+          <span style="color:rgba(252,228,228,0.95); font-weight:700; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${name}</span>
+          ${price > 0 ? `<span style="color:rgba(251,191,36,0.85); font-size:12px; font-weight:700; white-space:nowrap;">R$${(price * qty).toFixed(2)}</span>` : ""}
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+          <span style="color:rgba(252,228,228,0.5); font-size:14px; font-weight:800;">x${qty}</span>
+          <span style="color:rgba(252,228,228,0.4); font-size:12px;">un</span>
+        </div>
+      `;
       modalItems.appendChild(li);
     });
   }
