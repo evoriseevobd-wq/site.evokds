@@ -571,15 +571,20 @@ app.post("/api/v1/pedidos", async (req, res) => {
 
     if (order_id) {
       const { data, error } = await supabase
-        .from("orders")
-        .update({
-          itens: normalizedItems,
-          notes: notes || "",
-          status: finalStatus,
-          total_price: total_price || 0,
-          update_at: now
-        })
-        .eq("id", order_id)
+  .from("orders")
+  .update({
+    client_name,
+    client_phone: phone,
+    itens: normalizedItems,
+    notes: notes || "",
+    status: finalStatus,
+    total_price: total_price || 0,
+    service_type: service_type || "local",
+    address: address || null,
+    payment_method: payment_method || null,
+    update_at: now
+  })
+  .eq("id", order_id)
         .select()
         .single();
       
