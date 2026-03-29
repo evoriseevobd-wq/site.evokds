@@ -2415,3 +2415,13 @@ body {
   border: 1px solid rgba(239, 68, 68, 0.45);
   color: rgba(239, 68, 68, 1);
 }
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
