@@ -1536,18 +1536,100 @@ if (totalPriceField) {
   }
 
   function renderItensSelecionados() {
-    itensSelecionados.innerHTML = itensPedido.map((it, i) => `
-      <div style="display:inline-flex; align-items:center; gap:6px; padding:6px 12px;
-        background:rgba(91,28,28,0.55); border:1px solid rgba(249,115,115,0.4);
-        border-radius:999px; font-size:13px; font-weight:700; color:rgba(252,228,228,0.95);">
-        ${it.name} x${it.qty}
-        ${it.price > 0 ? `<span style="color:rgba(251,191,36,0.9);">R$${(it.price * it.qty).toFixed(2)}</span>` : ''}
-        <button onclick="removerItemPedido(${i})" style="background:none; border:none; color:rgba(249,115,115,0.8);
-          cursor:pointer; font-size:16px; line-height:1; padding:0 2px;">×</button>
+  itensSelecionados.innerHTML = itensPedido.map((it, i) => `
+    <div style="
+      display:flex; align-items:center; justify-content:space-between;
+      padding:10px 14px;
+      background:rgba(46,8,8,0.55);
+      border:1px solid rgba(91,28,28,0.85);
+      border-radius:12px;
+      width:100%;
+      gap:12px;
+    ">
+      <!-- Nome + Preço unitário -->
+      <div style="flex:1; min-width:0;">
+        <div style="color:rgba(252,228,228,0.95); font-weight:700; font-size:14px; 
+          white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+          ${it.name}
+        </div>
+        ${it.price > 0 ? `
+          <div style="color:rgba(251,191,36,0.75); font-size:12px; font-weight:600; margin-top:2px;">
+            R$${it.price.toFixed(2)} / un
+          </div>
+        ` : ''}
       </div>
-    `).join('');
-    atualizarHiddenItems();
-  }
+
+      <!-- Controles de quantidade -->
+      <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+        <!-- Botão - -->
+        <button 
+          onclick="alterarQtd(${i}, -1)" 
+          style="
+            width:28px; height:28px; border-radius:8px;
+            border:1px solid rgba(249,115,115,0.5);
+            background:rgba(249,115,115,0.15);
+            color:rgba(249,115,115,1);
+            font-size:16px; font-weight:900;
+            cursor:pointer; line-height:1;
+            display:flex; align-items:center; justify-content:center;
+            transition:all 0.15s;
+          "
+          onmouseover="this.style.background='rgba(249,115,115,0.3)'"
+          onmouseout="this.style.background='rgba(249,115,115,0.15)'"
+        >−</button>
+
+        <!-- Quantidade -->
+        <span style="
+          color:rgba(252,228,228,1); font-weight:800; font-size:15px;
+          min-width:20px; text-align:center;
+          font-family:'Space Grotesk', sans-serif;
+        ">${it.qty}</span>
+
+        <!-- Botão + -->
+        <button 
+          onclick="alterarQtd(${i}, 1)" 
+          style="
+            width:28px; height:28px; border-radius:8px;
+            border:1px solid rgba(34,197,94,0.5);
+            background:rgba(34,197,94,0.15);
+            color:rgba(34,197,94,1);
+            font-size:16px; font-weight:900;
+            cursor:pointer; line-height:1;
+            display:flex; align-items:center; justify-content:center;
+            transition:all 0.15s;
+          "
+          onmouseover="this.style.background='rgba(34,197,94,0.3)'"
+          onmouseout="this.style.background='rgba(34,197,94,0.15)'"
+        >+</button>
+
+        <!-- Subtotal -->
+        ${it.price > 0 ? `
+          <span style="
+            color:rgba(251,191,36,1); font-weight:900; font-size:14px;
+            min-width:60px; text-align:right;
+            font-family:'Space Grotesk', sans-serif;
+          ">R$${(it.price * it.qty).toFixed(2)}</span>
+        ` : ''}
+
+        <!-- Botão remover -->
+        <button 
+          onclick="removerItemPedido(${i})" 
+          style="
+            width:24px; height:24px; border-radius:6px;
+            border:none; background:rgba(239,68,68,0.2);
+            color:rgba(239,68,68,0.8);
+            font-size:14px; cursor:pointer; line-height:1;
+            display:flex; align-items:center; justify-content:center;
+            transition:all 0.15s;
+          "
+          onmouseover="this.style.background='rgba(239,68,68,0.4)'; this.style.color='rgba(239,68,68,1)'"
+          onmouseout="this.style.background='rgba(239,68,68,0.2)'; this.style.color='rgba(239,68,68,0.8)'"
+        >×</button>
+      </div>
+    </div>
+  `).join('');
+  atualizarHiddenItems();
+}
 
  window.removerItemPedido = function(index) {
   itensPedido.splice(index, 1);
@@ -1560,6 +1642,25 @@ if (totalPriceField) {
   }
 };
 
+  window.alterarQtd = function(index, delta) {
+  itensPedido[index].qty += delta;
+  itensPedido[index].quantidade = itensPedido[index].qty;
+
+  // Remove se chegou a 0
+  if (itensPedido[index].qty <= 0) {
+    itensPedido.splice(index, 1);
+  }
+
+  renderItensSelecionados();
+
+  // Recalcula o total
+  const totalField = document.getElementById("new-total-price");
+  if (totalField) {
+    const soma = itensPedido.reduce((acc, i) => acc + (i.price * i.qty), 0);
+    totalField.value = soma > 0 ? soma.toFixed(2).replace('.', ',') : '';
+  }
+};
+  
   function adicionarItem(item) {
     const existente = itensPedido.find(i => i.name === item.nome);
     if (existente) {
