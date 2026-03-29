@@ -2452,3 +2452,8 @@ input[type="number"] {
 .form-body::-webkit-scrollbar-thumb:hover {
   background: rgba(220, 38, 38, 0.9);
 }
+
+.modal-header .icon-button {
+  margin-left: auto;
+  flex-shrink: 0;
+}
