@@ -714,6 +714,11 @@ printBtn.classList.toggle("hidden", order._frontStatus !== "recebido");
 modalNextBtn.classList.toggle("hidden", s === "finalizado" || s === "cancelado");
   }
 
+const editBtn = document.getElementById("modal-edit-btn");
+if (editBtn) {
+  editBtn.classList.toggle("hidden", order._frontStatus !== "recebido");
+}
+  
   openBackdrop(modalBackdrop);
 }
 
@@ -1018,18 +1023,21 @@ async function saveNewOrder() {
   }
 
   try {
+
     const body = {
-      restaurant_id: rid,
-      client_name: client,
-      client_phone,
-      itens,
-      notes: String(newNotes?.value || ""),
-      service_type,
-      address: isDelivery ? address : null,
-      payment_method: isDelivery ? payment_method : null,
-      total_price,
-      origin: "balcao"
-    };
+  restaurant_id: rid,
+  client_name: client,
+  client_phone,
+  itens,
+  notes: String(newNotes?.value || ""),
+  service_type,
+  address: isDelivery ? address : null,
+  payment_method: isDelivery ? payment_method : null,
+  total_price,
+  origin: "balcao",
+  ...(editOrderId ? { order_id: editOrderId } : {})
+};
+    
 
     const resp = await fetch(`${API_BASE}/api/v1/pedidos`, {
       method: "POST",
@@ -1045,6 +1053,7 @@ async function saveNewOrder() {
 
     orders.push({ ...data.order, _frontStatus: toFrontStatus(data.order.status) });
     closeCreateModal();
+    saveCreateBtn.dataset.editOrderId = "";
     renderBoard();
   } catch (e) {
     console.error("Erro em saveNewOrder:", e);
@@ -1504,7 +1513,31 @@ function init() {
 setupDrawer();
 // Event listeners dos modais
 if (closeModalBtn) closeModalBtn.addEventListener("click", closeOrderModal);
-if (closeModalSecondaryBtn) closeModalSecondaryBtn.addEventListener("click", closeOrderModal);
+const modalEditBtn = document.getElementById("modal-edit-btn");
+if (modalEditBtn) modalEditBtn.addEventListener("click", () => {
+  const order = orders.find(o => o.id === activeOrderId);
+  if (!order) return;
+  closeOrderModal();
+  openCreateModal();
+  
+  if (newCustomer) newCustomer.value = order.client_name || "";
+  if (newPhone) newPhone.value = order.client_phone || "";
+  if (newNotes) newNotes.value = order.notes || "";
+  
+  const totalField = document.getElementById("new-total-price");
+  if (totalField) totalField.value = order.total_price ? String(order.total_price).replace(".", ",") : "";
+  
+  const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
+  if (newDelivery) {
+    newDelivery.checked = isDelivery;
+    updateCreateDeliveryVisibility();
+  }
+  if (isDelivery && newAddress) newAddress.value = order.address || "";
+  if (isDelivery && newPayment) newPayment.value = order.payment_method || "";
+
+  saveCreateBtn.dataset.editOrderId = activeOrderId;
+});
+  if (closeModalSecondaryBtn) closeModalSecondaryBtn.addEventListener("click", closeOrderModal);
 if (modalBackdrop) modalBackdrop.addEventListener("click", (e) => {
   if (e.target === modalBackdrop) closeOrderModal();
 });
