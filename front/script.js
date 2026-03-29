@@ -499,7 +499,6 @@ async function fetchOrders() {
       // Não renderiza
     } else if (!resultsView?.classList.contains("hidden")) {
       // Não renderiza (metrics já atualiza sozinho)
-    } else {
     }
   } catch (e) {
     console.error("Polling Error:", e);
