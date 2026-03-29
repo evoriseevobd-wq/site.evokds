@@ -1563,28 +1563,24 @@ function renderItensSelecionados() {
       <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
 
         <button onclick="alterarQtd(${i}, -1)" style="
-          width:28px; height:28px; border-radius:8px;
-          border:1px solid rgba(249,115,115,0.5);
-          background:rgba(249,115,115,0.12);
-          color:rgba(249,115,115,1);
-          font-size:18px; font-weight:900; cursor:pointer;
-          display:flex; align-items:center; justify-content:center;
-        ">−</button>
+  background:none; border:none;
+  color:rgba(252,228,228,0.5);
+  font-size:18px; font-weight:900; cursor:pointer;
+  padding:0 4px;
+">−</button>
 
-        <span style="
-          color:rgba(252,228,228,1); font-weight:800; font-size:14px;
-          min-width:28px; text-align:center;
-          font-family:'Space Grotesk', sans-serif;
-        ">${it.qty}un</span>
+<span style="
+  color:rgba(252,228,228,1); font-weight:800; font-size:14px;
+  min-width:28px; text-align:center;
+  font-family:'Space Grotesk', sans-serif;
+">${it.qty}un</span>
 
-        <button onclick="alterarQtd(${i}, 1)" style="
-          width:28px; height:28px; border-radius:8px;
-          border:1px solid rgba(34,197,94,0.5);
-          background:rgba(34,197,94,0.12);
-          color:rgba(34,197,94,1);
-          font-size:18px; font-weight:900; cursor:pointer;
-          display:flex; align-items:center; justify-content:center;
-        ">+</button>
+<button onclick="alterarQtd(${i}, 1)" style="
+  background:none; border:none;
+  color:rgba(252,228,228,0.5);
+  font-size:18px; font-weight:900; cursor:pointer;
+  padding:0 4px;
+">+</button>
 
         <button onclick="removerItemPedido(${i})" style="
           width:26px; height:26px; border-radius:6px;
