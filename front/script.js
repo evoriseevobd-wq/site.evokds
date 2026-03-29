@@ -1197,7 +1197,7 @@ async function openClientDetailsModal(client) {
             <h3>${escapeHtml(client.client_name)}</h3>
             <p class="muted">${client.client_phone}</p>
           </div>
-          <button class="icon-button" id="close-client-details">×</button>
+          <button class="icon-button" id="close-client-details" style="margin-left: auto;">×</button>
         </div>
         
         <div class="modal-body">
