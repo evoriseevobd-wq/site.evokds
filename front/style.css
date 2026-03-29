@@ -369,8 +369,6 @@ body {
   box-shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
   padding: 18px;
   animation: slideUp 0.3s ease;
-}
-  /* ADICIONA ISSO: */
   max-height: 90vh;
   display: flex;
   flex-direction: column;
