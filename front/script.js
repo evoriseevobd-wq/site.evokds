@@ -991,6 +991,7 @@ async function saveNewOrder() {
   const rid = getRestaurantId();
   const client = String(newCustomer?.value || "").trim();
   const itens = parseItems(newItems?.value);
+  const editOrderId = saveCreateBtn.dataset.editOrderId || null; // ← ADICIONA AQUI
 
   const isDelivery = !!newDelivery?.checked;
   const service_type = isDelivery ? "delivery" : "local";
