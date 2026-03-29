@@ -1540,13 +1540,13 @@ function renderItensSelecionados() {
     <div style="
       display:flex; align-items:center; justify-content:space-between;
       padding:10px 14px;
-      background:rgba(46,8,8,0.55);
+      background:rgba(46,8,8,0.75);
       border:1px solid rgba(91,28,28,0.85);
-      border-radius:12px;
+      border-radius:10px;
       width:100%;
       gap:12px;
     ">
-      <!-- ESQUERDA: Nome + preço na mesma linha -->
+      <!-- ESQUERDA: Nome + preço -->
       <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
         <span style="color:rgba(252,228,228,0.95); font-weight:700; font-size:14px;
           white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
@@ -1559,27 +1559,43 @@ function renderItensSelecionados() {
         ` : ''}
       </div>
 
-      <!-- DIREITA: − qtd + -->
-      <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+      <!-- DIREITA: − input + -->
+      <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+        
         <button onclick="alterarQtd(${i}, -1)" style="
           background:none; border:none;
           color:rgba(252,228,228,0.5);
           font-size:18px; font-weight:900; cursor:pointer;
-          padding:0 4px;
+          padding:0 4px; line-height:1;
         ">−</button>
 
-        <span style="
-          color:rgba(252,228,228,1); font-weight:800; font-size:14px;
-          min-width:28px; text-align:center;
-          font-family:'Space Grotesk', sans-serif;
-        ">${it.qty}un</span>
+        <input 
+          type="number" 
+          min="1"
+          value="${it.qty}"
+          onchange="setQtd(${i}, this.value)"
+          style="
+            width:46px; text-align:center;
+            background:rgba(20,3,3,0.4);
+            border:1px solid rgba(91,28,28,0.7);
+            border-radius:8px;
+            color:rgba(252,228,228,1);
+            font-weight:800; font-size:14px;
+            padding:4px 6px;
+            font-family:'Space Grotesk', sans-serif;
+            outline:none;
+          "
+        />
+
+        <span style="color:rgba(252,228,228,0.4); font-size:12px;">un</span>
 
         <button onclick="alterarQtd(${i}, 1)" style="
           background:none; border:none;
           color:rgba(252,228,228,0.5);
           font-size:18px; font-weight:900; cursor:pointer;
-          padding:0 4px;
+          padding:0 4px; line-height:1;
         ">+</button>
+
       </div>
     </div>
   `).join('');
