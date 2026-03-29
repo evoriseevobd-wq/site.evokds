@@ -81,6 +81,7 @@ const unauthClose = document.getElementById("unauth-close");
 const modalBackdrop = document.getElementById("modal");
 const closeModalBtn = document.getElementById("close-modal");
 const closeModalSecondaryBtn = document.getElementById("close-modal-secondary");
+const modalEditBtn = document.getElementById("modal-edit-btn");
 
 const modalId = document.getElementById("modal-id");
 const modalCustomer = document.getElementById("modal-customer");
