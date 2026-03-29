@@ -1546,51 +1546,40 @@ function renderItensSelecionados() {
       width:100%;
       gap:12px;
     ">
-      <!-- ESQUERDA: Nome + preço -->
-      <div style="flex:1; min-width:0;">
-        <div style="color:rgba(252,228,228,0.95); font-weight:700; font-size:14px;
+      <!-- ESQUERDA: Nome + preço na mesma linha -->
+      <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
+        <span style="color:rgba(252,228,228,0.95); font-weight:700; font-size:14px;
           white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
           ${it.name}
-        </div>
+        </span>
         ${it.price > 0 ? `
-          <div style="color:rgba(251,191,36,0.85); font-size:12px; font-weight:700; margin-top:2px;">
+          <span style="color:rgba(251,191,36,0.85); font-size:12px; font-weight:700; white-space:nowrap;">
             R$${(it.price * it.qty).toFixed(2)}
-          </div>
+          </span>
         ` : ''}
       </div>
 
-      <!-- DIREITA: − qtd + × -->
+      <!-- DIREITA: − qtd + -->
       <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-
         <button onclick="alterarQtd(${i}, -1)" style="
-  background:none; border:none;
-  color:rgba(252,228,228,0.5);
-  font-size:18px; font-weight:900; cursor:pointer;
-  padding:0 4px;
-">−</button>
+          background:none; border:none;
+          color:rgba(252,228,228,0.5);
+          font-size:18px; font-weight:900; cursor:pointer;
+          padding:0 4px;
+        ">−</button>
 
-<span style="
-  color:rgba(252,228,228,1); font-weight:800; font-size:14px;
-  min-width:28px; text-align:center;
-  font-family:'Space Grotesk', sans-serif;
-">${it.qty}un</span>
+        <span style="
+          color:rgba(252,228,228,1); font-weight:800; font-size:14px;
+          min-width:28px; text-align:center;
+          font-family:'Space Grotesk', sans-serif;
+        ">${it.qty}un</span>
 
-<button onclick="alterarQtd(${i}, 1)" style="
-  background:none; border:none;
-  color:rgba(252,228,228,0.5);
-  font-size:18px; font-weight:900; cursor:pointer;
-  padding:0 4px;
-">+</button>
-
-        <button onclick="removerItemPedido(${i})" style="
-          width:26px; height:26px; border-radius:6px;
-          border:1px solid rgba(239,68,68,0.4);
-          background:rgba(239,68,68,0.12);
-          color:rgba(239,68,68,0.8);
-          font-size:15px; cursor:pointer;
-          display:flex; align-items:center; justify-content:center;
-        ">×</button>
-
+        <button onclick="alterarQtd(${i}, 1)" style="
+          background:none; border:none;
+          color:rgba(252,228,228,0.5);
+          font-size:18px; font-weight:900; cursor:pointer;
+          padding:0 4px;
+        ">+</button>
       </div>
     </div>
   `).join('');
