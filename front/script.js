@@ -991,6 +991,8 @@ function parseItems(raw) {
 
  
 async function saveNewOrder() {
+    console.log("🧪 editOrderId:", saveCreateBtn.dataset.editOrderId);
+  console.log("🧪 tipo:", typeof saveCreateBtn.dataset.editOrderId);
   const rid = getRestaurantId();
   const client = String(newCustomer?.value || "").trim();
   const itens = parseItems(newItems?.value);
