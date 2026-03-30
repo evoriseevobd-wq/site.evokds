@@ -1510,13 +1510,6 @@ if (modalEditBtn) modalEditBtn.addEventListener("click", (e) => {
   const order = orders.find(o => o.id === activeOrderId);
   if (!order) return;
 
-if (modalEditBtn) modalEditBtn.addEventListener("click", (e) => {
-  e.stopPropagation();
-  e.preventDefault();
-
-  const order = orders.find(o => o.id === activeOrderId);
-  if (!order) return;
-
   const orderIdParaEditar = activeOrderId; // ← SALVA ANTES de fechar
   closeOrderModal();
 
