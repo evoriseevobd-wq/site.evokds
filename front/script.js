@@ -992,7 +992,12 @@ function parseItems(raw) {
  
 async function saveNewOrder() {
   const rawId = saveCreateBtn.dataset.editOrderId?.trim();
-const editOrderId = (rawId && rawId !== "null") ? rawId : null;
+  const editOrderId = (rawId && rawId !== "null") ? rawId : null;
+  
+  console.log("🔍 dataset.editOrderId:", saveCreateBtn.dataset.editOrderId);
+  console.log("🔍 rawId:", rawId);
+  console.log("🔍 editOrderId final:", editOrderId);
+  
   console.log("🧪 editOrderId:", editOrderId);
   console.log("🧪 tipo:", typeof editOrderId);
 
