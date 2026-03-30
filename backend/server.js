@@ -434,54 +434,6 @@ app.get("/orders/:restaurant_id", async (req, res) => {
   }
 });
 
-app.patch("/orders/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body || {};
-    
-    if (!ALLOWED_STATUS.includes(status)) return sendError(res, 400, "status inválido");
-    
-    const now = new Date().toISOString();
-    
-    // Objeto de atualização base
-    const updateData = {
-      status,
-      update_at: now
-    };
-    
-    // Adiciona timestamp específico baseado no status
-    if (status === "pending") {
-      updateData.confirmed_at = now;
-    } else if (status === "preparing") {
-      updateData.preparing_at = now;
-    } else if (status === "mounting") {
-      updateData.mounting_at = now;
-    } else if (status === "delivering") {
-      updateData.delivering_at = now;
-    } else if (status === "finished") {
-      updateData.delivered_at = now;
-    } else if (status === "cancelled" || status === "canceled") {
-      updateData.cancelled_at = now;
-    }
-    
-    const { data, error } = await supabase
-      .from("orders")
-      .update(updateData)
-      .eq("id", id)
-      .select()
-      .single();
-    
-  if (error) {
-  console.error("❌ SUPABASE erro:", JSON.stringify(error));
-  return sendError(res, 500, "Erro ao atualizar pedido");
-}
-if (!data || data.length === 0) return sendError(res, 404, "Pedido não encontrado");
-return res.json(data[0]);
-  } catch (err) {
-    return sendError(res, 500, "Erro ao atualizar pedido");
-  }
-});
-
 app.patch("/orders/:id/status", async (req, res) => {
   try {
     const { id } = req.params;
