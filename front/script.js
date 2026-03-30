@@ -991,62 +991,44 @@ function parseItems(raw) {
 
  
 async function saveNewOrder() {
-    console.log("🧪 editOrderId:", saveCreateBtn.dataset.editOrderId);
-  console.log("🧪 tipo:", typeof saveCreateBtn.dataset.editOrderId);
+  const editOrderId = saveCreateBtn.dataset.editOrderId?.trim() || null; // ← SÓ AQUI
+  console.log("🧪 editOrderId:", editOrderId);
+  console.log("🧪 tipo:", typeof editOrderId);
+
   const rid = getRestaurantId();
   const client = String(newCustomer?.value || "").trim();
   const itens = parseItems(newItems?.value);
-  const editOrderId = saveCreateBtn.dataset.editOrderId || null; // ← ADICIONA AQUI
 
   const isDelivery = !!newDelivery?.checked;
   const service_type = isDelivery ? "delivery" : "local";
   const address = String(newAddress?.value || "").trim();
   const payment_method = String(newPayment?.value || "").trim();
-
   const phoneRaw = String(newPhone?.value || "").trim();
   const client_phone = phoneRaw ? phoneRaw : null;
 
-  // 🔥 CONVERTE O VALOR FORMATADO PARA NÚMERO
   const totalPriceFormatted = document.getElementById("new-total-price")?.value || '0';
   const total_price = parseFloat(totalPriceFormatted.replace(/\./g, '').replace(',', '.')) || 0;
 
-  if (!rid || !client) {
-    alert("Preencha o nome do cliente.");
-    return;
-  }
-
-  if (!itens || itens.length === 0) {
-    alert("Preencha os itens do pedido.");
-    return;
-  }
-
-  if (isDelivery && !address) {
-    alert("Endereço é obrigatório para delivery.");
-    return;
-  }
-
-  if (isDelivery && !payment_method) {
-    alert("Forma de pagamento é obrigatória para delivery.");
-    return;
-  }
+  if (!rid || !client) { alert("Preencha o nome do cliente."); return; }
+  if (!itens || itens.length === 0) { alert("Preencha os itens do pedido."); return; }
+  if (isDelivery && !address) { alert("Endereço é obrigatório para delivery."); return; }
+  if (isDelivery && !payment_method) { alert("Forma de pagamento é obrigatória para delivery."); return; }
 
   try {
-
-   const editOrderId = saveCreateBtn.dataset.editOrderId || null; 
+    // ← SEM segunda declaração de editOrderId aqui!
     const body = {
-  restaurant_id: rid,
-  client_name: client,
-  client_phone,
-  itens,
-  notes: String(newNotes?.value || ""),
-  service_type,
-  address: isDelivery ? address : null,
-  payment_method: isDelivery ? payment_method : null,
-  total_price,
-  origin: "balcao",
-  ...(editOrderId ? { order_id: editOrderId } : {})
-};
-    
+      restaurant_id: rid,
+      client_name: client,
+      client_phone,
+      itens,
+      notes: String(newNotes?.value || ""),
+      service_type,
+      address: isDelivery ? address : null,
+      payment_method: isDelivery ? payment_method : null,
+      total_price,
+      origin: "balcao",
+      ...(editOrderId ? { order_id: editOrderId } : {})
+    };
 
     const resp = await fetch(`${API_BASE}/api/v1/pedidos`, {
       method: "POST",
