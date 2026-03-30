@@ -885,16 +885,9 @@ function updateCreateDeliveryVisibility() {
 }
 
 function openCreateModal(e) {
-  if (e) {
-    e.stopPropagation();
-    e.preventDefault();
-  }
-  
+  if (e) { e.stopPropagation(); e.preventDefault(); }
   closeDrawer();
-  
-  // 🔥 LIMPA o editOrderId ao abrir como novo pedido
-  saveCreateBtn.dataset.editOrderId = "";
-  
+  saveCreateBtn.dataset.editOrderId = ""; // ← só limpa ao abrir como NOVO
   openBackdrop(createModal);
   updateCreateDeliveryVisibility();
 }
