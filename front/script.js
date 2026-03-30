@@ -900,7 +900,6 @@ function openCreateModal(e) {
 }
 function closeCreateModal() {
   closeBackdrop(createModal);
-
   if (newCustomer) newCustomer.value = "";
   if (newPhone) newPhone.value = "";
   if (newItems) newItems.value = "";
@@ -908,12 +907,9 @@ function closeCreateModal() {
   if (newAddress) newAddress.value = "";
   if (newPayment) newPayment.value = "";
   if (newDelivery) newDelivery.checked = false;
-
-  // 🔥 LIMPA O CAMPO DE VALOR TOTAL
   const totalPriceField = document.getElementById("new-total-price");
   if (totalPriceField) totalPriceField.value = "";
-if (saveCreateBtn) saveCreateBtn.dataset.editOrderId = "";
-  
+  // ← REMOVE a linha: if (saveCreateBtn) saveCreateBtn.dataset.editOrderId = "";
   updateCreateDeliveryVisibility();
 }
 
