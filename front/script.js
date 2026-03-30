@@ -121,6 +121,7 @@ let currentView = "ativos";
 let orders = [];
 let activeOrderId = null;
 let isFetching = false;
+let editingOrderId = null;
 
 let restaurantPlan = "basic";
 let restaurantPlanPrice = 1200; // Preço padrão
@@ -980,12 +981,7 @@ function parseItems(raw) {
 
  
 async function saveNewOrder() {
-  const rawId = saveCreateBtn.dataset.editOrderId?.trim();
-  const editOrderId = (rawId && rawId !== "null") ? rawId : null;
-  
-  console.log("🔍 dataset.editOrderId:", saveCreateBtn.dataset.editOrderId);
-  console.log("🔍 rawId:", rawId);
-  console.log("🔍 editOrderId final:", editOrderId);
+  const editOrderId = editingOrderId || null;
   
   console.log("🧪 editOrderId:", editOrderId);
   console.log("🧪 tipo:", typeof editOrderId);
@@ -1037,7 +1033,14 @@ async function saveNewOrder() {
       throw new Error(data?.error || "Erro ao criar pedido");
     }
 
-    orders.push({ ...data.order, _frontStatus: toFrontStatus(data.order.status) });
+    if (editOrderId) {
+  const idx = orders.findIndex(o => o.id === editOrderId);
+  if (idx !== -1) orders[idx] = { ...orders[idx], ...data.order, _frontStatus: toFrontStatus(data.order.status) };
+} else {
+  orders.push({ ...data.order, _frontStatus: toFrontStatus(data.order.status) });
+}
+editingOrderId = null;
+    
     closeCreateModal();
     saveCreateBtn.dataset.editOrderId = "";
     renderBoard();
@@ -1537,7 +1540,7 @@ if (modalEditBtn) modalEditBtn.addEventListener("click", (e) => {
     }));
     renderItensSelecionados();
 
-    saveCreateBtn.dataset.editOrderId = activeOrderId;
+    editingOrderId = activeOrderId;
   }, 50);
 });
   
