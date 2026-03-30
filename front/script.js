@@ -1510,7 +1510,7 @@ if (modalEditBtn) modalEditBtn.addEventListener("click", (e) => {
   const order = orders.find(o => o.id === activeOrderId);
   if (!order) return;
 
-  const orderIdParaEditar = activeOrderId; // ← SALVA ANTES de fechar
+  const orderIdParaEditar = activeOrderId;
   closeOrderModal();
 
   setTimeout(() => {
@@ -1541,7 +1541,7 @@ if (modalEditBtn) modalEditBtn.addEventListener("click", (e) => {
     }));
     renderItensSelecionados();
 
-    editingOrderId = orderIdParaEditar; // ← USA A VARIÁVEL SALVA
+    editingOrderId = orderIdParaEditar;
     console.log("✅ editingOrderId setado:", editingOrderId);
   }, 50);
 });
