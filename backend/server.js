@@ -531,66 +531,67 @@ app.post("/api/v1/pedidos", async (req, res) => {
     const now = new Date().toISOString();
     let resultData;
 
-    if (order_id) {
-      const { data, error } = await supabase
-  .from("orders")
-  .update({
-    client_name,
-    client_phone: phone,
-    itens: normalizedItems,
-    notes: notes || "",
-    status: finalStatus,
-    total_price: total_price || 0,
-    service_type: service_type || "local",
-    address: address || null,
-    payment_method: payment_method || null,
-    update_at: now
-  })
-  .eq("id", order_id)
-        .select()
-        .single();
-      
-    if (error) {
-  console.error("❌ Erro update pedido:", JSON.stringify(error));
-  return sendError(res, 500, "Erro ao atualizar pedido: " + error.message);
-}  
-    else {
-      const { data: last } = await supabase
-        .from("orders")
-        .select("order_number")
-        .eq("restaurant_id", restaurant_id)
-        .order("order_number", { ascending: false })
-        .limit(1);
-      
-      const nextNumber = last && last.length > 0 ? Number(last[0].order_number) + 1 : 1;
+   if (order_id) {
+  const { data, error } = await supabase
+    .from("orders")
+    .update({
+      client_name,
+      client_phone: phone,
+      itens: normalizedItems,
+      notes: notes || "",
+      status: finalStatus,
+      total_price: total_price || 0,
+      service_type: service_type || "local",
+      address: address || null,
+      payment_method: payment_method || null,
+      update_at: now
+    })
+    .eq("id", order_id)
+    .select()
+    .single();
 
-      const { data, error } = await supabase
-        .from("orders")
-        .insert([{
-          restaurant_id,
-          client_name,
-          client_phone: phone,
-          order_number: nextNumber,
-          itens: normalizedItems,
-          notes: notes || "",
-          status: finalStatus,
-          service_type: service_type || "local",
-          address: address || null,
-          payment_method: payment_method || null,
-          total_price: total_price || 0,
-          origin: finalOrigin,
-          created_at: now,
-          update_at: now
-        }])
-        .select()
-        .single();
-      
-      if (error) {
-        console.error("❌ Erro ao criar pedido:", error);
-        return sendError(res, 500, "Erro ao criar pedido: " + error.message);
-      }
-      resultData = data;
-    }
+  if (error) {
+    console.error("❌ Erro update pedido:", JSON.stringify(error));
+    return sendError(res, 500, "Erro ao atualizar pedido: " + error.message);
+  }
+  resultData = data; // ← estava faltando!
+} else {
+  const { data: last } = await supabase
+    .from("orders")
+    .select("order_number")
+    .eq("restaurant_id", restaurant_id)
+    .order("order_number", { ascending: false })
+    .limit(1);
+
+  const nextNumber = last && last.length > 0 ? Number(last[0].order_number) + 1 : 1;
+
+  const { data, error } = await supabase
+    .from("orders")
+    .insert([{
+      restaurant_id,
+      client_name,
+      client_phone: phone,
+      order_number: nextNumber,
+      itens: normalizedItems,
+      notes: notes || "",
+      status: finalStatus,
+      service_type: service_type || "local",
+      address: address || null,
+      payment_method: payment_method || null,
+      total_price: total_price || 0,
+      origin: finalOrigin,
+      created_at: now,
+      update_at: now
+    }])
+    .select()
+    .single();
+
+  if (error) {
+    console.error("❌ Erro ao criar pedido:", error);
+    return sendError(res, 500, "Erro ao criar pedido: " + error.message);
+  }
+  resultData = data;
+}
 
     // Gera código único: primeiros 8 caracteres do restaurant_id + order_number
 const shortRestaurantId = restaurant_id.substring(0, 8);
