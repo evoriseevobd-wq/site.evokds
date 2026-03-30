@@ -471,9 +471,12 @@ app.patch("/orders/:id", async (req, res) => {
       .select()
       .single();
     
-    if (error || !data) return sendError(res, 500, "Erro ao atualizar pedido");
-    
-    return res.json(data);
+  if (error) {
+  console.error("❌ SUPABASE erro:", JSON.stringify(error));
+  return sendError(res, 500, "Erro ao atualizar pedido");
+}
+if (!data || data.length === 0) return sendError(res, 404, "Pedido não encontrado");
+return res.json(data[0]);
   } catch (err) {
     return sendError(res, 500, "Erro ao atualizar pedido");
   }
