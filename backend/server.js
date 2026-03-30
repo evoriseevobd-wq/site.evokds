@@ -543,9 +543,11 @@ app.post("/api/v1/pedidos", async (req, res) => {
         .select()
         .single();
       
-      if (error) return sendError(res, 500, "Erro ao atualizar pedido");
-      resultData = data;
-    } else {
+    if (error) {
+  console.error("❌ Erro update pedido:", JSON.stringify(error));
+  return sendError(res, 500, "Erro ao atualizar pedido: " + error.message);
+}  
+    else {
       const { data: last } = await supabase
         .from("orders")
         .select("order_number")
