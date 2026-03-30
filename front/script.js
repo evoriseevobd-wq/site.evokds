@@ -890,8 +890,10 @@ function openCreateModal(e) {
     e.preventDefault();
   }
   
-  // Fecha o drawer se estiver aberto
   closeDrawer();
+  
+  // 🔥 LIMPA o editOrderId ao abrir como novo pedido
+  saveCreateBtn.dataset.editOrderId = "";
   
   openBackdrop(createModal);
   updateCreateDeliveryVisibility();
