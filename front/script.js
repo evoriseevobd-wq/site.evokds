@@ -912,7 +912,8 @@ function closeCreateModal() {
   // 🔥 LIMPA O CAMPO DE VALOR TOTAL
   const totalPriceField = document.getElementById("new-total-price");
   if (totalPriceField) totalPriceField.value = "";
-
+if (saveCreateBtn) saveCreateBtn.dataset.editOrderId = "";
+  
   updateCreateDeliveryVisibility();
 }
 
