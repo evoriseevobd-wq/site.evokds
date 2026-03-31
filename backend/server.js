@@ -10,6 +10,8 @@ import { fileTypeFromBuffer } from "file-type";
 
 dotenv.config();
 
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 const HOST = '0.0.0.0';
@@ -666,9 +668,6 @@ return res.status(201).json({
     return sendError(res, 500, "Erro interno no servidor");
   }
 });
-
-import { OAuth2Client } from "google-auth-library";
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 app.post("/auth/google", async (req, res) => {
   try {
