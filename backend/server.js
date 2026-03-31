@@ -663,13 +663,48 @@ return res.status(201).json({
   }
 });
 
+import { OAuth2Client } from "google-auth-library";
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
 app.post("/auth/google", async (req, res) => {
   try {
-    const { email } = req.body;
-    const { data, error } = await supabase.from("restaurants").select("*").eq("email", email).limit(1);
-    if (error || !data || data.length === 0) return res.status(403).json({ authorized: false });
-    return res.json({ authorized: true, restaurant: data[0] });
+    const { credential } = req.body; // recebe o token JWT do Google, não o email
+
+    if (!credential) return res.status(400).json({ error: "Token ausente" });
+
+    // Verifica o token com a API do Google — impossível de falsificar
+    let payload;
+    try {
+      const ticket = await googleClient.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      payload = ticket.getPayload();
+    } catch {
+      return res.status(401).json({ authorized: false, error: "Token inválido" });
+    }
+
+    const email = payload.email;
+
+    const { data, error } = await supabase
+      .from("restaurants")
+      .select("*")
+      .eq("email", email)
+      .limit(1);
+
+    if (error || !data || data.length === 0)
+      return res.status(403).json({ authorized: false });
+
+    // Gera um JWT próprio para autenticar nas próximas requisições
+    const token = jwt.sign(
+      { restaurant_id: data[0].id, email, plan: data[0].plan },
+      process.env.JWT_SECRET,
+      { expiresIn: "12h" }
+    );
+
+    return res.json({ authorized: true, restaurant: data[0], token });
   } catch (err) {
+    console.error("Erro auth:", err);
     return res.status(500).json({ error: "Erro inesperado" });
   }
 });
