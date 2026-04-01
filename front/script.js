@@ -626,31 +626,32 @@ function toggleCardSelection(orderId, checked) {
 }
 
 function updateSelectionBar() {
-  let bar = document.getElementById("selection-action-bar");
+  // Remove todas as mini-barras antigas
+  document.querySelectorAll(".col-action-bar").forEach(b => b.remove());
+  if (selectedOrderIds.size === 0) return;
 
-  if (selectedOrderIds.size === 0) {
-    bar?.remove();
-    return;
-  }
+  const porColuna = {};
+  selectedOrderIds.forEach(id => {
+    const o = orders.find(x => x.id === id);
+    if (!o) return;
+    const col = o._frontStatus;
+    if (!porColuna[col]) porColuna[col] = [];
+    porColuna[col].push(id);
+  });
 
-  if (!bar) {
-    bar = document.createElement("div");
-    bar.id = "selection-action-bar";
+  Object.entries(porColuna).forEach(([status, ids]) => {
+    const colBody = columns[status];
+    if (!colBody) return;
+    const header = colBody.closest(".column")?.querySelector(".column-header");
+    if (!header) return;
+    const bar = document.createElement("div");
+    bar.className = "col-action-bar";
     bar.innerHTML = `
-      <span id="selection-count"></span>
-      <div style="display:flex; gap:8px;">
-        <button class="ghost-button" onclick="clearSelection()">Cancelar</button>
-        <button class="primary-button" onclick="advanceSelectedOrders()">
-          Mover para próxima etapa →
-        </button>
-      </div>
+      <span>${ids.length} sel.</span>
+      <button onclick="advanceSelectedOrders()">Mover →</button>
     `;
-    const tabsEl = document.querySelector(".tabs");
-    tabsEl?.insertAdjacentElement("afterend", bar);
-  }
-
-  document.getElementById("selection-count").textContent =
-    `${selectedOrderIds.size} selecionado${selectedOrderIds.size > 1 ? "s" : ""}`;
+    header.appendChild(bar);
+  });
 }
 
 function clearSelection() {
