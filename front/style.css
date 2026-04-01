@@ -2455,3 +2455,41 @@ input[type="number"] {
   margin-left: auto;
   flex-shrink: 0;
 }
+
+/* ===== SELEÇÃO MÚLTIPLA DE CARDS ===== */
+.order-card {
+  position: relative;
+}
+
+.card-checkbox-wrap {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+}
+
+.card-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #f97373;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+#selection-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(30, 10, 10, 0.95);
+  border: 1px solid rgba(249, 115, 115, 0.45);
+  border-radius: 14px;
+  padding: 10px 18px;
+  max-width: 1280px;
+  margin: 0 18px 12px;
+}
+
+#selection-count {
+  color: rgba(249, 115, 115, 1);
+  font-weight: 700;
+  font-size: 14px;
+}
