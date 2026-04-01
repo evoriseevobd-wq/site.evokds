@@ -803,19 +803,19 @@ function showPaymentModal(orderId) {
 
   document.getElementById("payment-cancel").addEventListener("click", () => modal.remove());
 
-  document.getElementById("payment-confirm").addEventListener("click", async () => {
-    const metodo = document.getElementById("payment-select").value;
-    if (!metodo) { alert("Selecione o método de pagamento."); return; }
+ document.getElementById("payment-confirm").addEventListener("click", async () => {
+  const metodo = document.getElementById("payment-select").value;
+  if (!metodo) { alert("Selecione o método de pagamento."); return; }
 
-    await fetch(`${API_BASE}/api/v1/pedidos`, {
-      method: "POST",
-      headers: buildHeaders(),
-      body: JSON.stringify({ order_id: orderId, payment_method: metodo, restaurant_id: getRestaurantId(), client_name: "x" })
-    });
-
-    modal.remove();
-    updateOrderStatus(orderId, "finalizado");
+  await fetch(`${API_BASE}/api/v1/pedidos/${orderId}/payment`, {
+    method: "PATCH",
+    headers: buildHeaders(),
+    body: JSON.stringify({ payment_method: metodo })
   });
+
+  modal.remove();
+  updateOrderStatus(orderId, "finalizado");
+});
 
   modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
 }
