@@ -184,14 +184,13 @@ body {
 }
 
 /* ===== ORDER CARDS ===== */
-.order-card {
-  background: rgba(46, 8, 8, 0.85);
+.column {
+  background: rgba(59, 16, 16, 0.55);
   border: 1px solid rgba(91, 28, 28, 0.85);
-  border-radius: 14px;
-  padding: 12px;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.25);
-  cursor: pointer;
-  transition: all 0.2s ease;
+  border-radius: 16px;
+  overflow: visible;
+  min-height: 72vh;
+  box-shadow: var(--shadow);
 }
 
 .order-card:hover {
@@ -2463,8 +2462,8 @@ input[type="number"] {
 
 .card-checkbox-wrap {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  bottom: 10px;
+  right: 10px;
   z-index: 2;
 }
 
