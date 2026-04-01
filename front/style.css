@@ -2492,3 +2492,28 @@ input[type="number"] {
   font-weight: 700;
   font-size: 14px;
 }
+
+.column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.col-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #f97373;
+  font-weight: 700;
+}
+.col-action-bar button {
+  background: #f97373;
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
