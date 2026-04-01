@@ -603,10 +603,77 @@ function buildOrderCard(order) {
    ${isDelivery ? `<div class="order-delivery-tag">Delivery</div>` : ""}
 ${paymentText ? `<div class="order-payment-tag">${escapeHtml(paymentText)}</div>` : ""}
 ${order.origin ? `<div class="order-origin-tag">${getOriginLabel(order.origin)}</div>` : ""}
+  <div class="card-checkbox-wrap" onclick="event.stopPropagation()">
+    <input type="checkbox" class="card-checkbox" data-id="${order.id}"
+      onchange="toggleCardSelection('${order.id}', this.checked)" />
+  </div>
   `;
 
   card.addEventListener("click", () => openOrderModal(order.id));
   return card;
+}
+
+// ===== SELEÇÃO MÚLTIPLA =====
+let selectedOrderIds = new Set();
+
+function toggleCardSelection(orderId, checked) {
+  if (checked) {
+    selectedOrderIds.add(orderId);
+  } else {
+    selectedOrderIds.delete(orderId);
+  }
+  updateSelectionBar();
+}
+
+function updateSelectionBar() {
+  let bar = document.getElementById("selection-action-bar");
+
+  if (selectedOrderIds.size === 0) {
+    bar?.remove();
+    return;
+  }
+
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.id = "selection-action-bar";
+    bar.innerHTML = `
+      <span id="selection-count"></span>
+      <div style="display:flex; gap:8px;">
+        <button class="ghost-button" onclick="clearSelection()">Cancelar</button>
+        <button class="primary-button" onclick="advanceSelectedOrders()">
+          Mover para próxima etapa →
+        </button>
+      </div>
+    `;
+    const tabsEl = document.querySelector(".tabs");
+    tabsEl?.insertAdjacentElement("afterend", bar);
+  }
+
+  document.getElementById("selection-count").textContent =
+    `${selectedOrderIds.size} selecionado${selectedOrderIds.size > 1 ? "s" : ""}`;
+}
+
+function clearSelection() {
+  selectedOrderIds.clear();
+  document.querySelectorAll(".card-checkbox").forEach(cb => cb.checked = false);
+  document.getElementById("selection-action-bar")?.remove();
+}
+
+async function advanceSelectedOrders() {
+  const ids = [...selectedOrderIds];
+  await Promise.all(ids.map(id => {
+    const o = orders.find(x => x.id === id);
+    if (!o) return;
+    const s = o._frontStatus;
+    const isDelivery = String(o.service_type || "").toLowerCase() === "delivery";
+    const seq = isDelivery
+      ? ["recebido", "preparo", "pronto", "caminho", "finalizado"]
+      : ["recebido", "preparo", "pronto", "finalizado"];
+    const i = seq.indexOf(s);
+    if (i === -1 || i === seq.length - 1) return;
+    return updateOrderStatus(id, seq[i + 1]);
+  }));
+  clearSelection();
 }
 
 function toggleNoOrdersBalloons() {
@@ -627,7 +694,14 @@ function toggleNoOrdersBalloons() {
       existing.remove();
     }
   });
+
+  // Restaura checkboxes após re-render
+  selectedOrderIds.forEach(id => {
+    const cb = document.querySelector(`.card-checkbox[data-id="${id}"]`);
+    if (cb) cb.checked = true;
+  });
 }
+
 
 // ===== MODAL =====
 function openOrderModal(orderId) {
