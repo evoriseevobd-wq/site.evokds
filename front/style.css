@@ -156,7 +156,7 @@ body {
   background: rgba(59, 16, 16, 0.55);
   border: 1px solid rgba(91, 28, 28, 0.85);
   border-radius: 16px;
-  overflow: hidden;
+  overflow: visible;
   min-height: 72vh;
   box-shadow: var(--shadow);
 }
@@ -2457,6 +2457,12 @@ input[type="number"] {
 
 /* ===== SELEÇÃO MÚLTIPLA DE CARDS ===== */
 .order-card {
+  background: rgba(46, 8, 8, 0.75);
+  border: 1px solid rgba(91, 28, 28, 0.85);
+  border-radius: 14px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
   position: relative;
 }
 
