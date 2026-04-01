@@ -1140,7 +1140,7 @@ const response = {
   }
 });
 
-// ONDE COLAR: server.js, após a rota de timeline, antes do app.get("/health")
+// ONDE COLAR: server.js, após a rota de timeline, antes do app.get("")
 
 app.get("/api/v1/metrics/:restaurant_id/timing", async (req, res) => {
   try {
@@ -1614,6 +1614,28 @@ app.post("/api/v1/restaurante/:restaurant_id/imprimir-pedido", async (req, res) 
   } catch (err) {
     console.error("❌ Erro em /imprimir-pedido:", err);
     return sendError(res, 500, "Erro interno ao imprimir");
+  }
+});
+
+app.patch("/api/v1/pedidos/:id/payment", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { payment_method } = req.body;
+
+    if (!payment_method) return sendError(res, 400, "payment_method é obrigatório");
+
+    const { data, error } = await supabase
+      .from("orders")
+      .update({ payment_method, update_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error || !data) return sendError(res, 500, "Erro ao atualizar pagamento");
+
+    return res.json({ success: true, order: data });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
   }
 });
 
