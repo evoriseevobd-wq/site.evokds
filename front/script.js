@@ -661,6 +661,22 @@ function clearSelection() {
 }
 
 async function advanceSelectedOrders() {
+  const ids = [...selectedOrderIds];
+  await Promise.all(ids.map(async id => {
+    const o = orders.find(x => x.id === id);
+    if (!o) return;
+    const s = o._frontStatus;
+    const isDelivery = String(o.service_type || "").toLowerCase() === "delivery";
+    const seq = isDelivery
+      ? ["recebido", "preparo", "pronto", "caminho", "finalizado"]
+      : ["recebido", "preparo", "pronto", "finalizado"];
+    const i = seq.indexOf(s);
+    if (i === -1 || i === seq.length - 1) return;
+    return updateOrderStatus(id, seq[i + 1]);
+  }));
+  clearSelection();
+  renderBoard();
+}
 
 function toggleNoOrdersBalloons() {
   Object.keys(columns).forEach((k) => {
