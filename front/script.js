@@ -3497,8 +3497,8 @@ function gerarQrCodes() {
 
     div.innerHTML = `
       <input type="checkbox" class="qr-checkbox" data-mesa="${i}"
-        style="
-          position:absolute; top:10px; left:10px;
+          style="
+          position:absolute; bottom:10px; right:10px;
           width:18px; height:18px; cursor:pointer;
           accent-color:rgba(249,115,115,1);
           z-index:2;
