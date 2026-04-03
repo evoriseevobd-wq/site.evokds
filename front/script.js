@@ -3336,7 +3336,11 @@ function salvarDominio() {
   const val = document.getElementById("input-dominio-cardapio")?.value.trim();
   if (!val) { alert("Digite o domínio antes de salvar."); return; }
   
-  localStorage.setItem("cardapio_dominio", val);
+// DEPOIS — extrai só o hostname
+const hostname = val.replace(/^https?:\/\//, "").replace(/\/$/, "").split("/")[0];
+localStorage.setItem("cardapio_dominio", hostname);
+// e manda o hostname pro banco também:
+body: JSON.stringify({ dominio: hostname })
 
   // 🔥 Salva no banco
   fetch(`${API_BASE}/api/v1/restaurante/${getRestaurantId()}/dominio`, {
