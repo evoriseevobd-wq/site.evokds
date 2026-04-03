@@ -3346,7 +3346,7 @@ body: JSON.stringify({ dominio: hostname })
   fetch(`${API_BASE}/api/v1/restaurante/${getRestaurantId()}/dominio`, {
     method: "PATCH",
     headers: buildHeaders(),
-    body: JSON.stringify({ dominio: val })
+    body: JSON.stringify({ dominio: hostname })
   });
 
   document.getElementById("dominio-popover").style.display = "none";
