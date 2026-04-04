@@ -442,9 +442,43 @@
 <!-- FIDELIDADE VIEW -->
 <main class="crm-view hidden" id="fidelidade-view">
   <div class="crm-header">
-    <div class="crm-title">⭐ Fidelidade</div>
+  <div class="crm-title">⭐ Fidelidade</div>
+  <div style="display:flex; gap:10px; align-items:center; position:relative;">
+    <button id="btn-config-fidelidade" onclick="toggleFidelidadeConfig()" style="
+      width:36px; height:36px; border-radius:8px;
+      border:1px solid rgba(91,28,28,0.85);
+      background:rgba(46,8,8,0.45);
+      color:rgba(252,228,228,0.7);
+      font-size:18px; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+    " title="Configurações">⋯</button>
+    <div id="fidelidade-popover" style="
+      display:none; position:absolute; right:0; top:44px;
+      width:320px; background:rgba(30,6,6,0.98);
+      border:1px solid rgba(91,28,28,0.85); border-radius:12px;
+      padding:16px; box-shadow:0 12px 40px rgba(0,0,0,0.6); z-index:999;
+    ">
+      <div style="font-size:12px; font-weight:700; color:rgba(252,228,228,0.5); letter-spacing:2px; text-transform:uppercase; margin-bottom:10px;">
+        ⚙️ Configuração
+      </div>
+      <label style="color:rgba(252,228,228,0.8); font-size:13px; font-weight:600; display:block; margin-bottom:6px;">
+        Domínio da página de fidelidade
+      </label>
+      <input type="text" id="input-fidelidade-url"
+        placeholder="fidelidade.seunegocio.com.br"
+        style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.6); color:rgba(252,228,228,1); font-size:13px; outline:none; font-family:inherit;" />
+      <small style="color:rgba(252,228,228,0.35); font-size:11px; margin-top:6px; display:block; line-height:1.5;">
+        O cliente acessa:<br/>https://[domínio]?token=xxx
+      </small>
+      <button onclick="salvarFidelidadeUrl()" style="
+        margin-top:12px; width:100%; padding:8px; border-radius:8px; border:none;
+        background:rgba(249,115,115,0.85); color:#000; font-weight:700; font-size:13px;
+        cursor:pointer; font-family:inherit;
+      ">Salvar</button>
+    </div>
     <button class="ghost-button" type="button" id="fidelidade-back-btn">Voltar</button>
   </div>
+</div>
   <div class="crm-content">
     <div style="display:flex; gap:12px; margin-bottom:24px;">
       <button class="period-btn active" id="tab-fid-clientes">👥 Clientes</button>
