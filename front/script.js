@@ -1901,7 +1901,11 @@ if (crmBackBtn) crmBackBtn.addEventListener("click", showBoard);
 if (resultsBackBtn) resultsBackBtn.addEventListener("click", showBoard);
   const autoatendimentoBackBtn = document.getElementById("autoatendimento-back-btn");
 if (autoatendimentoBackBtn) autoatendimentoBackBtn.addEventListener("click", showBoard);
-// ← COLE AQUI
+const cardapioBackBtn = document.getElementById("cardapio-back-btn");
+if (cardapioBackBtn) cardapioBackBtn.addEventListener("click", showBoard);
+
+const fidelidadeBackBtn = document.getElementById("fidelidade-back-btn");
+if (fidelidadeBackBtn) fidelidadeBackBtn.addEventListener("click", showBoard);
 const settingsBtn = document.getElementById("drawer-settings");
 if (settingsBtn) settingsBtn.addEventListener("click", showSettings);
 
