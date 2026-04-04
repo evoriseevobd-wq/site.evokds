@@ -2703,31 +2703,17 @@ function formatCurrency(value) {
 let cardapioItems = [];
 
 async function initAutoatendimento() {
-  await fetchCardapio();
   setupAutoatendimentoTabs();
 }
 
 function setupAutoatendimentoTabs() {
-  const tabCardapio = document.getElementById("tab-cardapio");
   const tabMesas = document.getElementById("tab-mesas");
-  const painelCardapio = document.getElementById("painel-cardapio");
   const painelMesas = document.getElementById("painel-mesas");
 
-  tabCardapio?.addEventListener("click", () => {
-    tabCardapio.classList.add("active");
-    tabMesas.classList.remove("active");
-    painelCardapio.classList.remove("hidden");
-    painelMesas.classList.add("hidden");
-  });
-
   tabMesas?.addEventListener("click", () => {
-    tabMesas.classList.add("active");
-    tabCardapio.classList.remove("active");
     painelMesas.classList.remove("hidden");
-    painelCardapio.classList.add("hidden");
   });
 
-  document.getElementById("btn-novo-item")?.addEventListener("click", () => openItemModal());
   document.getElementById("btn-gerar-qr")?.addEventListener("click", gerarQrCodes);
 }
 
