@@ -1319,7 +1319,7 @@ app.get("/api/v1/dominio/:dominio", async (req, res) => {
   const { data, error } = await supabase
     .from("restaurants")
     .select("id")
-    .eq("dominio", dominio)
+    .eq("fidelidade_url", dominio)
     .single();
   if (error || !data) return sendError(res, 404, "Domínio não encontrado");
   return res.json({ restaurant_id: data.id });
@@ -1331,13 +1331,12 @@ app.patch("/api/v1/restaurante/:restaurant_id/dominio", async (req, res) => {
   
   const { data, error } = await supabase
     .from("restaurants")
-    .update({ dominio })
+    .update({ fidelidade_url: dominio })
     .eq("id", restaurant_id);
     
   if (error) return sendError(res, 500, "Erro ao salvar domínio");
   return res.json({ success: true });
 });
-
 app.patch("/api/v1/restaurante/:restaurant_id/tracking-url", async (req, res) => {
   const { restaurant_id } = req.params;
   const { tracking_url } = req.body;
