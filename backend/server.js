@@ -1337,6 +1337,39 @@ app.patch("/api/v1/restaurante/:restaurant_id/dominio", async (req, res) => {
   if (error) return sendError(res, 500, "Erro ao salvar domínio");
   return res.json({ success: true });
 });
+
+// GET - Busca config do restaurante (logo, cores, nome)
+app.get("/api/v1/restaurante/:restaurant_id/config", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+
+    const { data: rest } = await supabase
+      .from("restaurants")
+      .select("name")
+      .eq("id", restaurant_id)
+      .single();
+
+    const { data: config } = await supabase
+      .from("restaurante_config")
+      .select("*")
+      .eq("restaurant_id", restaurant_id)
+      .single();
+
+    return res.json({
+      nome_exibicao: config?.nome_exibicao || rest?.name || "",
+      logo_url: config?.logo_url || null,
+      cor_primaria: config?.cor_primaria || "#f97373",
+      cor_secundaria: config?.cor_secundaria || "#b91c1c",
+      subtitulo: config?.subtitulo || null,
+      telefone: config?.telefone || null,
+      instagram: config?.instagram || null,
+      descricao: config?.descricao || null
+    });
+  } catch (err) {
+    return sendError(res, 500, "Erro ao buscar configuração");
+  }
+});
+
 app.patch("/api/v1/restaurante/:restaurant_id/tracking-url", async (req, res) => {
   const { restaurant_id } = req.params;
   const { tracking_url } = req.body;
