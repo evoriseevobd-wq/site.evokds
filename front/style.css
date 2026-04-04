@@ -2474,11 +2474,28 @@ input[type="number"] {
 }
 
 .card-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
   width: 16px;
   height: 16px;
-  accent-color: #f97373;
-  cursor: pointer;
+  background: rgba(46,8,8,0.8);
+  border: 2px solid rgba(249,115,115,0.6);
   border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.card-checkbox:checked {
+  background: rgba(249,115,115,0.9);
+  border-color: rgba(249,115,115,1);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 10 10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.5 5l2.5 2.5 4.5-4.5' stroke='%23000' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-size: 11px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.card-checkbox:hover {
+  border-color: rgba(249,115,115,1);
 }
 
 #selection-action-bar {
@@ -2522,4 +2539,22 @@ input[type="number"] {
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
+}
+
+/* QR Checkbox personalizado */
+.qr-checkbox:checked {
+  background: rgba(249,115,115,0.9);
+  border-color: rgba(249,115,115,1);
+}
+
+.qr-checkbox:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #000;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
 }
