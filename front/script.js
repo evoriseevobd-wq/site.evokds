@@ -439,7 +439,7 @@ function showCardapio() {
 
 function showFidelidade() {
   const plan = restaurantPlan.toLowerCase();
-  if (!canUseFidelizacao(plan)) {
+  if (plan !== "executive" && plan !== "custom") {
     showUpgradeModal("executive", "Programa de Fidelidade");
     return;
   }
