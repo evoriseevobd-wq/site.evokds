@@ -3497,16 +3497,7 @@ function gerarQrCodes() {
 
     div.innerHTML = `
       <input type="checkbox" class="qr-checkbox" data-mesa="${i}"
-          style="
-          position:absolute; bottom:10px; right:10px;
-          width:18px; height:18px; cursor:pointer;
-          z-index:2;
-          appearance:none; -webkit-appearance:none;
-          background:rgba(46,8,8,0.8);
-          border:2px solid rgba(249,115,115,0.6);
-          border-radius:5px;
-          transition:all 0.2s;
-        "
+         style="position:absolute; bottom:10px; right:10px; z-index:2;"
         onchange="onQrCheckboxChange()" />
       <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}"
         alt="QR Mesa ${i}" style="border-radius:8px;" />
