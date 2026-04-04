@@ -602,7 +602,9 @@ function buildOrderCard(order) {
     </div>
    ${isDelivery ? `<div class="order-delivery-tag">Delivery</div>` : ""}
 ${paymentText ? `<div class="order-payment-tag">${escapeHtml(paymentText)}</div>` : ""}
-${order.origin ? `<div class="order-origin-tag">${getOriginLabel(order.origin)}</div>` : ""}
+${order.origin === "fidelidade" 
+  ? `<div class="order-fidelidade-tag">🎁 Fidelidade</div>` 
+  : order.origin ? `<div class="order-origin-tag">${getOriginLabel(order.origin)}</div>` : ""}
   <div class="card-checkbox-wrap" onclick="event.stopPropagation()">
     <input type="checkbox" class="card-checkbox" data-id="${order.id}"
       onchange="toggleCardSelection('${order.id}', this.checked)" />
