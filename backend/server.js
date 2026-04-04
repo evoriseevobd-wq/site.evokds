@@ -1390,10 +1390,16 @@ async function printOrder(order, apiKey, printerId) {
 
     // ── Busca dados do restaurante ─────────────────
     const { data: restData } = await supabase
-      .from("restaurants")
-      .select("tracking_url, name, subtitulo, telefone, instagram")
-      .eq("id", order.restaurant_id)
-      .single();
+  .from("restaurants")
+  .select("name, tracking_url")
+  .eq("id", order.restaurant_id)
+  .single();
+
+const { data: restConfig } = await supabase
+  .from("restaurante_config")
+  .select("nome_exibicao, subtitulo, telefone, instagram")
+  .eq("restaurant_id", order.restaurant_id)
+  .single();
 
     const ESC = 0x1B;
     const GS  = 0x1D;
@@ -1432,13 +1438,13 @@ async function printOrder(order, apiKey, printerId) {
 
     b(GS, 0x21, 0x11);
     b(ESC, 0x45, 0x01);
-    txt(restData?.name || 'Restaurante'); lf();
+    txt(restConfig?.nome_exibicao || restData?.name || 'Restaurante'); lf();
     b(GS, 0x21, 0x00);
     b(ESC, 0x45, 0x00);
 
-    if (restData?.subtitulo) { txt(`- ${restData.subtitulo} -`); lf(); }
+   if (restConfig?.subtitulo) { txt(`- ${restConfig.subtitulo} -`); lf(); }
     lf();
-    if (restData?.telefone) { txt(restData.telefone); lf(); }
+if (restConfig?.telefone) { txt(restConfig.telefone); lf(); }
     lf();
 
     // ── DIVISOR GROSSO ─────────────────────────────
@@ -1508,10 +1514,10 @@ if (order.client_phone)          { txt(`Telefone: ${order.client_phone}`); lf();
     lf();
     txt('* * * * * * * * * * * * * * * * * * * *'); lf();
     lf();
-    if (restData?.instagram) {
+    if (restConfig?.instagram) {
   txt('Siga-nos no Instagram:'); lf();
   b(ESC, 0x45, 0x01);
-  txt(`${restData.instagram}`); lf();
+  txt(`${restConfig.instagram}`); lf();
   b(ESC, 0x45, 0x00);
   lf();
 }
