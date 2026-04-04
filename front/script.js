@@ -2705,6 +2705,7 @@ let cardapioItems = [];
 
 async function initAutoatendimento() {
   setupAutoatendimentoTabs();
+  document.getElementById("painel-mesas")?.classList.remove("hidden");
 }
 
 function setupAutoatendimentoTabs() {
