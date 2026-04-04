@@ -1806,7 +1806,7 @@ app.get("/api/v1/fidelidade/cliente/:token", async (req, res) => {
 // Cliente solicita resgate (cria pedido com origin: fidelidade)
 app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
   try {
-    const { token, premio_id } = req.body;
+    const { token, premio_id, service_type, address } = req.body;
     if (!token || !premio_id) return sendError(res, 400, "token e premio_id são obrigatórios");
 
     const { data: cliente } = await supabase
@@ -1837,7 +1837,7 @@ app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
     const now = new Date().toISOString();
 
     // Cria pedido com origin fidelidade
-    const { data: order, error: orderError } = await supabase
+   const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert([{
         restaurant_id: cliente.restaurant_id,
@@ -1847,7 +1847,8 @@ app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
         itens: [{ name: premio.nome, qty: 1, price: 0 }],
         notes: `🎁 Resgate de fidelidade — ${premio.pontos_necessarios} pontos`,
         status: "pending",
-        service_type: "local",
+        service_type: service_type || "local", // ← usa o que veio
+        address: address || null,              // ← usa o endereço
         total_price: 0,
         origin: "fidelidade",
         created_at: now,
