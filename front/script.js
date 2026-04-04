@@ -2731,7 +2731,7 @@ async function fetchCardapio() {
 }
 
 function renderCardapio() {
-  const lista = document.getElementById("lista-cardapio");
+  const lista = document.getElementById("lista-cardapio-view") || document.getElementById("lista-cardapio");
   if (!lista) return;
 
   if (cardapioItems.length === 0) {
