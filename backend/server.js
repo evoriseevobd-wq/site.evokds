@@ -617,7 +617,7 @@ const trackingLink = baseUrl ? `${baseUrl}?code=${trackingCode}` : null;
 // ⭐ FIDELIZAÇÃO
 try {
   if (phone && !order_id) {
-    const pontosGanhos = Math.floor((parseFloat(total_price) || 0) * 10);
+    const pontosGanhos = Math.floor((parseFloat(total_price) || 0) * 15);
 
     if (pontosGanhos > 0) {
       const { data: perfil } = await supabase
@@ -1636,6 +1636,200 @@ app.patch("/api/v1/pedidos/:id/payment", async (req, res) => {
     return res.json({ success: true, order: data });
   } catch (err) {
     return sendError(res, 500, "Erro interno");
+  }
+});
+
+/* ========================================
+   ⭐ FIDELIZAÇÃO
+======================================== */
+
+// Lista prêmios do restaurante
+app.get("/api/v1/fidelidade/:restaurant_id/premios", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { data, error } = await supabase
+      .from("premios_fidelidade")
+      .select("*")
+      .eq("restaurant_id", restaurant_id)
+      .eq("ativo", true)
+      .order("pontos_necessarios");
+    if (error) return sendError(res, 500, "Erro ao buscar prêmios");
+    return res.json(data || []);
+  } catch (err) {
+    return sendError(res, 500, err.message);
+  }
+});
+
+// Cria prêmio
+app.post("/api/v1/fidelidade/premios", async (req, res) => {
+  try {
+    const { restaurant_id, nome, descricao, pontos_necessarios } = req.body;
+    if (!restaurant_id || !nome || !pontos_necessarios)
+      return sendError(res, 400, "Campos obrigatórios: restaurant_id, nome, pontos_necessarios");
+    const { data, error } = await supabase
+      .from("premios_fidelidade")
+      .insert([{ restaurant_id, nome, descricao, pontos_necessarios, ativo: true }])
+      .select().single();
+    if (error) return sendError(res, 500, "Erro ao criar prêmio");
+    return res.status(201).json(data);
+  } catch (err) {
+    return sendError(res, 500, err.message);
+  }
+});
+
+// Edita prêmio
+app.patch("/api/v1/fidelidade/premios/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase
+      .from("premios_fidelidade")
+      .update(req.body)
+      .eq("id", id)
+      .select().single();
+    if (error) return sendError(res, 500, "Erro ao atualizar prêmio");
+    return res.json(data);
+  } catch (err) {
+    return sendError(res, 500, err.message);
+  }
+});
+
+// Deleta prêmio
+app.delete("/api/v1/fidelidade/premios/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase.from("premios_fidelidade").delete().eq("id", id);
+    if (error) return sendError(res, 500, "Erro ao deletar prêmio");
+    return res.json({ success: true });
+  } catch (err) {
+    return sendError(res, 500, err.message);
+  }
+});
+
+// Lista clientes com pontos (admin)
+app.get("/api/v1/fidelidade/:restaurant_id/clientes", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { data, error } = await supabase
+      .from("base_clientes")
+      .select("*")
+      .eq("restaurant_id", restaurant_id)
+      .eq("Status", "ATIVO")
+      .order("pontos", { ascending: false });
+    if (error) return sendError(res, 500, "Erro ao buscar clientes");
+    return res.json(data || []);
+  } catch (err) {
+    return sendError(res, 500, err.message);
+  }
+});
+
+// Cliente busca dados pelo token
+app.get("/api/v1/fidelidade/cliente/:token", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { data: cliente, error } = await supabase
+      .from("base_clientes")
+      .select("*")
+      .eq("token_fidelidade", token)
+      .single();
+    if (error || !cliente) return sendError(res, 404, "Cliente não encontrado");
+
+    const { data: premios } = await supabase
+      .from("premios_fidelidade")
+      .select("*")
+      .eq("restaurant_id", cliente.restaurant_id)
+      .eq("ativo", true)
+      .order("pontos_necessarios");
+
+    const { data: resgates } = await supabase
+      .from("orders")
+      .select("id, order_number, itens, created_at, status")
+      .eq("restaurant_id", cliente.restaurant_id)
+      .eq("client_phone", cliente.numero)
+      .eq("origin", "fidelidade")
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    return res.json({
+      cliente: {
+        nome: cliente.nome,
+        pontos: cliente.pontos,
+        pontos_resgatados: cliente.pontos_resgatados,
+        token: cliente.token_fidelidade
+      },
+      premios: premios || [],
+      resgates: resgates || []
+    });
+  } catch (err) {
+    return sendError(res, 500, err.message);
+  }
+});
+
+// Cliente solicita resgate (cria pedido com origin: fidelidade)
+app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
+  try {
+    const { token, premio_id } = req.body;
+    if (!token || !premio_id) return sendError(res, 400, "token e premio_id são obrigatórios");
+
+    const { data: cliente } = await supabase
+      .from("base_clientes")
+      .select("*")
+      .eq("token_fidelidade", token)
+      .single();
+    if (!cliente) return sendError(res, 404, "Cliente não encontrado");
+
+    const { data: premio } = await supabase
+      .from("premios_fidelidade")
+      .select("*")
+      .eq("id", premio_id)
+      .single();
+    if (!premio) return sendError(res, 404, "Prêmio não encontrado");
+    if (cliente.pontos < premio.pontos_necessarios)
+      return sendError(res, 400, "Pontos insuficientes");
+
+    // Busca último order_number do restaurante
+    const { data: last } = await supabase
+      .from("orders")
+      .select("order_number")
+      .eq("restaurant_id", cliente.restaurant_id)
+      .order("order_number", { ascending: false })
+      .limit(1);
+    const nextNumber = last && last.length > 0 ? Number(last[0].order_number) + 1 : 1;
+
+    const now = new Date().toISOString();
+
+    // Cria pedido com origin fidelidade
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .insert([{
+        restaurant_id: cliente.restaurant_id,
+        client_name: cliente.nome,
+        client_phone: cliente.numero,
+        order_number: nextNumber,
+        itens: [{ name: premio.nome, qty: 1, price: 0 }],
+        notes: `🎁 Resgate de fidelidade — ${premio.pontos_necessarios} pontos`,
+        status: "pending",
+        service_type: "local",
+        total_price: 0,
+        origin: "fidelidade",
+        created_at: now,
+        update_at: now
+      }])
+      .select().single();
+
+    if (orderError) return sendError(res, 500, "Erro ao criar pedido de resgate");
+
+    // Debita pontos
+    await supabase
+      .from("base_clientes")
+      .update({
+        pontos: cliente.pontos - premio.pontos_necessarios,
+        pontos_resgatados: (cliente.pontos_resgatados || 0) + premio.pontos_necessarios
+      })
+      .eq("id", cliente.id);
+
+    return res.status(201).json({ success: true, order });
+  } catch (err) {
+    return sendError(res, 500, err.message);
   }
 });
 
