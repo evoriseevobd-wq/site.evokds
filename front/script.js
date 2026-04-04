@@ -3375,19 +3375,13 @@ function salvarDominio() {
   if (!val) { alert("Digite o domínio antes de salvar."); return; }
   
   const hostname = val.replace(/^https?:\/\//, "").replace(/\/$/, "").split("/")[0];
-  localStorage.setItem("fidelidade_url", hostname);
+localStorage.setItem("fidelidade_url", hostname);
 
-  fetch(`${API_BASE}/api/v1/restaurante/${getRestaurantId()}/dominio`, {
-    method: "PATCH",
-    headers: buildHeaders(),
-    body: JSON.stringify({ dominio: hostname })
-  });
-  // 🔥 Salva no banco
-  fetch(`${API_BASE}/api/v1/restaurante/${getRestaurantId()}/dominio`, {
-    method: "PATCH",
-    headers: buildHeaders(),
-    body: JSON.stringify({ dominio: hostname })
-  });
+fetch(`${API_BASE}/api/v1/restaurante/${getRestaurantId()}/dominio`, {
+  method: "PATCH",
+  headers: buildHeaders(),
+  body: JSON.stringify({ dominio: hostname })
+});
 
   document.getElementById("dominio-popover").style.display = "none";
   const btn = document.getElementById("btn-config-dominio");
@@ -3480,7 +3474,7 @@ function gerarQrCodes() {
   const lista = document.getElementById("lista-qrcodes");
   if (!lista) return;
 
-  let dominioRaw = (document.getElementById("input-dominio-cardapio")?.value || localStorage.getItem("cardapio_dominio") || "").trim();
+  let dominioRaw = (document.getElementById("input-dominio-cardapio")?.value || localStorage.getItem("fidelidade_url") || "").trim();
   if (!dominioRaw) {
     document.getElementById("dominio-popover").style.display = "block";
     document.getElementById("input-dominio-cardapio")?.focus();
