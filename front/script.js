@@ -1906,6 +1906,7 @@ if (cardapioBackBtn) cardapioBackBtn.addEventListener("click", showBoard);
 
 const fidelidadeBackBtn = document.getElementById("fidelidade-back-btn");
 if (fidelidadeBackBtn) fidelidadeBackBtn.addEventListener("click", showBoard);
+document.getElementById("btn-novo-item-cardapio")?.addEventListener("click", () => openItemModal());
 const settingsBtn = document.getElementById("drawer-settings");
 if (settingsBtn) settingsBtn.addEventListener("click", showSettings);
 
