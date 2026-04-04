@@ -3662,6 +3662,198 @@ function imprimirQrCodes() {
   win.document.close();
 }
 
+// ========================================
+// ⭐ FIDELIDADE
+// ========================================
+async function initFidelidade() {
+  setupFidelidadeTabs();
+  await fetchFidelidadeClientes();
+}
+
+function setupFidelidadeTabs() {
+  const tabClientes = document.getElementById("tab-fid-clientes");
+  const tabPremios = document.getElementById("tab-fid-premios");
+  const painelClientes = document.getElementById("painel-fid-clientes");
+  const painelPremios = document.getElementById("painel-fid-premios");
+
+  tabClientes?.addEventListener("click", () => {
+    tabClientes.classList.add("active");
+    tabPremios.classList.remove("active");
+    painelClientes.classList.remove("hidden");
+    painelPremios.classList.add("hidden");
+    fetchFidelidadeClientes();
+  });
+
+  tabPremios?.addEventListener("click", () => {
+    tabPremios.classList.add("active");
+    tabClientes.classList.remove("active");
+    painelPremios.classList.remove("hidden");
+    painelClientes.classList.add("hidden");
+    fetchFidelidadePremios();
+  });
+}
+
+async function fetchFidelidadeClientes() {
+  const rid = getRestaurantId();
+  const painel = document.getElementById("painel-fid-clientes");
+  if (!rid || !painel) return;
+
+  painel.innerHTML = `<p style="color:var(--muted); text-align:center; padding:40px 0;">Carregando...</p>`;
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/fidelidade/${rid}/clientes`);
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error);
+
+    if (!data.length) {
+      painel.innerHTML = `<p style="color:var(--muted); text-align:center; padding:40px 0;">Nenhum cliente com pontos ainda.</p>`;
+      return;
+    }
+
+    const table = document.createElement("table");
+    table.className = "crm-table";
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th>Telefone</th>
+          <th>Pontos</th>
+          <th>Resgatados</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${data.map(c => `
+          <tr>
+            <td>${escapeHtml(c.nome || "—")}</td>
+            <td>${escapeHtml(c.numero || "—")}</td>
+            <td style="color:rgba(251,191,36,1); font-weight:800;">⭐ ${c.pontos || 0}</td>
+            <td style="color:var(--muted);">${c.pontos_resgatados || 0}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    `;
+    painel.innerHTML = "";
+    painel.appendChild(table);
+  } catch (e) {
+    painel.innerHTML = `<p style="color:#ef4444; text-align:center; padding:40px 0;">Erro ao carregar clientes.</p>`;
+  }
+}
+
+async function fetchFidelidadePremios() {
+  const rid = getRestaurantId();
+  const painel = document.getElementById("painel-fid-premios");
+  if (!rid || !painel) return;
+
+  painel.innerHTML = `<p style="color:var(--muted); text-align:center; padding:40px 0;">Carregando...</p>`;
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/fidelidade/${rid}/premios`);
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error);
+
+    painel.innerHTML = `
+      <button class="primary-button" id="btn-novo-premio" style="margin-bottom:20px;">+ Novo Prêmio</button>
+      <div id="lista-premios">
+        ${data.length === 0 
+          ? `<p style="color:var(--muted); text-align:center; padding:40px 0;">Nenhum prêmio cadastrado ainda.</p>`
+          : data.map(p => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px; background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px; margin-bottom:8px;">
+              <div>
+                <div style="color:rgba(252,228,228,0.95); font-weight:700; font-size:14px;">${escapeHtml(p.nome)}</div>
+                ${p.descricao ? `<div style="color:var(--muted); font-size:12px;">${escapeHtml(p.descricao)}</div>` : ""}
+                <div style="color:rgba(251,191,36,1); font-weight:800; font-size:13px; margin-top:4px;">⭐ ${p.pontos_necessarios} pontos</div>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button onclick="openPremioModal(${JSON.stringify(p).replace(/"/g, '&quot;')})" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:transparent; color:rgba(252,228,228,0.7); cursor:pointer; font-size:11px;">Editar</button>
+                <button onclick="deletarPremio('${p.id}')" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(239,68,68,0.5); background:transparent; color:rgba(239,68,68,0.8); cursor:pointer; font-size:11px;">Excluir</button>
+              </div>
+            </div>
+          `).join("")}
+      </div>
+    `;
+
+    document.getElementById("btn-novo-premio")?.addEventListener("click", () => openPremioModal());
+  } catch (e) {
+    painel.innerHTML = `<p style="color:#ef4444; text-align:center; padding:40px 0;">Erro ao carregar prêmios.</p>`;
+  }
+}
+
+function openPremioModal(premio = null) {
+  const existing = document.getElementById("premio-modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "premio-modal";
+  modal.className = "modal-backdrop open";
+
+  modal.innerHTML = `
+    <div class="modal confirm-modal">
+      <div class="modal-header">
+        <h3>${premio ? "✏️ Editar Prêmio" : "🎁 Novo Prêmio"}</h3>
+      </div>
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:12px;">
+        <label style="color:rgba(252,228,228,0.8); font-size:13px;">Nome *
+          <input id="premio-nome" value="${premio ? escapeHtml(premio.nome) : ""}" placeholder="Ex: Hambúrguer grátis"
+            style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
+        </label>
+        <label style="color:rgba(252,228,228,0.8); font-size:13px;">Descrição
+          <input id="premio-descricao" value="${premio ? escapeHtml(premio.descricao || "") : ""}" placeholder="Ex: Um hambúrguer clássico à sua escolha"
+            style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
+        </label>
+        <label style="color:rgba(252,228,228,0.8); font-size:13px;">Pontos necessários *
+          <input id="premio-pontos" type="number" value="${premio ? premio.pontos_necessarios : ""}" placeholder="Ex: 500"
+            style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="ghost-button" id="premio-cancel">Cancelar</button>
+        <button class="primary-button" id="premio-save">Salvar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  document.getElementById("premio-cancel").addEventListener("click", () => modal.remove());
+  document.getElementById("premio-save").addEventListener("click", () => salvarPremio(premio?.id));
+  modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
+}
+
+async function salvarPremio(id = null) {
+  const rid = getRestaurantId();
+  const nome = document.getElementById("premio-nome").value.trim();
+  const descricao = document.getElementById("premio-descricao").value.trim();
+  const pontos_necessarios = parseInt(document.getElementById("premio-pontos").value) || 0;
+
+  if (!nome || !pontos_necessarios) { alert("Nome e pontos são obrigatórios."); return; }
+
+  try {
+    if (id) {
+      await fetch(`${API_BASE}/api/v1/fidelidade/premios/${id}`, {
+        method: "PATCH", headers: buildHeaders(),
+        body: JSON.stringify({ nome, descricao, pontos_necessarios })
+      });
+    } else {
+      await fetch(`${API_BASE}/api/v1/fidelidade/premios`, {
+        method: "POST", headers: buildHeaders(),
+        body: JSON.stringify({ restaurant_id: rid, nome, descricao, pontos_necessarios })
+      });
+    }
+    document.getElementById("premio-modal")?.remove();
+    await fetchFidelidadePremios();
+  } catch (e) {
+    alert("Erro ao salvar prêmio.");
+  }
+}
+
+async function deletarPremio(id) {
+  showConfirmModal("Tem certeza que deseja excluir este prêmio?", async () => {
+    await fetch(`${API_BASE}/api/v1/fidelidade/premios/${id}`, {
+      method: "DELETE", headers: buildHeaders()
+    });
+    await fetchFidelidadePremios();
+  });
+}
+
 // ===== INICIALIZA =====
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
