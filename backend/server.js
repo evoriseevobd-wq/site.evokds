@@ -916,13 +916,13 @@ app.get("/api/v1/metrics/:restaurant_id/timeline", async (req, res) => {
 
     // Totais do período atual
     const currentRevenue = timeline.reduce((sum, day) => sum + day.revenue, 0);
-    const currentOrders = timeline.reduce((sum, day) => sum + day.orders, 0);
-    const currentTicket = currentOrders > 0 ? currentRevenue / currentOrders : 0;
-    const currentROI = currentRevenue / planPrice;
+    const currentOrdersCount = timeline.reduce((sum, day) => sum + day.orders, 0);
+    const currentTicket = currentOrdersCount > 0 ? currentRevenue / currentOrdersCount : 0;
+const currentROI = currentRevenue / planPrice;
 
     const comparison = {
       revenue_growth: previousRevenue > 0 ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 : 0,
-      orders_growth: previousOrdersCount > 0 ? ((currentOrders - previousOrdersCount) / previousOrdersCount) * 100 : 0,
+      orders_growth: previousOrdersCount > 0 ? ((currentOrdersCount - previousOrdersCount) / previousOrdersCount) * 100 : 0,
       ticket_growth: previousTicket > 0 ? ((currentTicket - previousTicket) / previousTicket) * 100 : 0,
       roi_growth: previousROI > 0 ? ((currentROI - previousROI) / previousROI) * 100 : 0
     };
@@ -939,7 +939,7 @@ app.get("/api/v1/metrics/:restaurant_id/timeline", async (req, res) => {
       comparison,
       current_totals: {
         revenue: currentRevenue,
-        orders: currentOrders,
+        orders: currentOrdersCount,
         ticket: currentTicket,
         roi: currentROI
       },
