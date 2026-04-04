@@ -3456,9 +3456,9 @@ function gerarQrCodes() {
   printBar.style.cssText = "width:100%; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; gap:12px;";
   printBar.innerHTML = `
     <div style="display:flex; align-items:center; gap:10px;">
-      <input type="checkbox" id="select-all-qr"
-        style="width:16px; height:16px; cursor:pointer; accent-color:rgba(249,115,115,1);"
-        onchange="toggleSelectAllQr(this.checked)" />
+      <input type="checkbox" id="select-all-qr" class="qr-checkbox"
+  style="flex-shrink:0;"
+  onchange="toggleSelectAllQr(this.checked)" />
       <label for="select-all-qr"
         style="color:rgba(252,228,228,0.8); font-size:13px; font-weight:700; cursor:pointer;">
         Selecionar todos
