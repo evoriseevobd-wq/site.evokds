@@ -1925,7 +1925,7 @@ if (unauthClose) unauthClose.addEventListener("click", () => closeBackdrop(unaut
 setInterval(fetchOrders, 5000);
 fetchOrders();
 
-const dominioSalvo = localStorage.getItem("cardapio_dominio");
+const dominioSalvo = localStorage.getItem("fidelidade_url");
 if (dominioSalvo) {
   const el = document.getElementById("input-dominio-cardapio");
   if (el) el.value = dominioSalvo;
@@ -3374,12 +3374,14 @@ function salvarDominio() {
   const val = document.getElementById("input-dominio-cardapio")?.value.trim();
   if (!val) { alert("Digite o domínio antes de salvar."); return; }
   
-// DEPOIS — extrai só o hostname
-const hostname = val.replace(/^https?:\/\//, "").replace(/\/$/, "").split("/")[0];
-localStorage.setItem("cardapio_dominio", hostname);
-// e manda o hostname pro banco também:
-body: JSON.stringify({ dominio: hostname })
+  const hostname = val.replace(/^https?:\/\//, "").replace(/\/$/, "").split("/")[0];
+  localStorage.setItem("fidelidade_url", hostname);
 
+  fetch(`${API_BASE}/api/v1/restaurante/${getRestaurantId()}/dominio`, {
+    method: "PATCH",
+    headers: buildHeaders(),
+    body: JSON.stringify({ dominio: hostname })
+  });
   // 🔥 Salva no banco
   fetch(`${API_BASE}/api/v1/restaurante/${getRestaurantId()}/dominio`, {
     method: "PATCH",
