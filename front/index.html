@@ -427,6 +427,34 @@
 
   </main>
 
+<!-- CARDÁPIO VIEW -->
+<main class="crm-view hidden" id="cardapio-view">
+  <div class="crm-header">
+    <div class="crm-title">🍽️ Cardápio</div>
+    <button class="ghost-button" type="button" id="cardapio-back-btn">Voltar</button>
+  </div>
+  <div class="crm-content">
+    <button class="primary-button" id="btn-novo-item-cardapio" style="margin-bottom:20px;">+ Novo Item</button>
+    <div id="lista-cardapio-view"></div>
+  </div>
+</main>
+
+<!-- FIDELIDADE VIEW -->
+<main class="crm-view hidden" id="fidelidade-view">
+  <div class="crm-header">
+    <div class="crm-title">⭐ Fidelidade</div>
+    <button class="ghost-button" type="button" id="fidelidade-back-btn">Voltar</button>
+  </div>
+  <div class="crm-content">
+    <div style="display:flex; gap:12px; margin-bottom:24px;">
+      <button class="period-btn active" id="tab-fid-clientes">👥 Clientes</button>
+      <button class="period-btn" id="tab-fid-premios">🎁 Prêmios</button>
+    </div>
+    <div id="painel-fid-clientes"></div>
+    <div id="painel-fid-premios" class="hidden"></div>
+  </div>
+</main>
+  
   <!-- AUTOATENDIMENTO VIEW -->
 <main class="crm-view hidden" id="autoatendimento-view">
   <div class="crm-header">
