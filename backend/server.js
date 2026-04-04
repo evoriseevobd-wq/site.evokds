@@ -1781,11 +1781,13 @@ app.get("/api/v1/fidelidade/cliente/:token", async (req, res) => {
       .eq("ativo", true)
       .order("pontos_necessarios");
 
-    const { data: resgates } = await supabase
+    const phoneNormalizado = normalizePhone(cliente.numero);
+
+const { data: resgates } = await supabase
       .from("orders")
       .select("id, order_number, itens, created_at, status")
       .eq("restaurant_id", cliente.restaurant_id)
-      .eq("client_phone", cliente.numero)
+      .eq("client_phone", phoneNormalizado)
       .eq("origin", "fidelidade")
       .order("created_at", { ascending: false })
       .limit(10);
