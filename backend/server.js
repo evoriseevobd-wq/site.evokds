@@ -1358,11 +1358,12 @@ app.get("/api/v1/restaurante/:restaurant_id/config", async (req, res) => {
       .eq("restaurant_id", restaurant_id)
       .single();
 
-    return res.json({
+   return res.json({
       nome_exibicao: config?.nome_exibicao || rest?.name || "",
       logo_url: config?.logo_url || null,
       cor_primaria: config?.cor_primaria || "#f97373",
       cor_secundaria: config?.cor_secundaria || "#b91c1c",
+      cor_fundo: config?.cor_fundo || "#0c0a09",
       subtitulo: config?.subtitulo || null,
       telefone: config?.telefone || null,
       instagram: config?.instagram || null,
