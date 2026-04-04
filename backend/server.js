@@ -1788,15 +1788,16 @@ app.get("/api/v1/fidelidade/cliente/:token", async (req, res) => {
       .limit(10);
 
     return res.json({
-      cliente: {
-        nome: cliente.nome,
-        pontos: cliente.pontos,
-        pontos_resgatados: cliente.pontos_resgatados,
-        token: cliente.token_fidelidade
-      },
-      premios: premios || [],
-      resgates: resgates || []
-    });
+  cliente: {
+    nome: cliente.nome,
+    pontos: cliente.pontos,
+    pontos_resgatados: cliente.pontos_resgatados,
+    token: cliente.token_fidelidade,
+    restaurant_id: cliente.restaurant_id  // ← adiciona essa linha
+  },
+  premios: premios || [],
+  resgates: resgates || []
+});
   } catch (err) {
     return sendError(res, 500, err.message);
   }
