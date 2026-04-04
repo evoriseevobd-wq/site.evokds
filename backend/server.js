@@ -150,7 +150,8 @@ app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
     console.log(`📅 Período anterior: ${previousStart.toISOString()} até ${previousEnd.toISOString()}`);
 
     // Busca pedidos do período ATUAL
-    const { data: currentOrders, error: currentError } = await supabase
+    let currentOrders = [];
+    const { data: fetchedOrders, error: currentError } = await supabase
       .from("orders")
       .select("id, client_phone, origin, status, service_type, created_at, total_price")
       .eq("restaurant_id", restaurant_id)
@@ -160,6 +161,8 @@ app.get("/api/v1/metrics/:restaurant_id", async (req, res) => {
       console.error("❌ Erro ao buscar pedidos:", currentError);
       return sendError(res, 500, "Erro ao buscar pedidos");
     }
+
+    currentOrders = fetchedOrders || [];
 
     // Busca pedidos do período ANTERIOR
     const { data: previousOrders, error: previousError } = await supabase
