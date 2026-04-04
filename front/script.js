@@ -376,7 +376,9 @@ function showBoard() {
   crmView?.classList.add("hidden");
   resultsView?.classList.add("hidden");
   document.getElementById("autoatendimento-view")?.classList.add("hidden");
-  document.getElementById("settings-view")?.classList.add("hidden"); // ← ADICIONA
+  document.getElementById("settings-view")?.classList.add("hidden");
+  document.getElementById("cardapio-view")?.classList.add("hidden");
+  document.getElementById("fidelidade-view")?.classList.add("hidden");
   board?.classList.remove("hidden");
   showTabsBar();
   closeDrawer();
@@ -388,10 +390,12 @@ function showCRM() {
     showUpgradeModal("advanced", "CRM de Clientes");
     return;
   }
- board?.classList.add("hidden");
+  board?.classList.add("hidden");
   resultsView?.classList.add("hidden");
   document.getElementById("autoatendimento-view")?.classList.add("hidden");
-  document.getElementById("settings-view")?.classList.add("hidden"); // ← ADICIONA
+  document.getElementById("settings-view")?.classList.add("hidden");
+  document.getElementById("cardapio-view")?.classList.add("hidden");
+  document.getElementById("fidelidade-view")?.classList.add("hidden");
   crmView?.classList.remove("hidden");
   hideTabsBar();
   closeDrawer();
@@ -406,17 +410,49 @@ function showResults() {
   board?.classList.add("hidden");
   crmView?.classList.add("hidden");
   document.getElementById("autoatendimento-view")?.classList.add("hidden");
-  document.getElementById("settings-view")?.classList.add("hidden"); // ← ADICIONA
+  document.getElementById("settings-view")?.classList.add("hidden");
+  document.getElementById("cardapio-view")?.classList.add("hidden");
+  document.getElementById("fidelidade-view")?.classList.add("hidden");
   resultsView?.classList.remove("hidden");
   hideTabsBar();
   closeDrawer();
-  
   if (!resultsState.uiReady) {
     setupPeriodButtons();
     resultsState.uiReady = true;
   }
-  
   fetchAndRenderMetrics();
+}
+  
+
+function showCardapio() {
+  board?.classList.add("hidden");
+  crmView?.classList.add("hidden");
+  resultsView?.classList.add("hidden");
+  document.getElementById("settings-view")?.classList.add("hidden");
+  document.getElementById("autoatendimento-view")?.classList.add("hidden");
+  document.getElementById("fidelidade-view")?.classList.add("hidden");
+  document.getElementById("cardapio-view")?.classList.remove("hidden");
+  hideTabsBar();
+  closeDrawer();
+  fetchCardapio();
+}
+
+function showFidelidade() {
+  const plan = restaurantPlan.toLowerCase();
+  if (!canUseFidelizacao(plan)) {
+    showUpgradeModal("executive", "Programa de Fidelidade");
+    return;
+  }
+  board?.classList.add("hidden");
+  crmView?.classList.add("hidden");
+  resultsView?.classList.add("hidden");
+  document.getElementById("settings-view")?.classList.add("hidden");
+  document.getElementById("autoatendimento-view")?.classList.add("hidden");
+  document.getElementById("cardapio-view")?.classList.add("hidden");
+  document.getElementById("fidelidade-view")?.classList.remove("hidden");
+  hideTabsBar();
+  closeDrawer();
+  initFidelidade();
 }
 
 function showAutoatendimento() {
@@ -428,7 +464,9 @@ function showAutoatendimento() {
   board?.classList.add("hidden");
   crmView?.classList.add("hidden");
   resultsView?.classList.add("hidden");
-  document.getElementById("settings-view")?.classList.add("hidden"); // ← ADICIONA
+  document.getElementById("settings-view")?.classList.add("hidden");
+  document.getElementById("fidelidade-view")?.classList.add("hidden");
+  document.getElementById("cardapio-view")?.classList.add("hidden");
   document.getElementById("autoatendimento-view")?.classList.remove("hidden");
   hideTabsBar();
   closeDrawer();
@@ -1548,7 +1586,13 @@ function setupDrawer() {
   if (ordersBtn) ordersBtn.addEventListener("click", showBoard);
   if (crmBtn) crmBtn.addEventListener("click", showCRM);
   if (resultsBtn) resultsBtn.addEventListener("click", showResults);
-  const autoatendimentoBtn = document.getElementById("drawer-autoatendimento");
+  const cardapioBtn = document.getElementById("drawer-cardapio");
+if (cardapioBtn) cardapioBtn.addEventListener("click", showCardapio);
+
+const fidelidadeBtn = document.getElementById("drawer-fidelidade");
+if (fidelidadeBtn) fidelidadeBtn.addEventListener("click", showFidelidade);
+
+const autoatendimentoBtn = document.getElementById("drawer-autoatendimento");
 if (autoatendimentoBtn) autoatendimentoBtn.addEventListener("click", showAutoatendimento);
 
   console.log("✅ Drawer totalmente configurado!");
