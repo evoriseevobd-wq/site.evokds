@@ -3646,6 +3646,44 @@ function imprimirQrCodes() {
   win.document.close();
 }
 
+function toggleFidelidadeConfig() {
+  const pop = document.getElementById("fidelidade-popover");
+  pop.style.display = pop.style.display === "none" ? "block" : "none";
+  const saved = localStorage.getItem("fidelidade_url") || "";
+  document.getElementById("input-fidelidade-url").value = saved;
+  setTimeout(() => {
+    document.addEventListener("click", closeFidelidadeOnClickOutside, { once: true });
+  }, 10);
+}
+
+function closeFidelidadeOnClickOutside(e) {
+  const pop = document.getElementById("fidelidade-popover");
+  const btn = document.getElementById("btn-config-fidelidade");
+  if (!pop?.contains(e.target) && !btn?.contains(e.target)) {
+    if (pop) pop.style.display = "none";
+  }
+}
+
+function salvarFidelidadeUrl() {
+  const val = document.getElementById("input-fidelidade-url")?.value.trim();
+  if (!val) { alert("Digite o domínio antes de salvar."); return; }
+
+  const hostname = val.replace(/^https?:\/\//, "").replace(/\/$/, "").split("/")[0];
+  localStorage.setItem("fidelidade_url", hostname);
+
+  fetch(`${API_BASE}/api/v1/restaurante/${getRestaurantId()}/dominio`, {
+    method: "PATCH",
+    headers: buildHeaders(),
+    body: JSON.stringify({ dominio: hostname })
+  });
+
+  document.getElementById("fidelidade-popover").style.display = "none";
+  const btn = document.getElementById("btn-config-fidelidade");
+  btn.textContent = "✓";
+  btn.style.color = "rgba(34,197,94,1)";
+  setTimeout(() => { btn.textContent = "⋯"; btn.style.color = "rgba(252,228,228,0.7)"; }, 1500);
+}
+
 // ========================================
 // ⭐ FIDELIDADE
 // ========================================
