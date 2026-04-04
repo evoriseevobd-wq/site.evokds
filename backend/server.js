@@ -616,7 +616,7 @@ const trackingLink = baseUrl ? `${baseUrl}?code=${trackingCode}` : null;
     
 // ⭐ FIDELIZAÇÃO
 try {
-  if (phone && !order_id) {
+  if (phone && !order_id && finalOrigin !== "fidelidade") {
     const pontosGanhos = Math.floor((parseFloat(total_price) || 0) * 15);
 
     if (pontosGanhos > 0) {
