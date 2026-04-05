@@ -1346,6 +1346,7 @@ app.patch("/api/v1/restaurante/:restaurant_id/dominio", async (req, res) => {
 });
 
 // GET - Busca config do restaurante (logo, cores, nome)
+// GET - Busca config do restaurante (logo, cores, nome)
 app.get("/api/v1/restaurante/:restaurant_id/config", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
@@ -1362,34 +1363,38 @@ app.get("/api/v1/restaurante/:restaurant_id/config", async (req, res) => {
       .eq("restaurant_id", restaurant_id)
       .single();
 
-   return res.json({
-      app.patch("/api/v1/restaurante/:restaurant_id/config", async (req, res) => {
-  const { restaurant_id } = req.params;
-  const fields = req.body;
-
-  const { error } = await supabase
-    .from("restaurante_config")
-    .upsert({ restaurant_id, ...fields }, { onConflict: "restaurant_id" });
-
-  if (error) return sendError(res, 500, "Erro ao salvar config");
-  return res.json({ success: true });
-});
+    return res.json({
+      nome_exibicao: config?.nome_exibicao || "",
+      logo_url: config?.logo_url || null,
+      cor_primaria: config?.cor_primaria || "#f97373",
+      cor_secundaria: config?.cor_secundaria || "#b91c1c",
+      cor_fundo: config?.cor_fundo || "#0c0a09",
+      subtitulo: config?.subtitulo || null,
+      telefone: config?.telefone || null,
+      instagram: config?.instagram || null,
+      descricao: config?.descricao || null,
+      tema: config?.tema || "dark"
+    });
   } catch (err) {
     return sendError(res, 500, "Erro ao buscar configuração");
   }
 });
 
-app.patch("/api/v1/restaurante/:restaurant_id/tracking-url", async (req, res) => {
-  const { restaurant_id } = req.params;
-  const { tracking_url } = req.body;
+// PATCH - Salva config do restaurante
+app.patch("/api/v1/restaurante/:restaurant_id/config", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const fields = req.body;
 
-  const { error } = await supabase
-    .from("restaurants")
-    .update({ tracking_url })
-    .eq("id", restaurant_id);
+    const { error } = await supabase
+      .from("restaurante_config")
+      .upsert({ restaurant_id, ...fields }, { onConflict: "restaurant_id" });
 
-  if (error) return sendError(res, 500, "Erro ao salvar tracking URL");
-  return res.json({ success: true });
+    if (error) return sendError(res, 500, "Erro ao salvar config");
+    return res.json({ success: true });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
 });
 
 /* ========================================
