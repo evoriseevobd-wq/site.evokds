@@ -2706,6 +2706,11 @@ let cardapioItems = [];
 async function initAutoatendimento() {
   setupAutoatendimentoTabs();
   document.getElementById("painel-mesas")?.classList.remove("hidden");
+
+  // 🔥 ADICIONE ISTO:
+  const dominioSalvo = localStorage.getItem("cardapio_url");
+  const el = document.getElementById("input-dominio-cardapio");
+  if (dominioSalvo && el) el.value = dominioSalvo;
 }
 
 function setupAutoatendimentoTabs() {
