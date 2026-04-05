@@ -1440,8 +1440,12 @@ async function handleCredentialResponse(response) {
     const resp = await fetch(AUTH_URL, {
       method: "POST",
       headers: buildHeaders(),
-      body: JSON.stringify({ email: payload.email }),
+      body: JSON.stringify({ credential: response.credential }), // ✅ manda o token JWT
     });
+
+    const data = await resp.json();
+    if (data.authorized && data.restaurant) {
+      // ... resto igual
 
     const data = await resp.json();
     if (data.authorized && data.restaurant) {
