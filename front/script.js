@@ -2702,9 +2702,9 @@ async function initAutoatendimento() {
   document.getElementById("painel-mesas")?.classList.remove("hidden");
 
   // 🔥 ADICIONE ISTO:
-  const dominioSalvo = localStorage.getItem("cardapio_url");
-  const el = document.getElementById("input-dominio-cardapio");
-  if (dominioSalvo && el) el.value = dominioSalvo;
+  const dominioSalvo = localStorage.getItem("cardapio_url") || "";
+const el = document.getElementById("input-dominio-cardapio");
+if (el) el.value = dominioSalvo;
 }
 
 function setupAutoatendimentoTabs() {
@@ -3473,7 +3473,7 @@ function gerarQrCodes() {
   const lista = document.getElementById("lista-qrcodes");
   if (!lista) return;
 
-  let dominioRaw = (document.getElementById("input-dominio-cardapio")?.value || localStorage.getItem("fidelidade_url") || "").trim();
+  let dominioRaw = (document.getElementById("input-dominio-cardapio")?.value || localStorage.getItem("cardapio_url") || "").trim();
   if (!dominioRaw) {
     document.getElementById("dominio-popover").style.display = "block";
     document.getElementById("input-dominio-cardapio")?.focus();
