@@ -3800,6 +3800,57 @@ async function fetchFidelidadePremios() {
   }
 }
 
+function removerFotoPremio() {
+  document.getElementById("premio-foto").value = "";
+  const dropzone = document.getElementById("premio-dropzone");
+  dropzone.innerHTML = `
+    <div style="font-size:22px;">📷</div>
+    <div style="color:rgba(252,228,228,0.4); font-size:10px;">Foto do prêmio</div>
+    <input type="file" id="premio-file" accept="image/*" style="
+      position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%;
+    " />
+  `;
+  document.getElementById("premio-file").addEventListener("change", async function() {
+    if (this.files[0]) await handlePremioFileUpload(this.files[0]);
+  });
+}
+
+async function handlePremioFileUpload(file) {
+  const croppedBlob = await openCropModal(file);
+  if (!croppedBlob) return;
+
+  const croppedUrl = URL.createObjectURL(croppedBlob);
+  const dropzone = document.getElementById("premio-dropzone");
+
+  dropzone.innerHTML = `
+    <img src="${croppedUrl}" style="width:100%; height:70px; object-fit:cover; border-radius:8px;" />
+    <button type="button" onclick="removerFotoPremio()" style="
+      position:absolute; top:4px; right:4px; width:20px; height:20px;
+      border-radius:50%; border:none; background:rgba(239,68,68,0.9);
+      color:white; font-size:11px; cursor:pointer; line-height:1;
+    ">×</button>
+    <input type="file" id="premio-file" accept="image/*" style="
+      position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%;
+    " />
+  `;
+  document.getElementById("premio-file").addEventListener("change", async function() {
+    if (this.files[0]) await handlePremioFileUpload(this.files[0]);
+  });
+
+  try {
+    const formData = new FormData();
+    formData.append('file', croppedBlob, 'foto.jpg');
+    const resp = await fetch(`${API_BASE}/api/v1/upload-image`, { method: 'POST', body: formData });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Erro no upload');
+    document.getElementById("premio-foto").value = data.url;
+    dropzone.querySelector('img').src = data.url;
+  } catch (e) {
+    alert('Erro ao enviar imagem: ' + e.message);
+    document.getElementById("premio-foto").value = "";
+  }
+}
+
 function openPremioModal(premio = null) {
   const existing = document.getElementById("premio-modal");
   if (existing) existing.remove();
@@ -3822,6 +3873,30 @@ function openPremioModal(premio = null) {
           <input id="premio-descricao" value="${premio ? escapeHtml(premio.descricao || "") : ""}" placeholder="Ex: Um hambúrguer clássico à sua escolha"
             style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
         </label>
+       <label style="color:rgba(252,228,228,0.8); font-size:13px;">Foto do Prêmio
+          <div style="margin-top:8px; position:relative;">
+            <div id="premio-dropzone" style="
+              border:2px dashed rgba(249,115,115,0.5); border-radius:12px; padding:12px;
+              text-align:center; cursor:pointer; background:rgba(46,8,8,0.3); position:relative;
+              min-height:90px; display:flex; flex-direction:column;
+              align-items:center; justify-content:center; gap:6px;
+            ">
+              ${premio?.foto_url ? `
+                <img src="${escapeHtml(premio.foto_url)}" style="width:100%; height:70px; object-fit:cover; border-radius:8px;" />
+                <button type="button" onclick="removerFotoPremio()" style="
+                  position:absolute; top:4px; right:4px; width:20px; height:20px;
+                  border-radius:50%; border:none; background:rgba(239,68,68,0.9);
+                  color:white; font-size:11px; cursor:pointer; line-height:1;">×</button>
+              ` : `
+                <div style="font-size:22px;">📷</div>
+                <div style="color:rgba(252,228,228,0.4); font-size:10px;">Foto do prêmio</div>
+              `}
+              <input type="file" id="premio-file" accept="image/*" style="
+                position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%;" />
+            </div>
+            <input type="hidden" id="premio-foto" value="${premio?.foto_url || ''}" />
+          </div>
+        </label>
         <label style="color:rgba(252,228,228,0.8); font-size:13px;">Pontos necessários *
           <input id="premio-pontos" type="number" value="${premio ? premio.pontos_necessarios : ""}" placeholder="Ex: 500"
             style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
@@ -3835,6 +3910,9 @@ function openPremioModal(premio = null) {
   `;
 
   document.body.appendChild(modal);
+  document.getElementById("premio-file")?.addEventListener("change", async function() {
+    if (this.files[0]) await handlePremioFileUpload(this.files[0]);
+  });
   document.getElementById("premio-cancel").addEventListener("click", () => modal.remove());
   document.getElementById("premio-save").addEventListener("click", () => salvarPremio(premio?.id));
   modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
@@ -3847,17 +3925,18 @@ async function salvarPremio(id = null) {
   const pontos_necessarios = parseInt(document.getElementById("premio-pontos").value) || 0;
 
   if (!nome || !pontos_necessarios) { alert("Nome e pontos são obrigatórios."); return; }
+  const foto_url = document.getElementById("premio-foto")?.value.trim() || null;
 
   try {
     if (id) {
       await fetch(`${API_BASE}/api/v1/fidelidade/premios/${id}`, {
         method: "PATCH", headers: buildHeaders(),
-        body: JSON.stringify({ nome, descricao, pontos_necessarios })
+        body: JSON.stringify({ nome, descricao, pontos_necessarios, foto_url })
       });
     } else {
       await fetch(`${API_BASE}/api/v1/fidelidade/premios`, {
         method: "POST", headers: buildHeaders(),
-        body: JSON.stringify({ restaurant_id: rid, nome, descricao, pontos_necessarios })
+        body: JSON.stringify({ restaurant_id: rid, nome, descricao, pontos_necessarios, foto_url })
       });
     }
     document.getElementById("premio-modal")?.remove();
