@@ -1925,12 +1925,6 @@ if (unauthClose) unauthClose.addEventListener("click", () => closeBackdrop(unaut
 setInterval(fetchOrders, 5000);
 fetchOrders();
 
-const dominioSalvo = localStorage.getItem("cardapio_url");
-if (dominioSalvo) {
-  const el = document.getElementById("input-dominio-cardapio");
-  if (el) el.value = dominioSalvo;
-}
-
 renderBoard();
 }
 // ========================================
