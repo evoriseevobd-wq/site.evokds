@@ -1345,6 +1345,28 @@ app.patch("/api/v1/restaurante/:restaurant_id/dominio", async (req, res) => {
   return res.json({ success: true });
 });
 
+app.patch("/api/v1/restaurante/:restaurant_id/dominio-cardapio", async (req, res) => {
+  const { restaurant_id } = req.params;
+  const { dominio } = req.body;
+  const { error } = await supabase
+    .from("restaurants")
+    .update({ cardapio_url: dominio })
+    .eq("id", restaurant_id);
+  if (error) return sendError(res, 500, "Erro ao salvar domínio do cardápio");
+  return res.json({ success: true });
+});
+
+app.get("/api/v1/dominio-cardapio/:dominio", async (req, res) => {
+  const { dominio } = req.params;
+  const { data, error } = await supabase
+    .from("restaurants")
+    .select("id")
+    .eq("cardapio_url", dominio)
+    .single();
+  if (error || !data) return sendError(res, 404, "Domínio não encontrado");
+  return res.json({ restaurant_id: data.id });
+});
+
 // GET - Busca config do restaurante (logo, cores, nome)
 // GET - Busca config do restaurante (logo, cores, nome)
 app.get("/api/v1/restaurante/:restaurant_id/config", async (req, res) => {
