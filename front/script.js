@@ -1925,7 +1925,7 @@ if (unauthClose) unauthClose.addEventListener("click", () => closeBackdrop(unaut
 setInterval(fetchOrders, 5000);
 fetchOrders();
 
-const dominioSalvo = localStorage.getItem("fidelidade_url");
+const dominioSalvo = localStorage.getItem("cardapio_url");
 if (dominioSalvo) {
   const el = document.getElementById("input-dominio-cardapio");
   if (el) el.value = dominioSalvo;
@@ -3375,13 +3375,13 @@ function salvarDominio() {
   if (!val) { alert("Digite o domínio antes de salvar."); return; }
   
   const hostname = val.replace(/^https?:\/\//, "").replace(/\/$/, "").split("/")[0];
-localStorage.setItem("fidelidade_url", hostname);
+  localStorage.setItem("cardapio_url", hostname);
 
-fetch(`${API_BASE}/api/v1/restaurante/${getRestaurantId()}/dominio`, {
-  method: "PATCH",
-  headers: buildHeaders(),
-  body: JSON.stringify({ dominio: hostname })
-});
+  fetch(`${API_BASE}/api/v1/restaurante/${getRestaurantId()}/dominio-cardapio`, {
+    method: "PATCH",
+    headers: buildHeaders(),
+    body: JSON.stringify({ dominio: hostname })
+  });
 
   document.getElementById("dominio-popover").style.display = "none";
   const btn = document.getElementById("btn-config-dominio");
