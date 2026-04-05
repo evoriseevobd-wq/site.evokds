@@ -1812,8 +1812,9 @@ const { data: resgates } = await supabase
 // Cliente solicita resgate (cria pedido com origin: fidelidade)
 app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
   try {
-    const { token, premio_id, service_type, address } = req.body;
-    if (!token || !premio_id) return sendError(res, 400, "token e premio_id são obrigatórios");
+    const { token, itens, service_type, address } = req.body;
+    if (!token || !itens || !Array.isArray(itens) || itens.length === 0)
+      return sendError(res, 400, "token e itens são obrigatórios");
 
     const { data: cliente } = await supabase
       .from("base_clientes")
