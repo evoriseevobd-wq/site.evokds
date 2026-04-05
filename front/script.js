@@ -1445,10 +1445,6 @@ async function handleCredentialResponse(response) {
 
     const data = await resp.json();
     if (data.authorized && data.restaurant) {
-      // ... resto igual
-
-    const data = await resp.json();
-    if (data.authorized && data.restaurant) {
       localStorage.setItem("restaurant_id", data.restaurant.id);
       localStorage.setItem("restaurant_name", data.restaurant.name);
       localStorage.setItem("restaurant_plan", data.restaurant.plan || "basic");
