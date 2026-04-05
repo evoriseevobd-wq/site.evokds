@@ -1823,13 +1823,22 @@ app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
       .single();
     if (!cliente) return sendError(res, 404, "Cliente não encontrado");
 
-    const { data: premio } = await supabase
-      .from("premios_fidelidade")
-      .select("*")
-      .eq("id", premio_id)
-      .single();
-    if (!premio) return sendError(res, 404, "Prêmio não encontrado");
-    if (cliente.pontos < premio.pontos_necessarios)
+    // Busca todos os prêmios do carrinho
+    const premiosCarrinho = [];
+    let totalPontos = 0;
+
+    for (const item of itens) {
+      const { data: premio } = await supabase
+        .from("premios_fidelidade")
+        .select("*")
+        .eq("id", item.premio_id)
+        .single();
+      if (!premio) return sendError(res, 404, `Prêmio ${item.premio_id} não encontrado`);
+      premiosCarrinho.push({ ...premio, quantidade: item.quantidade || 1 });
+      totalPontos += premio.pontos_necessarios * (item.quantidade || 1);
+    }
+
+    if (cliente.pontos < totalPontos)
       return sendError(res, 400, "Pontos insuficientes");
 
     // Busca último order_number do restaurante
@@ -1851,8 +1860,8 @@ app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
         client_name: cliente.nome,
         client_phone: cliente.numero,
         order_number: nextNumber,
-        itens: [{ name: premio.nome, qty: 1, price: 0 }],
-        notes: `🎁 Resgate de fidelidade — ${premio.pontos_necessarios} pontos`,
+       itens: premiosCarrinho.map(p => ({ name: p.nome, qty: p.quantidade, price: 0 })),
+        notes: `🎁 Resgate de fidelidade — ${totalPontos} pontos`,
         status: "pending",
         service_type: service_type || "local", // ← usa o que veio
         address: address || null,              // ← usa o endereço
@@ -1869,8 +1878,8 @@ app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
     await supabase
       .from("base_clientes")
       .update({
-        pontos: cliente.pontos - premio.pontos_necessarios,
-        pontos_resgatados: (cliente.pontos_resgatados || 0) + premio.pontos_necessarios
+        pontos: cliente.pontos - totalPontos,
+        pontos_resgatados: (cliente.pontos_resgatados || 0) + totalPontos
       })
       .eq("id", cliente.id);
 
