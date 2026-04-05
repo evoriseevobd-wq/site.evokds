@@ -1298,8 +1298,12 @@ app.post("/api/v1/upload-image", upload.single("file"), async (req, res) => {
     const ext = req.file.originalname.split(".").pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
+    const bucket = req.body.bucket || req.query.bucket || "cardapio-images";
+    const allowedBuckets = ["cardapio-images", "restaurante-logos", "premios-images"];
+    if (!allowedBuckets.includes(bucket)) return sendError(res, 400, "Bucket inválido");
+
     const { data, error } = await supabase.storage
-      .from("cardapio-images")
+      .from(bucket)
       .upload(fileName, req.file.buffer, {
         contentType: req.file.mimetype,
         upsert: false
@@ -1308,7 +1312,7 @@ app.post("/api/v1/upload-image", upload.single("file"), async (req, res) => {
     if (error) return sendError(res, 500, "Erro ao fazer upload: " + error.message);
 
     const { data: urlData } = supabase.storage
-      .from("cardapio-images")
+      .from(bucket)
       .getPublicUrl(fileName);
 
     return res.json({ success: true, url: urlData.publicUrl });
