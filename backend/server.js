@@ -1363,16 +1363,17 @@ app.get("/api/v1/restaurante/:restaurant_id/config", async (req, res) => {
       .single();
 
    return res.json({
-      nome_exibicao: config?.nome_exibicao || "",
-      logo_url: config?.logo_url || null,
-      cor_primaria: config?.cor_primaria || "#f97373",
-      cor_secundaria: config?.cor_secundaria || "#b91c1c",
-      cor_fundo: config?.cor_fundo || "#0c0a09",
-      subtitulo: config?.subtitulo || null,
-      telefone: config?.telefone || null,
-      instagram: config?.instagram || null,
-      descricao: config?.descricao || null
-    });
+      app.patch("/api/v1/restaurante/:restaurant_id/config", async (req, res) => {
+  const { restaurant_id } = req.params;
+  const fields = req.body;
+
+  const { error } = await supabase
+    .from("restaurante_config")
+    .upsert({ restaurant_id, ...fields }, { onConflict: "restaurant_id" });
+
+  if (error) return sendError(res, 500, "Erro ao salvar config");
+  return res.json({ success: true });
+});
   } catch (err) {
     return sendError(res, 500, "Erro ao buscar configuração");
   }
