@@ -1019,7 +1019,7 @@ function startAutoTimer(orderId, createdAt) {
   const LIMIT_MS = 1.5 * 60 * 1000; // ← muda de 3 para 1.5 min
 
   function tick() {
-    const elapsed = Date.now() - new Date(createdAt).getTime();
+    const elapsed = Date.now() - new Date(createdAt + 'Z').getTime();
     const remaining = LIMIT_MS - elapsed;
     const el = document.getElementById(`timer-${orderId}`);
     if (!el) { clearInterval(_autoTimers[orderId]); delete _autoTimers[orderId]; return; }
