@@ -662,7 +662,7 @@ ${order.origin === "fidelidade"
     const timerEl = document.createElement("div");
     timerEl.id = `timer-${order.id}`;
     timerEl.style.cssText = "font-size:12px; font-weight:800; margin-top:6px; font-family:'Space Grotesk',sans-serif;";
-    timerEl.textContent = "⏱ 3:00";
+    timerEl.textContent = "⏱ 1:30";
     card.appendChild(timerEl);
     setTimeout(() => startAutoTimer(order.id, order.created_at), 50);
   }
@@ -1016,7 +1016,7 @@ const _autoTimers = {};
 
 function startAutoTimer(orderId, createdAt) {
   if (_autoTimers[orderId]) return;
-  const LIMIT_MS = 3 * 60 * 1000;
+  const LIMIT_MS = 1.5 * 60 * 1000; // ← muda de 3 para 1.5 min
 
   function tick() {
     const elapsed = Date.now() - new Date(createdAt).getTime();
@@ -1030,7 +1030,21 @@ function startAutoTimer(orderId, createdAt) {
       el.textContent = "⏰ 0:00";
       el.style.color = "rgba(239,68,68,1)";
       const order = orders.find(o => o.id === orderId);
-      if (order && order._frontStatus === "recebido") imprimirPedido(orderId);
+if (order && order._frontStatus === "recebido") {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.5, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.8);
+  } catch(e) {}
+  imprimirPedido(orderId);
+}
       return;
     }
 
