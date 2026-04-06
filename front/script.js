@@ -1504,12 +1504,13 @@ console.log("Payload:", payload);
 
   try {
     const resp = await fetch(AUTH_URL, {
-      method: "POST",
-      headers: buildHeaders(),
-body: JSON.stringify({ 
-  credential: response.credential,
-  email: payload.email
-}),
+  method: "POST",
+  headers: buildHeaders(),
+  body: JSON.stringify({ 
+    credential: response.credential,
+    email: payload.email
+  })
+});
 
     const data = await resp.json();
     if (data.authorized && data.restaurant) {
