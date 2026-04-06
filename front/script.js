@@ -3764,9 +3764,6 @@ function exportarFechamentoPDF() {
   win.document.close();
 }
 
-  document.body.appendChild(modal);
-  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
-}
 
 function gerarQrCodes() {
   const qtd = parseInt(document.getElementById("input-mesas").value) || 10;
