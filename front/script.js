@@ -1681,6 +1681,14 @@ if (autoatendimentoBtn) autoatendimentoBtn.addEventListener("click", showAutoate
   console.log("✅ Drawer totalmente configurado!");
 }
 
+function toggleAccordion(id) {
+  const body = document.getElementById(`accordion-${id}`);
+  const arrow = document.getElementById(`arrow-${id}`);
+  const isOpen = body.style.display === 'flex';
+  body.style.display = isOpen ? 'none' : 'flex';
+  arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
 // ===== INIT =====
 function init() {
   const rid = getRestaurantId();
