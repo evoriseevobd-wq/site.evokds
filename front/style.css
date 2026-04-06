@@ -2571,3 +2571,41 @@ input[type="number"] {
   font-weight: 900;
   line-height: 1;
 }
+
+.drawer-section-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(252, 228, 228, 0.3);
+  padding: 18px 20px 6px 20px;
+}
+
+.drawer-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  color: rgba(252, 228, 228, 0.8);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.drawer-item:hover {
+  background: rgba(249, 115, 115, 0.1);
+  color: rgba(252, 228, 228, 1);
+}
+
+.drawer-icon {
+  font-size: 16px;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
