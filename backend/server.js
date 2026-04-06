@@ -1477,6 +1477,43 @@ app.patch("/api/v1/restaurante/:restaurant_id/tracking-url", async (req, res) =>
   }
 });
 
+// GET - Busca config fiscal
+app.get("/api/v1/restaurante/:restaurant_id/fiscal", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { data, error } = await supabase
+      .from("restaurants")
+      .select("focusnfe_token, cnpj, inscricao_estadual, regime_tributario")
+      .eq("id", restaurant_id)
+      .single();
+    if (error || !data) return sendError(res, 404, "Restaurante não encontrado");
+    return res.json({
+      focusnfe_token: data.focusnfe_token || "",
+      cnpj: data.cnpj || "",
+      inscricao_estadual: data.inscricao_estadual || "",
+      regime_tributario: data.regime_tributario || "1"
+    });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
+// PATCH - Salva config fiscal
+app.patch("/api/v1/restaurante/:restaurant_id/fiscal", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { focusnfe_token, cnpj, inscricao_estadual, regime_tributario } = req.body;
+    const { error } = await supabase
+      .from("restaurants")
+      .update({ focusnfe_token, cnpj, inscricao_estadual, regime_tributario })
+      .eq("id", restaurant_id);
+    if (error) return sendError(res, 500, "Erro ao salvar config fiscal");
+    return res.json({ success: true });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
 /* ========================================
    🖨️ ROTAS DE IMPRESSORA (PrintNode)
 ======================================== */
