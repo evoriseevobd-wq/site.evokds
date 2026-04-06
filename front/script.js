@@ -1784,26 +1784,29 @@ function renderItensSelecionados() {
   }
 };
 
-window.alterarQtd = function(index, delta) {
-  itensPedido[index].qty += delta;
-  itensPedido[index].quantidade = itensPedido[index].qty;
-
-  if (itensPedido[index].qty <= 0) {
-    itensPedido.splice(index, 1);
-  }
-
-  window.setQtd = function(index, value) {
+window.setQtd = function(index, value) {
   const qty = parseInt(value) || 1;
-  
   if (qty <= 0) {
     itensPedido.splice(index, 1);
   } else {
     itensPedido[index].qty = qty;
     itensPedido[index].quantidade = qty;
   }
-
   renderItensSelecionados();
+  const totalField = document.getElementById("new-total-price");
+  if (totalField) {
+    const soma = itensPedido.reduce((acc, i) => acc + (i.price * i.qty), 0);
+    totalField.value = soma > 0 ? soma.toFixed(2).replace('.', ',') : '';
+  }
+};
 
+window.alterarQtd = function(index, delta) {
+  itensPedido[index].qty += delta;
+  itensPedido[index].quantidade = itensPedido[index].qty;
+  if (itensPedido[index].qty <= 0) {
+    itensPedido.splice(index, 1);
+  }
+  renderItensSelecionados();
   const totalField = document.getElementById("new-total-price");
   if (totalField) {
     const soma = itensPedido.reduce((acc, i) => acc + (i.price * i.qty), 0);
@@ -2651,24 +2654,19 @@ function renderMetricsUI(data) {
   safeSetText("card-plan-price", formatCurrency(restaurantPlanPrice));
   
 // Gráficos
+ // Gráficos
   console.log("🎨 Renderizando gráficos...");
   renderAllCharts(data);
-  fetchAndRenderInsights(); // 🔥 ADICIONE ESTA LINHA
+  fetchAndRenderInsights();
   console.log("✅ Métricas renderizadas com sucesso!");
   fetchAndRenderTiming();
   renderTopProductsChart(orders);
   renderPeakHoursChart(orders);
-  
 
   // Performance IA
   safeSetText("ia-orders", data.ia_performance?.orders || 0);
   safeSetText("ia-revenue", formatCurrency(data.ia_performance?.revenue || 0));
   safeSetText("ia-percentage", `${(data.ia_performance?.percentage || 0).toFixed(1)}%`);
-  
-  // Gráficos
-  console.log("🎨 Renderizando gráficos...");
-  renderAllCharts(data);
-  console.log("✅ Métricas renderizadas com sucesso!");
 }
 
 function renderComparison(elementId, percentage) {
