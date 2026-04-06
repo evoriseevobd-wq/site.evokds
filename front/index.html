@@ -812,16 +812,38 @@
       <button class="icon-button" id="close-drawer" aria-label="Fechar menu">&times;</button>
     </div>
 
-    <nav class="drawer-nav">
-     <button type="button" class="drawer-item" id="drawer-orders">Gestão de pedidos</button>
-<button type="button" class="drawer-item" id="drawer-cardapio">🍽️ Cardápio</button>
-<button type="button" class="drawer-item" id="drawer-crm">CRM de clientes</button>
-<button type="button" class="drawer-item" id="drawer-fidelidade">⭐ Fidelidade</button>
-<button type="button" class="drawer-item" id="drawer-autoatendimento">Autoatendimento</button>
-<button type="button" class="drawer-item" id="drawer-results">Resultados</button>
-      <button type="button" class="drawer-item" id="drawer-resumo-dia">📊 Resumo do dia</button>
-      
-    </nav>
+   <nav class="drawer-nav">
+
+  <div class="drawer-section-label">Operacional</div>
+  <button type="button" class="drawer-item" id="drawer-orders">
+    <span class="drawer-icon">🧾</span> Gestão de Pedidos
+  </button>
+  <button type="button" class="drawer-item" id="drawer-resumo-dia">
+    <span class="drawer-icon">📊</span> Resumo do Dia
+  </button>
+
+  <div class="drawer-section-label">Cardápio & Atendimento</div>
+  <button type="button" class="drawer-item" id="drawer-cardapio">
+    <span class="drawer-icon">🍽️</span> Cardápio
+  </button>
+  <button type="button" class="drawer-item" id="drawer-autoatendimento">
+    <span class="drawer-icon">📱</span> Autoatendimento
+  </button>
+
+  <div class="drawer-section-label">Clientes</div>
+  <button type="button" class="drawer-item" id="drawer-crm">
+    <span class="drawer-icon">👥</span> CRM de Clientes
+  </button>
+  <button type="button" class="drawer-item" id="drawer-fidelidade">
+    <span class="drawer-icon">⭐</span> Fidelidade
+  </button>
+
+  <div class="drawer-section-label">Administrativo</div>
+  <button type="button" class="drawer-item" id="drawer-results">
+    <span class="drawer-icon">📈</span> Resultados
+  </button>
+
+</nav>
 
 <div class="drawer-footer">
   <div class="user-chip" id="user-chip" hidden>
