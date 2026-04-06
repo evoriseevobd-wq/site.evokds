@@ -573,7 +573,6 @@ async function updateOrderStatus(orderId, newFrontStatus) {
     
   } catch (e) {
     console.error(e);
-    alert("Não foi possível atualizar o status do pedido.");
   }
 }
 
