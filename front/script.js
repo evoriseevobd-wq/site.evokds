@@ -1495,12 +1495,10 @@ function decodeJwt(token) {
 
 async function handleCredentialResponse(response) {
   const payload = decodeJwt(response.credential);
-  console.log("JWT:", response.credential);
-console.log("Payload:", payload);
   if (!payload?.email) {
-  alert("Email não encontrado no login Google");
-  return;
-}
+    alert("Email não encontrado no login Google");
+    return;
+  }
 
   try {
     const resp = await fetch(AUTH_URL, {
