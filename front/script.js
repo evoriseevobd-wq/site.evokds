@@ -649,6 +649,24 @@ ${order.origin === "fidelidade"
   `;
 
   card.addEventListener("click", () => openOrderModal(order.id));
+
+  // Semáforo
+  const waitColor = getWaitColor(order._frontStatus, order.created_at);
+  if (waitColor) {
+    card.style.borderLeft = `4px solid ${waitColor}`;
+    card.style.borderRadius = "0 14px 14px 0";
+  }
+
+  // Timer automático (só em recebido)
+  if (order._frontStatus === "recebido") {
+    const timerEl = document.createElement("div");
+    timerEl.id = `timer-${order.id}`;
+    timerEl.style.cssText = "font-size:12px; font-weight:800; margin-top:6px; font-family:'Space Grotesk',sans-serif;";
+    timerEl.textContent = "⏱ 3:00";
+    card.appendChild(timerEl);
+    setTimeout(() => startAutoTimer(order.id, order.created_at), 50);
+  }
+
   return card;
 }
 
@@ -991,6 +1009,61 @@ async function imprimirPedido(orderId) {
 
 function cancelOrder(orderId) {
   updateOrderStatus(orderId, "cancelado");
+}
+
+// ===== TIMER AUTOMÁTICO 3 MINUTOS =====
+const _autoTimers = {};
+
+function startAutoTimer(orderId, createdAt) {
+  if (_autoTimers[orderId]) return;
+  const LIMIT_MS = 3 * 60 * 1000;
+
+  function tick() {
+    const elapsed = Date.now() - new Date(createdAt).getTime();
+    const remaining = LIMIT_MS - elapsed;
+    const el = document.getElementById(`timer-${orderId}`);
+    if (!el) { clearInterval(_autoTimers[orderId]); delete _autoTimers[orderId]; return; }
+
+    if (remaining <= 0) {
+      clearInterval(_autoTimers[orderId]);
+      delete _autoTimers[orderId];
+      el.textContent = "⏰ 0:00";
+      el.style.color = "rgba(239,68,68,1)";
+      const order = orders.find(o => o.id === orderId);
+      if (order && order._frontStatus === "recebido") imprimirPedido(orderId);
+      return;
+    }
+
+    const mins = Math.floor(remaining / 60000);
+    const secs = Math.floor((remaining % 60000) / 1000);
+    el.textContent = `⏱ ${mins}:${String(secs).padStart(2, "0")}`;
+    const pct = remaining / LIMIT_MS;
+    if (pct > 0.5) el.style.color = "rgba(34,197,94,1)";
+    else if (pct > 0.2) el.style.color = "rgba(251,191,36,1)";
+    else el.style.color = "rgba(239,68,68,1)";
+  }
+
+  tick();
+  _autoTimers[orderId] = setInterval(tick, 1000);
+}
+
+// ===== SEMÁFORO DE ESPERA POR COLUNA =====
+const WAIT_THRESHOLDS = {
+  recebido:   null,
+  preparo:    { green: 10, yellow: 15 },
+  pronto:     { green: 14, yellow: 20 },
+  caminho:    { green: 20, yellow: 30 },
+  finalizado: null,
+  cancelado:  null,
+};
+
+function getWaitColor(frontStatus, createdAt) {
+  const threshold = WAIT_THRESHOLDS[frontStatus];
+  if (!threshold) return null;
+  const mins = (Date.now() - new Date(createdAt).getTime()) / 60000;
+  if (mins < threshold.green)  return "rgba(34,197,94,1)";
+  if (mins < threshold.yellow) return "rgba(251,191,36,1)";
+  return "rgba(239,68,68,1)";
 }
 
 // ===== CREATE ORDER =====
@@ -1926,6 +1999,20 @@ if (unauthClose) unauthClose.addEventListener("click", () => closeBackdrop(unaut
 // Polling de pedidos
 setInterval(fetchOrders, 5000);
 fetchOrders();
+
+// Atualiza semáforo a cada 60s
+setInterval(() => {
+  orders.forEach(o => {
+    const cardEl = document.querySelector(`.order-card[data-id="${o.id}"]`);
+    if (!cardEl) return;
+    const waitColor = getWaitColor(o._frontStatus, o.created_at);
+    if (waitColor) {
+      cardEl.style.borderLeft = `4px solid ${waitColor}`;
+    } else {
+      cardEl.style.borderLeft = "";
+    }
+  });
+}, 60000);
 
 renderBoard();
 }
