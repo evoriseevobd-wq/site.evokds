@@ -500,6 +500,21 @@ async function loadSettingsData() {
     console.error("Erro ao carregar config impressora:", e);
   }
 
+try {
+    const respFiscal = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/fiscal`);
+    const dataFiscal = await respFiscal.json();
+    if (dataFiscal.focusnfe_token)
+      document.getElementById("settings-focusnfe-token").value = dataFiscal.focusnfe_token;
+    if (dataFiscal.cnpj)
+      document.getElementById("settings-cnpj").value = dataFiscal.cnpj;
+    if (dataFiscal.inscricao_estadual)
+      document.getElementById("settings-ie").value = dataFiscal.inscricao_estadual;
+    if (dataFiscal.regime_tributario)
+      document.getElementById("settings-regime").value = dataFiscal.regime_tributario;
+  } catch (e) {
+    console.error("Erro ao carregar config fiscal:", e);
+  }
+  
   const trackingUrl = localStorage.getItem("tracking_url") || "https://rastreio.evoriseai.com.br";
   document.getElementById("settings-tracking-url").value = trackingUrl;
 }
@@ -2002,7 +2017,8 @@ if (settingsBackBtn) settingsBackBtn.addEventListener("click", showBoard);
 document.getElementById("btn-salvar-impressora")?.addEventListener("click", salvarImpressora);
 document.getElementById("btn-testar-impressora")?.addEventListener("click", testarImpressora);
 document.getElementById("btn-salvar-rastreio")?.addEventListener("click", salvarRastreio);
-
+document.getElementById("btn-salvar-nfe")?.addEventListener("click", salvarFiscal);
+  
 // Logout
 if (logoutBtn) logoutBtn.addEventListener("click", logout);
 if (unauthClose) unauthClose.addEventListener("click", () => closeBackdrop(unauthorizedModal));
