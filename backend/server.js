@@ -2048,6 +2048,41 @@ app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
   }
 });
 
+// GET - Busca chaves de marketplace
+app.get("/api/v1/restaurante/:restaurant_id/marketplace", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { data, error } = await supabase
+      .from("restaurants")
+      .select("ifood_api_key, aiqfome_api_key")
+      .eq("id", restaurant_id)
+      .single();
+    if (error || !data) return sendError(res, 404, "Restaurante não encontrado");
+    return res.json({
+      ifood_api_key: data.ifood_api_key || "",
+      aiqfome_api_key: data.aiqfome_api_key || ""
+    });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
+// PATCH - Salva chaves de marketplace
+app.patch("/api/v1/restaurante/:restaurant_id/marketplace", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { ifood_api_key, aiqfome_api_key } = req.body;
+    const { error } = await supabase
+      .from("restaurants")
+      .update({ ifood_api_key, aiqfome_api_key })
+      .eq("id", restaurant_id);
+    if (error) return sendError(res, 500, "Erro ao salvar chaves de marketplace");
+    return res.json({ success: true });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
