@@ -1875,14 +1875,6 @@ window.alterarQtd = function(index, delta) {
   }
 };
   
-  renderItensSelecionados();
-
-  const totalField = document.getElementById("new-total-price");
-  if (totalField) {
-    const soma = itensPedido.reduce((acc, i) => acc + (i.price * i.qty), 0);
-    totalField.value = soma > 0 ? soma.toFixed(2).replace('.', ',') : '';
-  }
-};
   
   function adicionarItem(item) {
     const existente = itensPedido.find(i => i.name === item.nome);
