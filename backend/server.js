@@ -1426,6 +1426,57 @@ app.patch("/api/v1/restaurante/:restaurant_id/config", async (req, res) => {
   }
 });
 
+// GET - Busca config da impressora
+app.get("/api/v1/restaurante/:restaurant_id/impressora", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { data, error } = await supabase
+      .from("restaurants")
+      .select("printnode_api_key, printnode_printer_id")
+      .eq("id", restaurant_id)
+      .single();
+    if (error || !data) return sendError(res, 404, "Restaurante não encontrado");
+    return res.json({
+      printnode_api_key: data.printnode_api_key || "",
+      printnode_printer_id: data.printnode_printer_id || ""
+    });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
+// PATCH - Salva config da impressora
+app.patch("/api/v1/restaurante/:restaurant_id/impressora", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { printnode_api_key, printnode_printer_id } = req.body;
+    const { error } = await supabase
+      .from("restaurants")
+      .update({ printnode_api_key, printnode_printer_id })
+      .eq("id", restaurant_id);
+    if (error) return sendError(res, 500, "Erro ao salvar impressora");
+    return res.json({ success: true });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
+// PATCH - Salva tracking_url
+app.patch("/api/v1/restaurante/:restaurant_id/tracking-url", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { tracking_url } = req.body;
+    const { error } = await supabase
+      .from("restaurants")
+      .update({ tracking_url })
+      .eq("id", restaurant_id);
+    if (error) return sendError(res, 500, "Erro ao salvar tracking URL");
+    return res.json({ success: true });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
 /* ========================================
    🖨️ ROTAS DE IMPRESSORA (PrintNode)
 ======================================== */
