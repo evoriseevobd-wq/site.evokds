@@ -570,18 +570,19 @@
     <button class="ghost-button" type="button" id="settings-back-btn">Voltar</button>
   </div>
   <div class="crm-content">
-
-    <div style="max-width:640px; display:flex; flex-direction:column; gap:20px;">
+    <div style="max-width:640px; display:flex; flex-direction:column; gap:12px;">
 
       <!-- 🖨️ IMPRESSORA -->
-      <div style="background:rgba(46,8,8,0.5); border:1px solid rgba(91,28,28,0.85); border-radius:16px; padding:24px;">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
-          <span style="font-size:20px;">🖨️</span>
-          <h3 style="color:rgba(252,228,228,1); font-size:16px; font-weight:800; margin:0;">Impressora (PrintNode)</h3>
-        </div>
-        <p style="color:rgba(252,228,228,0.45); font-size:13px; margin:0 0 20px 0;">Configure sua impressora para imprimir pedidos automaticamente.</p>
-
-        <div style="display:flex; flex-direction:column; gap:12px;">
+      <div style="background:rgba(46,8,8,0.5); border:1px solid rgba(91,28,28,0.85); border-radius:16px; overflow:hidden;">
+        <button onclick="toggleAccordion('impressora')" style="width:100%; display:flex; align-items:center; justify-content:space-between; padding:20px 24px; background:transparent; border:none; cursor:pointer;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:20px;">🖨️</span>
+            <span style="color:rgba(252,228,228,1); font-size:16px; font-weight:800;">Impressora (PrintNode)</span>
+          </div>
+          <span id="arrow-impressora" style="color:rgba(252,228,228,0.5); font-size:18px; transition:transform 0.2s;">▼</span>
+        </button>
+        <div id="accordion-impressora" style="display:none; padding:0 24px 24px 24px; display:flex; flex-direction:column; gap:12px;">
+          <p style="color:rgba(252,228,228,0.45); font-size:13px; margin:0 0 8px 0;">Configure sua impressora para imprimir pedidos automaticamente.</p>
           <label style="display:flex; flex-direction:column; gap:6px;">
             <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">API Key</span>
             <input type="text" id="settings-printnode-key" placeholder="Sua API Key do PrintNode"
@@ -592,37 +593,77 @@
             <input type="text" id="settings-printnode-printer" placeholder="ID da impressora (ex: 12345)"
               style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
           </label>
+          <div style="display:flex; gap:10px; margin-top:4px;">
+            <button class="primary-button" id="btn-salvar-impressora" style="flex:1;">Salvar configuração</button>
+            <button class="ghost-button" id="btn-testar-impressora">🖨️ Testar</button>
+          </div>
+          <p id="settings-printer-status" style="margin-top:4px; font-size:13px; min-height:18px;"></p>
         </div>
-
-        <div style="display:flex; gap:10px; margin-top:16px;">
-          <button class="primary-button" id="btn-salvar-impressora" style="flex:1;">Salvar configuração</button>
-          <button class="ghost-button" id="btn-testar-impressora">🖨️ Testar</button>
-        </div>
-        <p id="settings-printer-status" style="margin-top:10px; font-size:13px; min-height:18px;"></p>
       </div>
 
       <!-- 🔗 RASTREIO -->
-      <div style="background:rgba(46,8,8,0.5); border:1px solid rgba(91,28,28,0.85); border-radius:16px; padding:24px;">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
-          <span style="font-size:20px;">🔗</span>
-          <h3 style="color:rgba(252,228,228,1); font-size:16px; font-weight:800; margin:0;">Link de Rastreio</h3>
+      <div style="background:rgba(46,8,8,0.5); border:1px solid rgba(91,28,28,0.85); border-radius:16px; overflow:hidden;">
+        <button onclick="toggleAccordion('rastreio')" style="width:100%; display:flex; align-items:center; justify-content:space-between; padding:20px 24px; background:transparent; border:none; cursor:pointer;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:20px;">🔗</span>
+            <span style="color:rgba(252,228,228,1); font-size:16px; font-weight:800;">Link de Rastreio</span>
+          </div>
+          <span id="arrow-rastreio" style="color:rgba(252,228,228,0.5); font-size:18px; transition:transform 0.2s;">▼</span>
+        </button>
+        <div id="accordion-rastreio" style="display:none; padding:0 24px 24px 24px; display:flex; flex-direction:column; gap:12px;">
+          <p style="color:rgba(252,228,228,0.45); font-size:13px; margin:0 0 8px 0;">URL enviada ao cliente para acompanhar o pedido em tempo real.</p>
+          <label style="display:flex; flex-direction:column; gap:6px;">
+            <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">URL Base</span>
+            <input type="text" id="settings-tracking-url" placeholder="https://rastreio.seudominio.com.br"
+              style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+          </label>
+          <button class="primary-button" id="btn-salvar-rastreio" style="margin-top:4px; width:100%;">Salvar URL</button>
+          <p id="settings-tracking-status" style="margin-top:4px; font-size:13px; min-height:18px;"></p>
         </div>
-        <p style="color:rgba(252,228,228,0.45); font-size:13px; margin:0 0 20px 0;">URL enviada ao cliente para acompanhar o pedido em tempo real.</p>
+      </div>
 
-        <label style="display:flex; flex-direction:column; gap:6px;">
-          <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">URL base</span>
-          <input type="text" id="settings-tracking-url" placeholder="https://rastreio.seudominio.com.br"
-            style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
-        </label>
-
-        <button class="primary-button" id="btn-salvar-rastreio" style="margin-top:16px; width:100%;">Salvar URL</button>
-        <p id="settings-tracking-status" style="margin-top:10px; font-size:13px; min-height:18px;"></p>
+      <!-- 🧾 FOCUS NF-e -->
+      <div style="background:rgba(46,8,8,0.5); border:1px solid rgba(91,28,28,0.85); border-radius:16px; overflow:hidden;">
+        <button onclick="toggleAccordion('nfe')" style="width:100%; display:flex; align-items:center; justify-content:space-between; padding:20px 24px; background:transparent; border:none; cursor:pointer;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:20px;">🧾</span>
+            <span style="color:rgba(252,228,228,1); font-size:16px; font-weight:800;">Nota Fiscal (Focus NF-e)</span>
+          </div>
+          <span id="arrow-nfe" style="color:rgba(252,228,228,0.5); font-size:18px; transition:transform 0.2s;">▼</span>
+        </button>
+        <div id="accordion-nfe" style="display:none; padding:0 24px 24px 24px; display:flex; flex-direction:column; gap:12px;">
+          <p style="color:rgba(252,228,228,0.45); font-size:13px; margin:0 0 8px 0;">Configure a emissão automática de NFC-e ao finalizar pedidos.</p>
+          <label style="display:flex; flex-direction:column; gap:6px;">
+            <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Token Focus NF-e</span>
+            <input type="text" id="settings-focusnfe-token" placeholder="Seu token da API Focus NF-e"
+              style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+          </label>
+          <label style="display:flex; flex-direction:column; gap:6px;">
+            <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">CNPJ</span>
+            <input type="text" id="settings-cnpj" placeholder="00.000.000/0001-00"
+              style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+          </label>
+          <label style="display:flex; flex-direction:column; gap:6px;">
+            <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Inscrição Estadual</span>
+            <input type="text" id="settings-ie" placeholder="Inscrição Estadual"
+              style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+          </label>
+          <label style="display:flex; flex-direction:column; gap:6px;">
+            <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Regime Tributário</span>
+            <select id="settings-regime" style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit; cursor:pointer;">
+              <option value="1">Simples Nacional</option>
+              <option value="2">Simples Nacional - Excesso</option>
+              <option value="3">Regime Normal</option>
+            </select>
+          </label>
+          <button class="primary-button" id="btn-salvar-nfe" style="margin-top:4px; width:100%;">Salvar configuração fiscal</button>
+          <p id="settings-nfe-status" style="margin-top:4px; font-size:13px; min-height:18px;"></p>
+        </div>
       </div>
 
     </div>
   </div>
 </main>
-  
 <!-- MODAL DE PEDIDO -->
 <div class="modal-backdrop" id="modal">
   <div class="modal">
