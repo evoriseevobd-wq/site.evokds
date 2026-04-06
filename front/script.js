@@ -3552,6 +3552,75 @@ async function salvarRastreio() {
   }
 }
 
+// ===== RESUMO DO DIA =====
+function showResumoDia() {
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+
+  const pedidosHoje = orders.filter(o =>
+    new Date(o.created_at) >= hoje && o._frontStatus === "finalizado"
+  );
+
+  const totalPedidos = pedidosHoje.length;
+  const faturamento = pedidosHoje.reduce((s, o) => s + (parseFloat(o.total_price) || 0), 0);
+
+  const porPagamento = {};
+  pedidosHoje.forEach(o => {
+    const m = o.payment_method || "Não informado";
+    if (!porPagamento[m]) porPagamento[m] = { qtd: 0, valor: 0 };
+    porPagamento[m].qtd++;
+    porPagamento[m].valor += parseFloat(o.total_price) || 0;
+  });
+
+  const existing = document.getElementById("resumo-dia-modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "resumo-dia-modal";
+  modal.className = "modal-backdrop open";
+
+  modal.innerHTML = `
+    <div class="modal confirm-modal" style="max-width:520px;">
+      <div class="modal-header">
+        <h3>📊 Resumo de Hoje</h3>
+        <button class="icon-button" onclick="document.getElementById('resumo-dia-modal').remove()">×</button>
+      </div>
+      <div class="modal-body" style="gap:16px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div style="background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.4); border-radius:14px; padding:18px; text-align:center;">
+            <div style="font-size:11px; font-weight:700; color:rgba(34,197,94,0.8); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Pedidos</div>
+            <div style="font-size:36px; font-weight:900; color:rgba(34,197,94,1); font-family:'Space Grotesk',sans-serif;">${totalPedidos}</div>
+          </div>
+          <div style="background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.4); border-radius:14px; padding:18px; text-align:center;">
+            <div style="font-size:11px; font-weight:700; color:rgba(251,191,36,0.8); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Faturamento</div>
+            <div style="font-size:28px; font-weight:900; color:rgba(251,191,36,1); font-family:'Space Grotesk',sans-serif;">${formatCurrency(faturamento)}</div>
+          </div>
+        </div>
+        <div style="background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:14px; padding:16px;">
+          <div style="font-size:11px; font-weight:700; color:rgba(252,228,228,0.5); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">Por forma de pagamento</div>
+          ${Object.entries(porPagamento).length === 0
+            ? `<p style="color:var(--muted); font-size:13px;">Nenhum pedido finalizado hoje.</p>`
+            : Object.entries(porPagamento).map(([metodo, info]) => `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(91,28,28,0.4);">
+                <div>
+                  <span style="font-weight:700; font-size:14px; color:rgba(252,228,228,0.95); text-transform:capitalize;">${metodo}</span>
+                  <span style="color:var(--muted); font-size:12px; margin-left:8px;">${info.qtd} pedido(s)</span>
+                </div>
+                <span style="font-weight:800; font-size:15px; color:rgba(251,191,36,1);">${formatCurrency(info.valor)}</span>
+              </div>
+            `).join("")}
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="ghost-button" onclick="document.getElementById('resumo-dia-modal').remove()">Fechar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+}
+
 function gerarQrCodes() {
   const qtd = parseInt(document.getElementById("input-mesas").value) || 10;
   const lista = document.getElementById("lista-qrcodes");
