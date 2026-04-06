@@ -3,7 +3,7 @@ const GOOGLE_CLIENT_ID =
   "872848052437-nl3lru9m1jhmfobk0imbpb2o9uk47mqi.apps.googleusercontent.com";
 
 const API_BASE = "https://kds-backend.dahead.easypanel.host";
-const API_URL = `${API_BASE}/orders`;f
+const API_URL = `${API_BASE}/orders`;
 const AUTH_URL = `${API_BASE}/auth/google`;
 const CRM_URL = `${API_BASE}/crm`;
 const METRICS_URL = `${API_BASE}/api/v1/metrics`;
