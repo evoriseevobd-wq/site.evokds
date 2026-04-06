@@ -1973,10 +1973,41 @@ app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
       })
       .eq("id", cliente.id);
 
-    return res.status(201).json({ success: true, order });
-  } catch (err) {
-    return sendError(res, 500, err.message);
+    // 🖨️ AUTO-IMPRESSÃO após 1 minuto
+try {
+  const { data: printerConfig } = await supabase
+    .from("restaurants")
+    .select("printnode_api_key, printnode_printer_id")
+    .eq("id", restaurant_id)
+    .single();
+
+  if (printerConfig?.printnode_api_key && printerConfig?.printnode_printer_id) {
+    setTimeout(async () => {
+      try {
+        const { data: freshOrder } = await supabase
+          .from("orders")
+          .select("*")
+          .eq("id", resultData.id)
+          .single();
+
+        if (freshOrder && freshOrder.status !== "cancelled" && freshOrder.status !== "canceled") {
+          await printOrder(freshOrder, printerConfig.printnode_api_key, printerConfig.printnode_printer_id);
+          console.log(`🖨️ Auto-impressão do pedido #${freshOrder.order_number}`);
+        }
+      } catch (printErr) {
+        console.error("⚠️ Erro na auto-impressão:", printErr.message);
+      }
+    }, 60 * 1000); // 1 minuto
   }
+} catch (printErr) {
+  console.error("⚠️ Erro ao agendar impressão:", printErr.message);
+}
+
+return res.status(201).json({ 
+  success: true, 
+  order: resultData,
+  tracking_code: trackingCode,
+  tracking_link: trackingLink
 });
 
 app.get("/health", (req, res) => {
