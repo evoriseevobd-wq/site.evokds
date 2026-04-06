@@ -1937,6 +1937,7 @@ const { data: resgates } = await supabase
 });
 
 // Cliente solicita resgate (cria pedido com origin: fidelidade)
+// POST - Resgate de fidelidade (CORRIGIDO)
 app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
   try {
     const { token, itens, service_type, address } = req.body;
@@ -1950,7 +1951,6 @@ app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
       .single();
     if (!cliente) return sendError(res, 404, "Cliente não encontrado");
 
-    // Busca todos os prêmios do carrinho
     const premiosCarrinho = [];
     let totalPontos = 0;
 
@@ -1968,7 +1968,6 @@ app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
     if (cliente.pontos < totalPontos)
       return sendError(res, 400, "Pontos insuficientes");
 
-    // Busca último order_number do restaurante
     const { data: last } = await supabase
       .from("orders")
       .select("order_number")
@@ -1979,19 +1978,18 @@ app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
 
     const now = new Date().toISOString();
 
-    // Cria pedido com origin fidelidade
-   const { data: order, error: orderError } = await supabase
+    const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert([{
         restaurant_id: cliente.restaurant_id,
         client_name: cliente.nome,
         client_phone: cliente.numero,
         order_number: nextNumber,
-       itens: premiosCarrinho.map(p => ({ name: p.nome, qty: p.quantidade, price: 0 })),
+        itens: premiosCarrinho.map(p => ({ name: p.nome, qty: p.quantidade, price: 0 })),
         notes: `🎁 Resgate de fidelidade — ${totalPontos} pontos`,
         status: "pending",
-        service_type: service_type || "local", // ← usa o que veio
-        address: address || null,              // ← usa o endereço
+        service_type: service_type || "local",
+        address: address || null,
         total_price: 0,
         origin: "fidelidade",
         created_at: now,
@@ -2001,7 +1999,6 @@ app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
 
     if (orderError) return sendError(res, 500, "Erro ao criar pedido de resgate");
 
-    // Debita pontos
     await supabase
       .from("base_clientes")
       .update({
@@ -2010,41 +2007,45 @@ app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
       })
       .eq("id", cliente.id);
 
-    // 🖨️ AUTO-IMPRESSÃO após 1 minuto
-try {
-  const { data: printerConfig } = await supabase
-    .from("restaurants")
-    .select("printnode_api_key, printnode_printer_id")
-    .eq("id", restaurant_id)
-    .single();
+    // Auto-impressão
+    try {
+      const { data: printerConfig } = await supabase
+        .from("restaurants")
+        .select("printnode_api_key, printnode_printer_id")
+        .eq("id", cliente.restaurant_id)  // ← usa cliente.restaurant_id
+        .single();
 
-  if (printerConfig?.printnode_api_key && printerConfig?.printnode_printer_id) {
-    setTimeout(async () => {
-      try {
-        const { data: freshOrder } = await supabase
-          .from("orders")
-          .select("*")
-          .eq("id", resultData.id)
-          .single();
+      if (printerConfig?.printnode_api_key && printerConfig?.printnode_printer_id) {
+        setTimeout(async () => {
+          try {
+            const { data: freshOrder } = await supabase
+              .from("orders")
+              .select("*")
+              .eq("id", order.id)  // ← usa order.id
+              .single();
 
-        if (freshOrder && freshOrder.status !== "cancelled" && freshOrder.status !== "canceled") {
-          await printOrder(freshOrder, printerConfig.printnode_api_key, printerConfig.printnode_printer_id);
-          console.log(`🖨️ Auto-impressão do pedido #${freshOrder.order_number}`);
-        }
-      } catch (printErr) {
-        console.error("⚠️ Erro na auto-impressão:", printErr.message);
+            if (freshOrder && freshOrder.status !== "cancelled" && freshOrder.status !== "canceled") {
+              await printOrder(freshOrder, printerConfig.printnode_api_key, printerConfig.printnode_printer_id);
+              console.log(`🖨️ Auto-impressão do pedido #${freshOrder.order_number}`);
+            }
+          } catch (printErr) {
+            console.error("⚠️ Erro na auto-impressão:", printErr.message);
+          }
+        }, 60 * 1000);
       }
-    }, 60 * 1000); // 1 minuto
-  }
-} catch (printErr) {
-  console.error("⚠️ Erro ao agendar impressão:", printErr.message);
-}
+    } catch (printErr) {
+      console.error("⚠️ Erro ao agendar impressão:", printErr.message);
+    }
 
-return res.status(201).json({ 
-  success: true, 
-  order: resultData,
-  tracking_code: trackingCode,
-  tracking_link: trackingLink
+    return res.status(201).json({
+      success: true,
+      order: order  // ← usa a variável correta
+    });
+
+  } catch (err) {
+    console.error("❌ Erro em /api/v1/fidelidade/resgatar:", err);
+    return sendError(res, 500, "Erro interno no servidor");
+  }
 });
 
 app.get("/health", (req, res) => {
