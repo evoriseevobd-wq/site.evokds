@@ -1481,20 +1481,6 @@ async function fetchAndRenderMetrics() {
   }
 }
 
-
-function renderComparison(elementId, percentage) {
-  const el = document.getElementById(elementId);
-  if (!el) return;
-  
-  const isPositive = percentage >= 0;
-  const arrow = isPositive ? "↑" : "↓";
-  const color = isPositive ? "#22c55e" : "#ef4444";
-  
-  el.textContent = `${arrow} ${Math.abs(percentage).toFixed(1)}% vs período anterior`;
-  el.style.color = color;
-}
-
-
 // ===== AUTH =====
 function decodeJwt(token) {
   try {
@@ -2769,13 +2755,6 @@ function renderComparison(elementId, percentage) {
   el.textContent = `${arrow} ${Math.abs(percentage).toFixed(1)}%`;
   el.style.color = color;
   el.style.fontWeight = '700';
-}
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  }).format(value);
 }
 
 // ========================================
