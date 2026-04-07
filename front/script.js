@@ -606,6 +606,12 @@ async function updateOrderStatus(orderId, newFrontStatus) {
 function renderBoard() {
   if (!board || board.classList.contains("hidden")) return;
 
+  // Cancela todos os timers antes de limpar o DOM
+  Object.keys(_autoTimers).forEach(id => {
+    clearInterval(_autoTimers[id]);
+    delete _autoTimers[id];
+  });
+
   Object.values(columns).forEach((c) => {
     if (c) c.innerHTML = "";
   });
