@@ -527,8 +527,26 @@ try {
     console.error("Erro ao carregar config marketplace:", e);
   }
   
-  const trackingUrl = localStorage.getItem("tracking_url") || "https://rastreio.evoriseai.com.br";
-  document.getElementById("settings-tracking-url").value = trackingUrl;
+ const trackingUrl = localStorage.getItem("tracking_url") || "https://rastreio.evoriseai.com.br";
+document.getElementById("settings-tracking-url").value = trackingUrl;
+
+// Carrega chaves marketplace
+try {
+  const mktResp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/marketplace`);
+  const mktData = await mktResp.json();
+  if (mktData.ifood_api_key) document.getElementById("settings-ifood-key").value = mktData.ifood_api_key;
+  if (mktData.aiqfome_api_key) document.getElementById("settings-aiqfome-key").value = mktData.aiqfome_api_key;
+} catch (e) {
+  console.error("Erro ao carregar chaves marketplace:", e);
+}
+
+// Carrega webhook satisfação
+try {
+  const whResp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/webhook-satisfaction`);
+  const whData = await whResp.json();
+  if (whData.webhook_url) document.getElementById("settings-webhook-satisfaction").value = whData.webhook_url;
+} catch (e) {
+  console.error("Erro ao carregar webhook:", e);
 }
 
 function setupPeriodButtons() {
@@ -544,6 +562,63 @@ function setupPeriodButtons() {
   });
 }
 
+  // ===== SALVAR IFOOD =====
+document.getElementById("btn-salvar-ifood")?.addEventListener("click", async () => {
+  const rid = getRestaurantId();
+  const key = document.getElementById("settings-ifood-key")?.value?.trim();
+  const status = document.getElementById("settings-ifood-status");
+  if (!key) { if (status) status.textContent = "❌ Informe a chave do iFood."; return; }
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/marketplace`, {
+      method: "POST",
+      headers: buildHeaders(),
+      body: JSON.stringify({ platform: "ifood", api_key: key })
+    });
+    const data = await resp.json();
+    if (status) status.textContent = data.success ? "✅ Chave iFood salva!" : "❌ Erro ao salvar.";
+  } catch (e) {
+    if (status) status.textContent = "❌ Erro de conexão.";
+  }
+});
+
+// ===== SALVAR AIQFOME =====
+document.getElementById("btn-salvar-aiqfome")?.addEventListener("click", async () => {
+  const rid = getRestaurantId();
+  const key = document.getElementById("settings-aiqfome-key")?.value?.trim();
+  const status = document.getElementById("settings-aiqfome-status");
+  if (!key) { if (status) status.textContent = "❌ Informe a chave do AiqFome."; return; }
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/marketplace`, {
+      method: "POST",
+      headers: buildHeaders(),
+      body: JSON.stringify({ platform: "aiqfome", api_key: key })
+    });
+    const data = await resp.json();
+    if (status) status.textContent = data.success ? "✅ Chave AiqFome salva!" : "❌ Erro ao salvar.";
+  } catch (e) {
+    if (status) status.textContent = "❌ Erro de conexão.";
+  }
+});
+
+// ===== SALVAR WEBHOOK SATISFAÇÃO =====
+document.getElementById("btn-salvar-webhook")?.addEventListener("click", async () => {
+  const rid = getRestaurantId();
+  const url = document.getElementById("settings-webhook-satisfaction")?.value?.trim();
+  const status = document.getElementById("settings-webhook-status");
+  if (!url) { if (status) status.textContent = "❌ Informe a URL do webhook."; return; }
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/webhook-satisfaction`, {
+      method: "POST",
+      headers: buildHeaders(),
+      body: JSON.stringify({ webhook_url: url })
+    });
+    const data = await resp.json();
+    if (status) status.textContent = data.success ? "✅ Webhook salvo!" : "❌ Erro ao salvar.";
+  } catch (e) {
+    if (status) status.textContent = "❌ Erro de conexão.";
+  }
+});
+  
 // ===== CORE LOGIC =====
 async function fetchOrders() {
   const rid = getRestaurantId();
