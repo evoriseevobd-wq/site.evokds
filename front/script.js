@@ -514,6 +514,17 @@ try {
   } catch (e) {
     console.error("Erro ao carregar config fiscal:", e);
   }
+
+  try {
+    const respMarket = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/marketplace`);
+    const dataMarket = await respMarket.json();
+    if (dataMarket.ifood_api_key)
+      document.getElementById("settings-ifood-key").value = dataMarket.ifood_api_key;
+    if (dataMarket.aiqfome_api_key)
+      document.getElementById("settings-aiqfome-key").value = dataMarket.aiqfome_api_key;
+  } catch (e) {
+    console.error("Erro ao carregar config marketplace:", e);
+  }
   
   const trackingUrl = localStorage.getItem("tracking_url") || "https://rastreio.evoriseai.com.br";
   document.getElementById("settings-tracking-url").value = trackingUrl;
@@ -2018,6 +2029,7 @@ document.getElementById("btn-salvar-impressora")?.addEventListener("click", salv
 document.getElementById("btn-testar-impressora")?.addEventListener("click", testarImpressora);
 document.getElementById("btn-salvar-rastreio")?.addEventListener("click", salvarRastreio);
 document.getElementById("btn-salvar-nfe")?.addEventListener("click", salvarFiscal);
+document.getElementById("btn-salvar-marketplace")?.addEventListener("click", salvarMarketplace);
   
 // Logout
 if (logoutBtn) logoutBtn.addEventListener("click", logout);
@@ -3540,6 +3552,26 @@ async function testarImpressora() {
     }
   } catch (e) {
     status.textContent = "❌ Falha no teste. Verifique API Key e Printer ID.";
+    status.style.color = "rgba(239,68,68,0.9)";
+  }
+}
+
+async function salvarMarketplace() {
+  const rid = getRestaurantId();
+  const ifood_api_key = document.getElementById("settings-ifood-key").value.trim();
+  const aiqfome_api_key = document.getElementById("settings-aiqfome-key").value.trim();
+  const status = document.getElementById("settings-marketplace-status");
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/marketplace`, {
+      method: "PATCH",
+      headers: buildHeaders(),
+      body: JSON.stringify({ ifood_api_key, aiqfome_api_key })
+    });
+    status.textContent = resp.ok ? "✅ Chaves salvas com sucesso!" : "❌ Erro ao salvar.";
+    status.style.color = resp.ok ? "rgba(34,197,94,0.9)" : "rgba(239,68,68,0.9)";
+  } catch (e) {
+    status.textContent = "❌ Erro de conexão.";
     status.style.color = "rgba(239,68,68,0.9)";
   }
 }
