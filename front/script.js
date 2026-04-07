@@ -156,7 +156,8 @@ function toBackStatus(front) {
 
 function formatTime(iso) {
   if (!iso) return "--:--";
-  const d = new Date(iso);
+  const normalized = iso.includes('Z') || iso.includes('+') ? iso : iso + 'Z';
+  const d = new Date(normalized);
   if (Number.isNaN(d.getTime())) return "--:--";
   return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
@@ -1045,7 +1046,8 @@ function startAutoTimer(orderId, createdAt) {
   const LIMIT_MS = 1.5 * 60 * 1000; // ← muda de 3 para 1.5 min
 
   function tick() {
-    const elapsed = Date.now() - new Date(createdAt + 'Z').getTime();
+   const rawDate = createdAt.includes('Z') || createdAt.includes('+') ? createdAt : createdAt + 'Z';
+const elapsed = Date.now() - new Date(rawDate).getTime();
     const remaining = LIMIT_MS - elapsed;
     const el = document.getElementById(`timer-${orderId}`);
     if (!el) { clearInterval(_autoTimers[orderId]); delete _autoTimers[orderId]; return; }
