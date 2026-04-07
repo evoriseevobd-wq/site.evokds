@@ -691,11 +691,16 @@ ${order.origin === "fidelidade"
   }
 
   // Timer automático (só em recebido)
+  // Timer automático (só em recebido)
   if (order._frontStatus === "recebido") {
     const timerEl = document.createElement("div");
     timerEl.id = `timer-${order.id}`;
-    timerEl.style.cssText = "font-size:12px; font-weight:800; margin-top:6px; font-family:'Space Grotesk',sans-serif;";
+    timerEl.style.cssText = `
+      font-size:12px; font-weight:800; font-family:'Space Grotesk',sans-serif;
+      position:absolute; bottom:10px; right:32px;
+    `;
     timerEl.textContent = "⏱ 1:30";
+    card.style.position = "relative";
     card.appendChild(timerEl);
     setTimeout(() => startAutoTimer(order.id, order.created_at), 50);
   }
