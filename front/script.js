@@ -548,6 +548,7 @@ try {
 } catch (e) {
   console.error("Erro ao carregar webhook:", e);
 }
+}
 
 function setupPeriodButtons() {
   const periodButtons = document.querySelectorAll('.period-btn');
