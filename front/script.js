@@ -2028,7 +2028,7 @@ if (settingsBackBtn) settingsBackBtn.addEventListener("click", showBoard);
 document.getElementById("btn-salvar-impressora")?.addEventListener("click", salvarImpressora);
 document.getElementById("btn-testar-impressora")?.addEventListener("click", testarImpressora);
 document.getElementById("btn-salvar-rastreio")?.addEventListener("click", salvarRastreio);
-document.getElementById("btn-salvar-nfe")?.addEventListener("click", salvarFiscal);
+document.getElementById("btn-salvar-nfe")?.addEventListener("click", () => salvarFiscal());
 document.getElementById("btn-salvar-marketplace")?.addEventListener("click", salvarMarketplace);
   
 // Logout
