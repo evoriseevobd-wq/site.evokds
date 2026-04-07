@@ -494,8 +494,25 @@ app.patch("/orders/:id/status", async (req, res) => {
       .select()
       .single();
     
-    if (error || !data) return sendError(res, 500, "Erro ao atualizar pedido");
-    
+   if (error || !data) return sendError(res, 500, "Erro ao atualizar pedido");
+
+    // Agenda webhook de satisfação 2h após finalizar
+    if (status === "finished" || status === "delivered") {
+      setTimeout(async () => {
+        const { data: orderCompleto } = await supabase
+          .from("orders")
+          .select("*")
+          .eq("id", id)
+          .single();
+
+        if (orderCompleto) {
+          await dispararWebhookSatisfacao(orderCompleto);
+        }
+      }, 2 * 60 * 60 * 1000); // 2 horas em ms
+
+      console.log(`⏱️ Webhook satisfação agendado para 2h — Pedido ${id}`);
+    }
+
     return res.json(data);
   } catch (err) {
     return sendError(res, 500, "Erro ao atualizar pedido");
@@ -2099,6 +2116,123 @@ app.use((err, req, res, next) => {
 app.use((req, res) => {
   res.status(404).json({ error: "Rota não encontrada" });
 });
+
+// ===== MARKETPLACE: salvar chaves =====
+app.post("/api/v1/restaurante/:restaurant_id/marketplace", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { platform, api_key } = req.body;
+
+    if (!platform || !api_key) return sendError(res, 400, "platform e api_key são obrigatórios");
+
+    const allowedPlatforms = { ifood: "ifood_api_key", aiqfome: "aiqfome_api_key" };
+    const column = allowedPlatforms[platform];
+    if (!column) return sendError(res, 400, "platform inválido. Use: ifood ou aiqfome");
+
+    const { error } = await supabase
+      .from("restaurants")
+      .update({ [column]: api_key })
+      .eq("id", restaurant_id);
+
+    if (error) return sendError(res, 500, "Erro ao salvar chave");
+
+    return res.json({ success: true, platform, message: "Chave salva com sucesso" });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
+// ===== MARKETPLACE: buscar chaves =====
+app.get("/api/v1/restaurante/:restaurant_id/marketplace", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+
+    const { data, error } = await supabase
+      .from("restaurants")
+      .select("ifood_api_key, aiqfome_api_key")
+      .eq("id", restaurant_id)
+      .single();
+
+    if (error) return sendError(res, 500, "Erro ao buscar chaves");
+
+    return res.json({ success: true, ...data });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
+// ===== WEBHOOK SATISFAÇÃO: salvar =====
+app.post("/api/v1/restaurante/:restaurant_id/webhook-satisfaction", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { webhook_url } = req.body;
+
+    const { error } = await supabase
+      .from("restaurants")
+      .update({ webhook_satisfaction: webhook_url || null })
+      .eq("id", restaurant_id);
+
+    if (error) return sendError(res, 500, "Erro ao salvar webhook");
+
+    return res.json({ success: true, message: "Webhook salvo com sucesso" });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
+// ===== WEBHOOK SATISFAÇÃO: buscar =====
+app.get("/api/v1/restaurante/:restaurant_id/webhook-satisfaction", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+
+    const { data, error } = await supabase
+      .from("restaurants")
+      .select("webhook_satisfaction")
+      .eq("id", restaurant_id)
+      .single();
+
+    if (error) return sendError(res, 500, "Erro ao buscar webhook");
+
+    return res.json({ success: true, webhook_url: data?.webhook_satisfaction || "" });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
+// ===== WEBHOOK SATISFAÇÃO: disparo após 2h =====
+async function dispararWebhookSatisfacao(order) {
+  try {
+    const { data: restaurant } = await supabase
+      .from("restaurants")
+      .select("webhook_satisfaction")
+      .eq("id", order.restaurant_id)
+      .single();
+
+    const webhookUrl = restaurant?.webhook_satisfaction;
+    if (!webhookUrl) return;
+
+    const payload = {
+      order_id: order.id,
+      order_number: order.order_number,
+      client_name: order.client_name,
+      client_phone: order.client_phone,
+      total_price: order.total_price,
+      itens: order.itens,
+      finished_at: order.delivered_at,
+      triggered_at: new Date().toISOString()
+    };
+
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    console.log(`✅ Webhook satisfação disparado para pedido #${order.order_number}`);
+  } catch (err) {
+    console.error(`❌ Erro ao disparar webhook satisfação:`, err.message);
+  }
+}
 
 app.listen(PORT, HOST, () => {
   console.log(`🚀 Fluxon Backend v4.0 DASHBOARD COMPLETO em http://${HOST}:${PORT}`);
