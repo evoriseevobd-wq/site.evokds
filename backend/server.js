@@ -1928,7 +1928,7 @@ app.get("/api/v1/fidelidade/cliente/:token", async (req, res) => {
 
     const phoneNormalizado = normalizePhone(cliente.numero);
 
-const { data: resgates } = await supabase
+    const { data: resgates } = await supabase
       .from("orders")
       .select("id, order_number, itens, created_at, status")
       .eq("restaurant_id", cliente.restaurant_id)
@@ -1938,23 +1938,22 @@ const { data: resgates } = await supabase
       .limit(10);
 
     return res.json({
-  cliente: {
-    nome: cliente.nome,
-    pontos: cliente.pontos,
-    pontos_resgatados: cliente.pontos_resgatados,
-    token: cliente.token_fidelidade,
-    restaurant_id: cliente.restaurant_id  // ← adiciona essa linha
-  },
-  premios: premios || [],
-  resgates: resgates || []
-});
+      cliente: {
+        nome: cliente.nome,
+        pontos: cliente.pontos,
+        pontos_resgatados: cliente.pontos_resgatados,
+        token: cliente.token_fidelidade,
+        restaurant_id: cliente.restaurant_id
+      },
+      premios: premios || [],
+      resgates: resgates || []
+    });
   } catch (err) {
     return sendError(res, 500, err.message);
   }
 });
 
-// Cliente solicita resgate (cria pedido com origin: fidelidade)
-// POST - Resgate de fidelidade (CORRIGIDO)
+// POST - Resgate de fidelidade
 app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
   try {
     const { token, itens, service_type, address } = req.body;
@@ -2024,12 +2023,11 @@ app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
       })
       .eq("id", cliente.id);
 
-    // Auto-impressão
     try {
       const { data: printerConfig } = await supabase
         .from("restaurants")
         .select("printnode_api_key, printnode_printer_id")
-        .eq("id", cliente.restaurant_id)  // ← usa cliente.restaurant_id
+        .eq("id", cliente.restaurant_id)
         .single();
 
       if (printerConfig?.printnode_api_key && printerConfig?.printnode_printer_id) {
@@ -2038,7 +2036,7 @@ app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
             const { data: freshOrder } = await supabase
               .from("orders")
               .select("*")
-              .eq("id", order.id)  // ← usa order.id
+              .eq("id", order.id)
               .single();
 
             if (freshOrder && freshOrder.status !== "cancelled" && freshOrder.status !== "canceled") {
@@ -2054,18 +2052,14 @@ app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
       console.error("⚠️ Erro ao agendar impressão:", printErr.message);
     }
 
-    return res.status(201).json({
-      success: true,
-      order: order  // ← usa a variável correta
-    });
-
+    return res.status(201).json({ success: true, order });
   } catch (err) {
     console.error("❌ Erro em /api/v1/fidelidade/resgatar:", err);
     return sendError(res, 500, "Erro interno no servidor");
   }
 });
 
-// GET - Busca chaves de marketplace
+// ===== MARKETPLACE =====
 app.get("/api/v1/restaurante/:restaurant_id/marketplace", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
@@ -2084,40 +2078,6 @@ app.get("/api/v1/restaurante/:restaurant_id/marketplace", async (req, res) => {
   }
 });
 
-// PATCH - Salva chaves de marketplace
-app.patch("/api/v1/restaurante/:restaurant_id/marketplace", async (req, res) => {
-  try {
-    const { restaurant_id } = req.params;
-    const { ifood_api_key, aiqfome_api_key } = req.body;
-    const { error } = await supabase
-      .from("restaurants")
-      .update({ ifood_api_key, aiqfome_api_key })
-      .eq("id", restaurant_id);
-    if (error) return sendError(res, 500, "Erro ao salvar chaves de marketplace");
-    return res.json({ success: true });
-  } catch (err) {
-    return sendError(res, 500, "Erro interno");
-  }
-});
-
-app.get("/health", (req, res) => {
-  res.json({
-    status: "ok",
-    timestamp: new Date().toISOString(),
-    version: "4.0.0-dashboard-completo"
-  });
-});
-
-app.use((err, req, res, next) => {
-  console.error("❌ Erro:", err);
-  res.status(500).json({ error: "Erro interno do servidor" });
-});
-
-app.use((req, res) => {
-  res.status(404).json({ error: "Rota não encontrada" });
-});
-
-// ===== MARKETPLACE: salvar chaves =====
 app.post("/api/v1/restaurante/:restaurant_id/marketplace", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
@@ -2135,71 +2095,13 @@ app.post("/api/v1/restaurante/:restaurant_id/marketplace", async (req, res) => {
       .eq("id", restaurant_id);
 
     if (error) return sendError(res, 500, "Erro ao salvar chave");
-
     return res.json({ success: true, platform, message: "Chave salva com sucesso" });
   } catch (err) {
     return sendError(res, 500, "Erro interno");
   }
 });
 
-// ===== MARKETPLACE: buscar chaves =====
-app.get("/api/v1/restaurante/:restaurant_id/marketplace", async (req, res) => {
-  try {
-    const { restaurant_id } = req.params;
-
-    const { data, error } = await supabase
-      .from("restaurants")
-      .select("ifood_api_key, aiqfome_api_key")
-      .eq("id", restaurant_id)
-      .single();
-
-    if (error) return sendError(res, 500, "Erro ao buscar chaves");
-
-    return res.json({ success: true, ...data });
-  } catch (err) {
-    return sendError(res, 500, "Erro interno");
-  }
-});
-
-// ===== WEBHOOK SATISFAÇÃO: salvar =====
-app.post("/api/v1/restaurante/:restaurant_id/webhook-satisfaction", async (req, res) => {
-  try {
-    const { restaurant_id } = req.params;
-    const { webhook_url } = req.body;
-
-    const { error } = await supabase
-      .from("restaurants")
-      .update({ webhook_satisfaction: webhook_url || null })
-      .eq("id", restaurant_id);
-
-    if (error) return sendError(res, 500, "Erro ao salvar webhook");
-
-    return res.json({ success: true, message: "Webhook salvo com sucesso" });
-  } catch (err) {
-    return sendError(res, 500, "Erro interno");
-  }
-});
-
-// ===== WEBHOOK SATISFAÇÃO: buscar =====
-app.get("/api/v1/restaurante/:restaurant_id/webhook-satisfaction", async (req, res) => {
-  try {
-    const { restaurant_id } = req.params;
-
-    const { data, error } = await supabase
-      .from("restaurants")
-      .select("webhook_satisfaction")
-      .eq("id", restaurant_id)
-      .single();
-
-    if (error) return sendError(res, 500, "Erro ao buscar webhook");
-
-    return res.json({ success: true, webhook_url: data?.webhook_satisfaction || "" });
-  } catch (err) {
-    return sendError(res, 500, "Erro interno");
-  }
-});
-
-// ===== WEBHOOK SATISFAÇÃO: disparo após 2h =====
+// ===== WEBHOOK SATISFAÇÃO =====
 async function dispararWebhookSatisfacao(order) {
   try {
     const { data: restaurant } = await supabase
@@ -2211,21 +2113,19 @@ async function dispararWebhookSatisfacao(order) {
     const webhookUrl = restaurant?.webhook_satisfaction;
     if (!webhookUrl) return;
 
-    const payload = {
-      order_id: order.id,
-      order_number: order.order_number,
-      client_name: order.client_name,
-      client_phone: order.client_phone,
-      total_price: order.total_price,
-      itens: order.itens,
-      finished_at: order.delivered_at,
-      triggered_at: new Date().toISOString()
-    };
-
     await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        order_id: order.id,
+        order_number: order.order_number,
+        client_name: order.client_name,
+        client_phone: order.client_phone,
+        total_price: order.total_price,
+        itens: order.itens,
+        finished_at: order.delivered_at,
+        triggered_at: new Date().toISOString()
+      })
     });
 
     console.log(`✅ Webhook satisfação disparado para pedido #${order.order_number}`);
@@ -2233,6 +2133,58 @@ async function dispararWebhookSatisfacao(order) {
     console.error(`❌ Erro ao disparar webhook satisfação:`, err.message);
   }
 }
+
+app.get("/api/v1/restaurante/:restaurant_id/webhook-satisfaction", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { data, error } = await supabase
+      .from("restaurants")
+      .select("webhook_satisfaction")
+      .eq("id", restaurant_id)
+      .single();
+    if (error || !data) return sendError(res, 404, "Restaurante não encontrado");
+    return res.json({ success: true, webhook_url: data.webhook_satisfaction || "" });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
+app.post("/api/v1/restaurante/:restaurant_id/webhook-satisfaction", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { webhook_url } = req.body;
+
+    const { error } = await supabase
+      .from("restaurants")
+      .update({ webhook_satisfaction: webhook_url || null })
+      .eq("id", restaurant_id);
+
+    if (error) return sendError(res, 500, "Erro ao salvar webhook");
+    return res.json({ success: true, message: "Webhook salvo com sucesso" });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
+// ===== HEALTH CHECK =====
+app.get("/health", (req, res) => {
+  res.json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    version: "4.0.0-dashboard-completo"
+  });
+});
+
+// ===== ERROR HANDLER =====
+app.use((err, req, res, next) => {
+  console.error("❌ Erro:", err);
+  res.status(500).json({ error: "Erro interno do servidor" });
+});
+
+// ===== 404 — SEMPRE O ÚLTIMO MIDDLEWARE =====
+app.use((req, res) => {
+  res.status(404).json({ error: "Rota não encontrada" });
+});
 
 app.listen(PORT, HOST, () => {
   console.log(`🚀 Fluxon Backend v4.0 DASHBOARD COMPLETO em http://${HOST}:${PORT}`);
