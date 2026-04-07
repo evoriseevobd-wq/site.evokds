@@ -3604,6 +3604,28 @@ async function salvarRastreio() {
   }
 }
 
+async function salvarFiscal() {
+  const rid = getRestaurantId();
+  const focusnfe_token = document.getElementById("settings-focusnfe-token").value.trim();
+  const cnpj = document.getElementById("settings-cnpj").value.trim();
+  const inscricao_estadual = document.getElementById("settings-ie").value.trim();
+  const regime_tributario = document.getElementById("settings-regime").value;
+  const status = document.getElementById("settings-nfe-status");
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/fiscal`, {
+      method: "PATCH",
+      headers: buildHeaders(),
+      body: JSON.stringify({ focusnfe_token, cnpj, inscricao_estadual, regime_tributario })
+    });
+    status.textContent = resp.ok ? "✅ Configuração fiscal salva!" : "❌ Erro ao salvar.";
+    status.style.color = resp.ok ? "rgba(34,197,94,0.9)" : "rgba(239,68,68,0.9)";
+  } catch (e) {
+    status.textContent = "❌ Erro de conexão.";
+    status.style.color = "rgba(239,68,68,0.9)";
+  }
+}
+
 // ===== FECHAMENTO DE CAIXA =====
 function showResumoDia() {
   const hoje = new Date();
