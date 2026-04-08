@@ -2871,6 +2871,16 @@ renderComparison("delta-revenue", data.comparison?.revenue?.growth || 0);
 renderComparison("delta-roi",     data.comparison?.revenue?.growth || 0);
 renderComparison("delta-ticket",  data.comparison?.ticket?.growth  || 0);
 renderComparison("delta-orders",  data.comparison?.orders?.growth  || 0);
+  // Novos cards de retenção
+safeSetText("card-retorno",    `${(data.taxa_retorno || 0).toFixed(1)}%`);
+safeSetText("card-frequencia", `${(data.frequencia_media || 0).toFixed(1)}x`);
+safeSetText("inativos-7",      data.clientes_inativos?.dias_7  || 0);
+safeSetText("inativos-15",     data.clientes_inativos?.dias_15 || 0);
+safeSetText("inativos-30",     data.clientes_inativos?.dias_30 || 0);
+safeSetText("card-recompensa", data.proximos_recompensa?.count  || 0);
+
+renderComparison("delta-retorno",    data.comparison?.taxa_retorno?.growth  || 0);
+renderComparison("delta-frequencia", data.comparison?.frequencia?.growth    || 0);
   safeSetText("card-plan-price", formatCurrency(restaurantPlanPrice));
   
 // Gráficos
