@@ -352,6 +352,130 @@ orders_by_origin: {
       ? ((metrics.average_ticket - previousTicket) / previousTicket) * 100 
       : 0;
 
+// ==========================================
+    // 🔁 TAXA DE RETORNO
+    // ==========================================
+    // Clientes que compraram no período anterior E no atual
+    const returningClients = [...uniquePhones].filter(phone => hadOrdersBefore[phone]).length;
+    metrics.taxa_retorno = uniquePhones.size > 0
+      ? (returningClients / uniquePhones.size) * 100
+      : 0;
+    metrics.taxa_retorno_count = returningClients;
+
+    // Comparação taxa de retorno com período anterior
+    const { data: prevPeriodOrders } = await supabase
+      .from("orders")
+      .select("client_phone")
+      .eq("restaurant_id", restaurant_id)
+      .gte("created_at", previousStart.toISOString())
+      .lt("created_at", previousEnd.toISOString());
+
+    const prevPeriodPhones = new Set((prevPeriodOrders || []).map(o => normalizePhone(o.client_phone)).filter(Boolean));
+    const prevBeforeStart = new Date(previousStart);
+    prevBeforeStart.setDate(prevBeforeStart.getDate() - days);
+
+    const { data: prevBeforeOrders } = await supabase
+      .from("orders")
+      .select("client_phone")
+      .eq("restaurant_id", restaurant_id)
+      .gte("created_at", prevBeforeStart.toISOString())
+      .lt("created_at", previousStart.toISOString());
+
+    const prevHadBefore = new Set((prevBeforeOrders || []).map(o => normalizePhone(o.client_phone)).filter(Boolean));
+    const prevReturning = [...prevPeriodPhones].filter(p => prevHadBefore.has(p)).length;
+    const prevTaxaRetorno = prevPeriodPhones.size > 0 ? (prevReturning / prevPeriodPhones.size) * 100 : 0;
+
+    metrics.comparison.taxa_retorno = {
+      current: metrics.taxa_retorno,
+      previous: prevTaxaRetorno,
+      growth: prevTaxaRetorno > 0 ? ((metrics.taxa_retorno - prevTaxaRetorno) / prevTaxaRetorno) * 100 : 0
+    };
+
+    // ==========================================
+    // 🔄 FREQUÊNCIA MÉDIA
+    // ==========================================
+    // Média de pedidos por cliente único no período
+    const totalOrdersForFreq = currentOrders.length;
+    metrics.frequencia_media = uniquePhones.size > 0
+      ? totalOrdersForFreq / uniquePhones.size
+      : 0;
+
+    // Comparação frequência
+    const prevFrequencia = prevPeriodPhones.size > 0
+      ? (prevPeriodOrders?.length || 0) / prevPeriodPhones.size
+      : 0;
+    metrics.comparison.frequencia = {
+      current: metrics.frequencia_media,
+      previous: prevFrequencia,
+      growth: prevFrequencia > 0 ? ((metrics.frequencia_media - prevFrequencia) / prevFrequencia) * 100 : 0
+    };
+
+    // ==========================================
+    // 💤 CLIENTES INATIVOS
+    // ==========================================
+    // Clientes que NÃO compraram nos últimos X dias mas compraram antes
+    const date7  = new Date(); date7.setDate(date7.getDate() - 7);
+    const date15 = new Date(); date15.setDate(date15.getDate() - 15);
+    const date30 = new Date(); date30.setDate(date30.getDate() - 30);
+
+    // Mapa: telefone -> última compra
+    const lastOrderByPhone = {};
+    (allOrders || []).forEach(order => {
+      const phone = normalizePhone(order.client_phone);
+      if (!phone) return;
+      const d = new Date(order.created_at);
+      if (!lastOrderByPhone[phone] || d > lastOrderByPhone[phone]) {
+        lastOrderByPhone[phone] = d;
+      }
+    });
+
+    let inativos7 = 0, inativos15 = 0, inativos30 = 0;
+    Object.values(lastOrderByPhone).forEach(lastDate => {
+      if (lastDate < date7)  inativos7++;
+      if (lastDate < date15) inativos15++;
+      if (lastDate < date30) inativos30++;
+    });
+
+    metrics.clientes_inativos = {
+      dias_7: inativos7,
+      dias_15: inativos15,
+      dias_30: inativos30,
+      total_na_base: Object.keys(lastOrderByPhone).length
+    };
+
+    // ==========================================
+    // 🎁 PRÓXIMOS DA RECOMPENSA
+    // ==========================================
+    // Busca menor prêmio disponível e conta clientes a menos de 20% dos pontos
+    const { data: premios } = await supabase
+      .from("premios_fidelidade")
+      .select("pontos_necessarios")
+      .eq("restaurant_id", restaurant_id)
+      .eq("ativo", true)
+      .order("pontos_necessarios")
+      .limit(1);
+
+    if (premios && premios.length > 0) {
+      const menorPremio = premios[0].pontos_necessarios;
+      const limiar = menorPremio * 0.8; // 80% do caminho
+
+      const { data: clientesPerto } = await supabase
+        .from("base_clientes")
+        .select("pontos")
+        .eq("restaurant_id", restaurant_id)
+        .eq("Status", "ATIVO")
+        .gte("pontos", limiar)
+        .lt("pontos", menorPremio);
+
+      metrics.proximos_recompensa = {
+        count: clientesPerto?.length || 0,
+        pontos_premio: menorPremio,
+        limiar_80pct: Math.round(limiar)
+      };
+    } else {
+      metrics.proximos_recompensa = { count: 0, pontos_premio: null, limiar_80pct: null };
+    }
+    
     console.log(`✅ Métricas calculadas com sucesso!`);
 
     return res.json(metrics);
