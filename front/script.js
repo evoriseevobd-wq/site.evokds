@@ -2866,6 +2866,11 @@ function renderMetricsUI(data) {
   safeSetText("card-ticket", formatCurrency(avgTicket));
   
   safeSetText("card-orders", data.total_orders || 0);
+  // Comparações com período anterior
+renderComparison("delta-revenue", data.comparison?.revenue?.growth || 0);
+renderComparison("delta-roi",     data.comparison?.revenue?.growth || 0);
+renderComparison("delta-ticket",  data.comparison?.ticket?.growth  || 0);
+renderComparison("delta-orders",  data.comparison?.orders?.growth  || 0);
   safeSetText("card-plan-price", formatCurrency(restaurantPlanPrice));
   
 // Gráficos
