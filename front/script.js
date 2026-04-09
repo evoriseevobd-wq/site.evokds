@@ -121,6 +121,7 @@ let currentView = "ativos";
 let orders = [];
 let activeOrderId = null;
 let isFetching = false;
+var _fetchController = null;
 let editingOrderId = null;
 let socket = null;
 
