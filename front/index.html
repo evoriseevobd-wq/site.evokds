@@ -265,240 +265,211 @@
     </div>
   </main>
 
-  <!-- ========================================
-       🔥 RESULTS VIEW - DASHBOARD COMPLETO
-  ======================================== -->
-  <main class="results-view hidden" id="results-view">
-    <div class="results-header">
-      <h2>Dashboard de Resultados</h2>
-      <p class="results-subtitle">Análise completa de performance e ROI</p>
-    </div>
-
-    <!-- FILTROS DE PERÍODO -->
-    <div class="results-period-selector">
-      <button class="period-btn" data-period="3d">3D</button>
-      <button class="period-btn" data-period="7d">7D</button>
-      <button class="period-btn" data-period="15d">15D</button>
-      <button class="period-btn active" data-period="30d">30D</button>
-      <button class="period-btn" data-period="90d">90D</button>
-      <button class="period-btn" data-period="all">Todo</button>
-    </div>
-
-    <!-- CARDS PREMIUM COM COMPARAÇÃO -->
-    <div class="results-premium-cards">
-      <!-- Card Faturamento -->
-      <div class="premium-card faturamento-card">
-        <div class="card-icon">💰</div>
-        <div class="card-content">
-          <div class="card-label">FATURAMENTO TOTAL</div>
-          <div class="card-value" id="card-revenue">R$ 0,00</div>
-          <div class="card-delta" id="delta-revenue" style="font-size:11px; font-weight:700; margin-top:2px; white-space:nowrap; overflow:hidden;"0; margin-top:4px;"></div>
-        </div>
-      </div>
-
-      <!-- Card ROI -->
-      <div class="premium-card roi-card">
-        <div class="card-icon">📊</div>
-        <div class="card-content">
-          <div class="card-label">ROI DO SISTEMA</div>
-          <div class="card-value" id="card-roi">0x</div>
-          <div class="card-sublabel">Sobre <span id="card-plan-price">R$ 0</span></div>
-          <div class="card-delta" id="delta-revenue" style="font-size:12px; font-weight:700; margin-top:4px;"></div>
-        </div>
-      </div>
-
-      <!-- Card Ticket Médio -->
-      <div class="premium-card ticket-card">
-        <div class="card-icon">💳</div>
-        <div class="card-content">
-          <div class="card-label">TICKET MÉDIO</div>
-          <div class="card-value" id="card-ticket">R$ 0,00</div>
-          <div class="card-delta" id="delta-revenue" style="font-size:12px; font-weight:700; margin-top:4px;"></div>
-        </div>
-      </div>
-
-      <!-- Card Total Pedidos -->
-      <div class="premium-card pedidos-card">
-        <div class="card-icon">📦</div>
-        <div class="card-content">
-          <div class="card-label">TOTAL DE PEDIDOS</div>
-          <div class="card-value" id="card-orders">0</div>
-          <div class="card-delta" id="delta-revenue" style="font-size:12px; font-weight:700; margin-top:4px;"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- GRÁFICO DE INSIGHTS -->
-    <div class="results-premium-chart-section chart-full-width insights-chart-section">
-      <h3>💡 Insights do Período</h3>
-      <div class="chart-container chart-container-large">
-        <canvas id="insightsChart"></canvas>
-      </div>
-      <div class="insights-legend">
-        <p class="muted" style="font-size: 13px; text-align: center; margin-top: 16px;">
-          👆 Clique nos cards acima para destacar a métrica no gráfico
-        </p>
-      </div>
-    </div>
-
-<!-- CARDS DE RETENÇÃO E ENGAJAMENTO -->
-<div class="results-premium-cards" style="margin-top:0;">
-
-  <!-- Taxa de Retorno -->
-  <div class="premium-card" style="background:linear-gradient(135deg,rgba(34,197,94,0.15),rgba(34,197,94,0.05)); border:1px solid rgba(34,197,94,0.3);">
-    <div class="card-icon">🔁</div>
-    <div class="card-content">
-      <div class="card-label">TAXA DE RETORNO</div>
-      <div class="card-value" id="card-retorno">0%</div>
-      <div class="card-delta" id="delta-retorno" style="font-size:11px; font-weight:700; margin-top:2px;"></div>
-    </div>
+<!-- ========================================
+     🔥 RESULTS VIEW - DASHBOARD COMPLETO
+======================================== -->
+<main class="results-view hidden" id="results-view">
+  <div class="results-header">
+    <h2>Dashboard de Resultados</h2>
+    <p class="results-subtitle">Análise completa de performance e ROI</p>
   </div>
 
-  <!-- Frequência Média -->
-  <div class="premium-card" style="background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(139,92,246,0.05)); border:1px solid rgba(139,92,246,0.3);">
-    <div class="card-icon">🔄</div>
-    <div class="card-content">
-      <div class="card-label">FREQUÊNCIA MÉDIA</div>
-      <div class="card-value" id="card-frequencia">0x</div>
-      <div class="card-delta" id="delta-frequencia" style="font-size:11px; font-weight:700; margin-top:2px;"></div>
-      <div class="card-sublabel">pedidos por cliente</div>
-    </div>
+  <!-- FILTROS DE PERÍODO -->
+  <div class="results-period-selector">
+    <button class="period-btn" data-period="3d">3D</button>
+    <button class="period-btn" data-period="7d">7D</button>
+    <button class="period-btn" data-period="15d">15D</button>
+    <button class="period-btn active" data-period="30d">30D</button>
+    <button class="period-btn" data-period="90d">90D</button>
+    <button class="period-btn" data-period="all">Todo</button>
   </div>
 
-  <!-- Clientes Inativos -->
-  <div class="premium-card" style="background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.05)); border:1px solid rgba(239,68,68,0.3);">
-    <div class="card-icon">💤</div>
-    <div class="card-content">
-      <div class="card-label">CLIENTES INATIVOS</div>
-      <div style="display:flex; gap:12px; margin-top:6px;">
-        <div style="text-align:center;">
-          <div style="font-size:20px; font-weight:900; color:rgba(252,228,228,1);" id="inativos-7">0</div>
-          <div style="font-size:10px; color:rgba(252,228,228,0.4); font-weight:700;">7 dias</div>
-        </div>
-        <div style="text-align:center;">
-          <div style="font-size:20px; font-weight:900; color:rgba(252,228,228,1);" id="inativos-15">0</div>
-          <div style="font-size:10px; color:rgba(252,228,228,0.4); font-weight:700;">15 dias</div>
-        </div>
-        <div style="text-align:center;">
-          <div style="font-size:20px; font-weight:900; color:rgba(252,228,228,1);" id="inativos-30">0</div>
-          <div style="font-size:10px; color:rgba(252,228,228,0.4); font-weight:700;">30 dias</div>
-        </div>
+  <!-- LINHA 1: FATURAMENTO, ROI, TICKET, PEDIDOS -->
+  <div class="results-premium-cards">
+    <div class="premium-card faturamento-card">
+      <div class="card-icon">💰</div>
+      <div class="card-content">
+        <div class="card-label">FATURAMENTO TOTAL</div>
+        <div class="card-value" id="card-revenue">R$ 0,00</div>
+        <div class="card-delta" id="delta-revenue" style="font-size:11px; font-weight:700; margin-top:2px; white-space:nowrap; overflow:hidden;"></div>
+      </div>
+    </div>
+
+    <div class="premium-card roi-card">
+      <div class="card-icon">📊</div>
+      <div class="card-content">
+        <div class="card-label">ROI DO SISTEMA</div>
+        <div class="card-value" id="card-roi">0x</div>
+        <div class="card-sublabel">Sobre <span id="card-plan-price">R$ 0</span></div>
+        <div class="card-delta" id="delta-roi" style="font-size:11px; font-weight:700; margin-top:2px; white-space:nowrap; overflow:hidden;"></div>
+      </div>
+    </div>
+
+    <div class="premium-card ticket-card">
+      <div class="card-icon">💳</div>
+      <div class="card-content">
+        <div class="card-label">TICKET MÉDIO</div>
+        <div class="card-value" id="card-ticket">R$ 0,00</div>
+        <div class="card-delta" id="delta-ticket" style="font-size:11px; font-weight:700; margin-top:2px; white-space:nowrap; overflow:hidden;"></div>
+      </div>
+    </div>
+
+    <div class="premium-card pedidos-card">
+      <div class="card-icon">📦</div>
+      <div class="card-content">
+        <div class="card-label">TOTAL DE PEDIDOS</div>
+        <div class="card-value" id="card-orders">0</div>
+        <div class="card-delta" id="delta-orders" style="font-size:11px; font-weight:700; margin-top:2px; white-space:nowrap; overflow:hidden;"></div>
       </div>
     </div>
   </div>
 
-  <!-- Próximos da Recompensa -->
-  <div class="premium-card" style="background:linear-gradient(135deg,rgba(251,191,36,0.15),rgba(251,191,36,0.05)); border:1px solid rgba(251,191,36,0.3);">
-    <div class="card-icon">🎁</div>
-    <div class="card-content">
-      <div class="card-label">PRÓXIMOS DA RECOMPENSA</div>
-      <div class="card-value" id="card-recompensa">0</div>
-      <div class="card-sublabel">clientes a 80% do prêmio</div>
+  <!-- GRÁFICO DE INSIGHTS -->
+  <div class="results-premium-chart-section chart-full-width insights-chart-section">
+    <h3>💡 Insights do Período</h3>
+    <div class="chart-container chart-container-large">
+      <canvas id="insightsChart"></canvas>
+    </div>
+    <div class="insights-legend">
+      <p class="muted" style="font-size:13px; text-align:center; margin-top:16px;">
+        👆 Clique nos cards acima para destacar a métrica no gráfico
+      </p>
     </div>
   </div>
 
-</div>
-    
-    <!-- GRID DE GRÁFICOS (2x2) -->
-    <div class="results-charts-grid">
-      
-      <!-- GRÁFICO 1: ORIGEM DOS PEDIDOS -->
-      <div class="results-premium-chart-section">
-        <h3>📊 Origem dos Pedidos</h3>
-        <div class="chart-container">
-          <canvas id="originChart"></canvas>
-        </div>
-      </div>
+  <!-- LINHA 2: COMPORTAMENTO DOS CLIENTES -->
+  <div class="results-premium-cards" style="margin-top:0;">
 
-      <!-- GRÁFICO 2: DELIVERY VS LOCAL -->
-      <div class="results-premium-chart-section">
-        <h3>🚚 Tipo de Serviço</h3>
-        <div class="chart-container">
-          <canvas id="serviceChart"></canvas>
-        </div>
+    <div class="premium-card" style="background:linear-gradient(135deg,rgba(34,197,94,0.15),rgba(34,197,94,0.05)); border:1px solid rgba(34,197,94,0.3);">
+      <div class="card-icon">🔁</div>
+      <div class="card-content">
+        <div class="card-label">TAXA DE RETORNO</div>
+        <div class="card-value" id="card-retorno">0%</div>
+        <div class="card-delta" id="delta-retorno" style="font-size:11px; font-weight:700; margin-top:2px;"></div>
       </div>
+    </div>
 
-      <!-- GRÁFICO 3: PERFORMANCE IA (CARD) -->
-      <div class="results-premium-chart-section performance-ia-card">
-        <h3>🤖 Performance da IA</h3>
-        <div class="chart-container">
-          <div class="ia-stats">
-            <div class="ia-stat-item">
-              <div class="ia-stat-label">Pedidos da IA</div>
-              <div class="ia-stat-value" id="ia-orders">0</div>
-            </div>
-            <div class="ia-stat-item">
-              <div class="ia-stat-label">Faturamento IA</div>
-              <div class="ia-stat-value" id="ia-revenue">R$ 0,00</div>
-            </div>
-            <div class="ia-stat-item">
-              <div class="ia-stat-label">% do Total</div>
-              <div class="ia-stat-value ia-percentage" id="ia-percentage">0%</div>
-            </div>
+    <div class="premium-card" style="background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(139,92,246,0.05)); border:1px solid rgba(139,92,246,0.3);">
+      <div class="card-icon">🔄</div>
+      <div class="card-content">
+        <div class="card-label">FREQUÊNCIA MÉDIA</div>
+        <div class="card-value" id="card-frequencia">0x</div>
+        <div class="card-delta" id="delta-frequencia" style="font-size:11px; font-weight:700; margin-top:2px;"></div>
+        <div class="card-sublabel">pedidos por cliente</div>
+      </div>
+    </div>
+
+    <div class="premium-card" style="background:linear-gradient(135deg,rgba(59,130,246,0.15),rgba(59,130,246,0.05)); border:1px solid rgba(59,130,246,0.3);">
+      <div class="card-icon">👥</div>
+      <div class="card-content">
+        <div class="card-label">CLIENTES ÚNICOS</div>
+        <div class="card-value" id="card-unique-clients">0</div>
+        <div class="card-delta" id="delta-unique-clients" style="font-size:11px; font-weight:700; margin-top:2px;"></div>
+      </div>
+    </div>
+
+    <div class="premium-card" style="background:linear-gradient(135deg,rgba(251,191,36,0.15),rgba(251,191,36,0.05)); border:1px solid rgba(251,191,36,0.3);">
+      <div class="card-icon">🔂</div>
+      <div class="card-content">
+        <div class="card-label">CLIENTES RECORRENTES</div>
+        <div class="card-value" id="card-recurring-clients">0</div>
+        <div class="card-sublabel" id="card-recurring-pct">0% da base</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- GRID DE GRÁFICOS -->
+  <div class="results-charts-grid">
+
+    <div class="results-premium-chart-section">
+      <h3>📊 Origem dos Pedidos</h3>
+      <div class="chart-container">
+        <canvas id="originChart"></canvas>
+      </div>
+    </div>
+
+    <div class="results-premium-chart-section">
+      <h3>🚚 Tipo de Serviço</h3>
+      <div class="chart-container">
+        <canvas id="serviceChart"></canvas>
+      </div>
+    </div>
+
+    <!-- PERFORMANCE IA REFORMULADO -->
+    <div class="results-premium-chart-section performance-ia-card">
+      <h3>🤖 Performance da IA</h3>
+      <div class="chart-container">
+        <div class="ia-stats">
+          <div class="ia-stat-item">
+            <div class="ia-stat-label">Pedidos da IA</div>
+            <div class="ia-stat-value" id="ia-orders">0</div>
+          </div>
+          <div class="ia-stat-item">
+            <div class="ia-stat-label">Faturamento IA</div>
+            <div class="ia-stat-value" id="ia-revenue">R$ 0,00</div>
+          </div>
+          <div class="ia-stat-item">
+            <div class="ia-stat-label">% do Total</div>
+            <div class="ia-stat-value ia-percentage" id="ia-percentage">0%</div>
           </div>
         </div>
       </div>
-
-      <!-- GRÁFICO 4: BASE DE CLIENTES -->
-      <div class="results-premium-chart-section">
-        <h3>👥 Base de Clientes</h3>
-        <div class="chart-container">
-          <canvas id="clientsChart"></canvas>
-        </div>
-      </div>
-
     </div>
 
-    <!-- 🏆 PRODUTOS + 🕐 PICO (lado a lado) -->
-<div class="results-charts-grid">
-  <div class="results-premium-chart-section">
-    <h3>🏆 Produtos Mais Vendidos</h3>
-    <div class="chart-container chart-container-large">
-      <canvas id="topProductsChart"></canvas>
-    </div>
-  </div>
-
-  <div class="results-premium-chart-section">
-    <h3>🕐 Pico de Vendas por Horário</h3>
-    <div class="chart-container chart-container-large">
-      <canvas id="peakHoursChart"></canvas>
-    </div>
-  </div>
-</div>
-
-<!-- ⏱️ TEMPO MÉDIO POR ETAPA -->
-<div class="results-premium-chart-section chart-full-width">
-  <h3>⏱️ Tempo Médio por Etapa</h3>
-  <div class="chart-container chart-container-large">
-    <canvas id="timingChart"></canvas>
-  </div>
-  <div class="timing-metas-info">
-    <span class="meta-badge meta-ok">✅ Dentro da meta</span>
-    <span class="meta-badge meta-warn">🔴 Acima da meta</span>
-    <small class="muted">Metas: Confirmação 5min · Preparo 15min · Montagem 8min · Entrega 20min</small>
-  </div>
-</div>
-    
-    <!-- STATUS OPERACIONAL (FULL WIDTH) -->
-    <div class="results-premium-chart-section chart-full-width">
+    <!-- STATUS OPERACIONAL -->
+    <div class="results-premium-chart-section">
       <h3>⚡ Status Operacional</h3>
-      <div class="chart-container chart-container-large">
+      <div class="chart-container">
         <canvas id="statusChart"></canvas>
       </div>
     </div>
 
-  </main>
+  </div>
 
-<!-- CARDÁPIO VIEW -->
-<main class="crm-view hidden" id="cardapio-view">
-  <div class="crm-header">
-    <div class="crm-title">🍽️ Cardápio</div>
-    <button class="ghost-button" type="button" id="cardapio-back-btn">Voltar</button>
+  <!-- PRODUTOS + HORÁRIO -->
+  <div class="results-charts-grid">
+    <div class="results-premium-chart-section">
+      <h3>🏆 Produtos Mais Vendidos</h3>
+      <div class="chart-container chart-container-large">
+        <canvas id="topProductsChart"></canvas>
+      </div>
+    </div>
+    <div class="results-premium-chart-section">
+      <h3>🕐 Pico de Vendas por Horário</h3>
+      <div class="chart-container chart-container-large">
+        <canvas id="peakHoursChart"></canvas>
+      </div>
+    </div>
   </div>
-  <div class="crm-content">
-    <button class="primary-button" id="btn-novo-item-cardapio" style="margin-bottom:20px;">+ Novo Item</button>
-    <div id="lista-cardapio-view"></div>
+
+  <!-- TEMPO MÉDIO POR ETAPA — 4 MINI CARDS -->
+  <div class="results-premium-chart-section chart-full-width">
+    <h3>⏱️ Tempo Médio por Etapa</h3>
+    <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:8px;">
+      <div style="text-align:center; padding:16px 10px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:12px;" id="timing-card-confirmacao">
+        <div style="font-size:26px; font-weight:900;" id="timing-val-confirmacao">—</div>
+        <div style="font-size:12px; font-weight:700; margin-top:4px; opacity:0.8;">Confirmação</div>
+        <div style="font-size:11px; margin-top:2px; opacity:0.5;">meta: 5 min</div>
+      </div>
+      <div style="text-align:center; padding:16px 10px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:12px;" id="timing-card-preparo">
+        <div style="font-size:26px; font-weight:900;" id="timing-val-preparo">—</div>
+        <div style="font-size:12px; font-weight:700; margin-top:4px; opacity:0.8;">Preparo</div>
+        <div style="font-size:11px; margin-top:2px; opacity:0.5;">meta: 15 min</div>
+      </div>
+      <div style="text-align:center; padding:16px 10px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:12px;" id="timing-card-montagem">
+        <div style="font-size:26px; font-weight:900;" id="timing-val-montagem">—</div>
+        <div style="font-size:12px; font-weight:700; margin-top:4px; opacity:0.8;">Montagem</div>
+        <div style="font-size:11px; margin-top:2px; opacity:0.5;">meta: 8 min</div>
+      </div>
+      <div style="text-align:center; padding:16px 10px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:12px;" id="timing-card-entrega">
+        <div style="font-size:26px; font-weight:900;" id="timing-val-entrega">—</div>
+        <div style="font-size:12px; font-weight:700; margin-top:4px; opacity:0.8;">Entrega</div>
+        <div style="font-size:11px; margin-top:2px; opacity:0.5;">meta: 20 min</div>
+      </div>
+    </div>
   </div>
+
 </main>
 
 <!-- FIDELIDADE VIEW -->
