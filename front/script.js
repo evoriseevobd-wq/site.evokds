@@ -1499,14 +1499,10 @@ async function openClientDetailsModal(client) {
   const rid = getRestaurantId();
   if (!rid) return;
 
-  try {
-    // Busca todos os pedidos do cliente
-    const resp = await fetch(`${API_URL}/${rid}`);
-    const allOrders = await resp.json();
-    
-    const clientOrders = allOrders.filter(o => 
-      normalizePhone(o.client_phone) === normalizePhone(client.client_phone)
-    );
+try {
+    const phoneNorm = normalizePhone(client.client_phone);
+    const resp = await fetch(`${API_BASE}/api/v1/pedidos-cliente?restaurant_id=${rid}&phone=${phoneNorm}`);
+    const clientOrders = await resp.json();
 
     // Cria modal
     const existing = document.getElementById("client-details-modal");
