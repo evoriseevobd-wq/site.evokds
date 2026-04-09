@@ -2972,8 +2972,12 @@ async function fetchCardapio() {
 }
 
 function renderCardapio() {
-  const lista = document.getElementById("lista-cardapio-view") || document.getElementById("lista-cardapio");
-  if (!lista) return;
+ const lista = document.getElementById("lista-cardapio-view") || document.getElementById("lista-cardapio");
+if (!lista) {
+  console.error("❌ Elemento da lista do cardápio não encontrado no HTML. IDs testados: lista-cardapio-view, lista-cardapio");
+  return;
+}
+console.log("✅ lista encontrada:", lista.id);
 
   if (cardapioItems.length === 0) {
     lista.innerHTML = `<p style="color:rgba(252,228,228,0.5); text-align:center; padding:40px 0;">Nenhum item cadastrado. Clique em "+ Novo Item" para começar.</p>`;
