@@ -3730,53 +3730,24 @@ async function salvarFiscal() {
 }
 
 // ===== FECHAMENTO DE CAIXA =====
-function showResumoDia() {
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-
-  const pedidosHoje = orders.filter(o =>
-    new Date(o.created_at) >= hoje && o._frontStatus === "finalizado"
-  );
-
-  const totalPedidos = pedidosHoje.length;
-  const faturamento = pedidosHoje.reduce((s, o) => s + (parseFloat(o.total_price) || 0), 0);
-  const ticketMedio = totalPedidos > 0 ? faturamento / totalPedidos : 0;
-
-  const cancelados = orders.filter(o =>
-    new Date(o.created_at) >= hoje && o._frontStatus === "cancelado"
-  ).length;
-
-  const delivery = pedidosHoje.filter(o =>
-    String(o.service_type || "").toLowerCase() === "delivery"
-  ).length;
-  const local = pedidosHoje.filter(o =>
-    String(o.service_type || "").toLowerCase() !== "delivery"
-  ).length;
-
-  const porPagamento = {};
-  pedidosHoje.forEach(o => {
-    const m = o.payment_method || "Não informado";
-    if (!porPagamento[m]) porPagamento[m] = { qtd: 0, valor: 0 };
-    porPagamento[m].qtd++;
-    porPagamento[m].valor += parseFloat(o.total_price) || 0;
-  });
-
-  const topItens = {};
-  pedidosHoje.forEach(o => {
-    (o.itens || []).forEach(it => {
-      const nome = it.name || it.nome || "?";
-      topItens[nome] = (topItens[nome] || 0) + (it.qty || it.quantidade || 1);
-    });
-  });
-  const topSorted = Object.entries(topItens).sort((a, b) => b[1] - a[1]).slice(0, 5);
-
+async function showResumoDia() {
+  const rid = getRestaurantId();
+  if (!rid) return;
+  let d;
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/metrics/${rid}/resumo-dia`);
+    d = await resp.json();
+    if (!resp.ok) throw new Error();
+  } catch(e) {
+    console.error("Erro resumo dia:", e);
+    return;
+  }
+  const hoje = new Date(d.data);
   const existing = document.getElementById("resumo-dia-modal");
   if (existing) existing.remove();
-
   const modal = document.createElement("div");
   modal.id = "resumo-dia-modal";
   modal.className = "modal-backdrop open";
-
   modal.innerHTML = `
     <div class="modal confirm-modal" style="max-width:600px; max-height:90vh; overflow-y:auto;">
       <div class="modal-header">
@@ -3788,50 +3759,43 @@ function showResumoDia() {
         </div>
         <button class="icon-button" onclick="document.getElementById('resumo-dia-modal').remove()">×</button>
       </div>
-
       <div class="modal-body" style="gap:16px;">
-
-        <!-- CARDS PRINCIPAIS -->
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
           <div style="background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.4); border-radius:14px; padding:16px; text-align:center;">
             <div style="font-size:10px; font-weight:700; color:rgba(34,197,94,0.8); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Pedidos Finalizados</div>
-            <div style="font-size:34px; font-weight:900; color:rgba(34,197,94,1); font-family:'Space Grotesk',sans-serif;">${totalPedidos}</div>
+            <div style="font-size:34px; font-weight:900; color:rgba(34,197,94,1); font-family:'Space Grotesk',sans-serif;">${d.total_pedidos}</div>
           </div>
           <div style="background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.4); border-radius:14px; padding:16px; text-align:center;">
             <div style="font-size:10px; font-weight:700; color:rgba(251,191,36,0.8); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Faturamento Total</div>
-            <div style="font-size:26px; font-weight:900; color:rgba(251,191,36,1); font-family:'Space Grotesk',sans-serif;">${formatCurrency(faturamento)}</div>
+            <div style="font-size:26px; font-weight:900; color:rgba(251,191,36,1); font-family:'Space Grotesk',sans-serif;">${formatCurrency(d.faturamento)}</div>
           </div>
           <div style="background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.4); border-radius:14px; padding:16px; text-align:center;">
             <div style="font-size:10px; font-weight:700; color:rgba(59,130,246,0.8); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Ticket Médio</div>
-            <div style="font-size:26px; font-weight:900; color:rgba(59,130,246,1); font-family:'Space Grotesk',sans-serif;">${formatCurrency(ticketMedio)}</div>
+            <div style="font-size:26px; font-weight:900; color:rgba(59,130,246,1); font-family:'Space Grotesk',sans-serif;">${formatCurrency(d.ticket_medio)}</div>
           </div>
           <div style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.4); border-radius:14px; padding:16px; text-align:center;">
             <div style="font-size:10px; font-weight:700; color:rgba(239,68,68,0.8); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Cancelados</div>
-            <div style="font-size:34px; font-weight:900; color:rgba(239,68,68,1); font-family:'Space Grotesk',sans-serif;">${cancelados}</div>
+            <div style="font-size:34px; font-weight:900; color:rgba(239,68,68,1); font-family:'Space Grotesk',sans-serif;">${d.cancelados}</div>
           </div>
         </div>
-
-        <!-- DELIVERY VS LOCAL -->
         <div style="background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:14px; padding:16px;">
           <div style="font-size:11px; font-weight:700; color:rgba(252,228,228,0.5); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">🚚 Tipo de Pedido</div>
           <div style="display:flex; gap:12px;">
             <div style="flex:1; text-align:center; padding:10px; background:rgba(251,191,36,0.1); border-radius:10px; border:1px solid rgba(251,191,36,0.3);">
               <div style="font-size:10px; color:rgba(251,191,36,0.8); font-weight:700; margin-bottom:4px;">DELIVERY</div>
-              <div style="font-size:24px; font-weight:900; color:rgba(251,191,36,1);">${delivery}</div>
+              <div style="font-size:24px; font-weight:900; color:rgba(251,191,36,1);">${d.delivery}</div>
             </div>
             <div style="flex:1; text-align:center; padding:10px; background:rgba(139,92,246,0.1); border-radius:10px; border:1px solid rgba(139,92,246,0.3);">
               <div style="font-size:10px; color:rgba(139,92,246,0.8); font-weight:700; margin-bottom:4px;">LOCAL</div>
-              <div style="font-size:24px; font-weight:900; color:rgba(139,92,246,1);">${local}</div>
+              <div style="font-size:24px; font-weight:900; color:rgba(139,92,246,1);">${d.local}</div>
             </div>
           </div>
         </div>
-
-        <!-- POR FORMA DE PAGAMENTO -->
         <div style="background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:14px; padding:16px;">
           <div style="font-size:11px; font-weight:700; color:rgba(252,228,228,0.5); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">💳 Por Forma de Pagamento</div>
-          ${Object.entries(porPagamento).length === 0
+          ${Object.keys(d.por_pagamento).length === 0
             ? `<p style="color:var(--muted); font-size:13px;">Nenhum pedido finalizado hoje.</p>`
-            : Object.entries(porPagamento).map(([metodo, info]) => `
+            : Object.entries(d.por_pagamento).map(([metodo, info]) => `
               <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(91,28,28,0.4);">
                 <div>
                   <span style="font-weight:700; font-size:14px; color:rgba(252,228,228,0.95); text-transform:capitalize;">${metodo}</span>
@@ -3839,19 +3803,17 @@ function showResumoDia() {
                 </div>
                 <span style="font-weight:800; font-size:15px; color:rgba(251,191,36,1);">${formatCurrency(info.valor)}</span>
               </div>
-            `).join("")}
-          ${Object.entries(porPagamento).length > 0 ? `
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; margin-top:4px;">
-            <span style="font-weight:900; font-size:14px; color:rgba(252,228,228,0.95);">TOTAL</span>
-            <span style="font-weight:900; font-size:16px; color:rgba(34,197,94,1);">${formatCurrency(faturamento)}</span>
-          </div>` : ""}
+            `).join("") + `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; margin-top:4px;">
+              <span style="font-weight:900; font-size:14px; color:rgba(252,228,228,0.95);">TOTAL</span>
+              <span style="font-weight:900; font-size:16px; color:rgba(34,197,94,1);">${formatCurrency(d.faturamento)}</span>
+            </div>`
+          }
         </div>
-
-        <!-- TOP 5 ITENS -->
-        ${topSorted.length > 0 ? `
+        ${d.top_itens.length > 0 ? `
         <div style="background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:14px; padding:16px;">
           <div style="font-size:11px; font-weight:700; color:rgba(252,228,228,0.5); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">🏆 Itens Mais Vendidos</div>
-          ${topSorted.map(([nome, qty], i) => `
+          ${d.top_itens.map(({ nome, qty }, i) => `
             <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid rgba(91,28,28,0.3);">
               <div style="display:flex; align-items:center; gap:10px;">
                 <span style="font-size:11px; font-weight:900; color:rgba(252,228,228,0.3); width:16px;">${i + 1}</span>
@@ -3860,53 +3822,33 @@ function showResumoDia() {
               <span style="font-weight:800; font-size:13px; color:rgba(249,115,115,1);">${qty}x</span>
             </div>
           `).join("")}
-        </div>
-        ` : ""}
-
+        </div>` : ""}
       </div>
-
       <div class="modal-actions" style="justify-content:space-between;">
         <button class="ghost-button" onclick="exportarFechamentoPDF()">📄 Exportar PDF</button>
         <button class="ghost-button" onclick="document.getElementById('resumo-dia-modal').remove()">Fechar</button>
       </div>
     </div>
   `;
-
   document.body.appendChild(modal);
   modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
 }
 
-function exportarFechamentoPDF() {
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-
-  const pedidosHoje = orders.filter(o =>
-    new Date(o.created_at) >= hoje && o._frontStatus === "finalizado"
-  );
-
-  const faturamento = pedidosHoje.reduce((s, o) => s + (parseFloat(o.total_price) || 0), 0);
-  const ticketMedio = pedidosHoje.length > 0 ? faturamento / pedidosHoje.length : 0;
-
-  const porPagamento = {};
-  pedidosHoje.forEach(o => {
-    const m = o.payment_method || "Não informado";
-    if (!porPagamento[m]) porPagamento[m] = { qtd: 0, valor: 0 };
-    porPagamento[m].qtd++;
-    porPagamento[m].valor += parseFloat(o.total_price) || 0;
-  });
-
-  const topItens = {};
-  pedidosHoje.forEach(o => {
-    (o.itens || []).forEach(it => {
-      const nome = it.name || it.nome || "?";
-      topItens[nome] = (topItens[nome] || 0) + (it.qty || it.quantidade || 1);
-    });
-  });
-  const topSorted = Object.entries(topItens).sort((a, b) => b[1] - a[1]).slice(0, 5);
-
+async function exportarFechamentoPDF() {
+  const rid = getRestaurantId();
+  if (!rid) return;
+  let d;
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/metrics/${rid}/resumo-dia`);
+    d = await resp.json();
+    if (!resp.ok) throw new Error();
+  } catch(e) {
+    console.error("Erro ao exportar PDF:", e);
+    return;
+  }
+  const hoje = new Date(d.data);
   const dataStr = hoje.toLocaleDateString("pt-BR", { weekday:"long", day:"2-digit", month:"long", year:"numeric" });
   const nomeRestaurante = localStorage.getItem("restaurant_name") || "Restaurante";
-
   const html = `
     <html><head><title>Fechamento de Caixa - ${dataStr}</title>
     <style>
@@ -3919,7 +3861,7 @@ function exportarFechamentoPDF() {
       .card .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 6px; }
       .card .value { font-size: 26px; font-weight: 900; }
       table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-      th { text-align: left; padding: 10px 14px; background: #f5f5f5; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #ddd; }
+      th { text-align: left; padding: 10px 14px; background: #f5f5f5; font-size: 12px; text-transform: uppercase; border-bottom: 2px solid #ddd; }
       td { padding: 10px 14px; border-bottom: 1px solid #eee; font-size: 14px; }
       .total-row td { font-weight: 900; background: #f9f9f9; }
       h2 { font-size: 16px; margin-bottom: 12px; color: #333; }
@@ -3929,45 +3871,38 @@ function exportarFechamentoPDF() {
     <body>
       <h1>🧾 Fechamento de Caixa</h1>
       <div class="sub">${nomeRestaurante} · ${dataStr}</div>
-
       <div class="grid">
-        <div class="card"><div class="label">Pedidos</div><div class="value">${pedidosHoje.length}</div></div>
-        <div class="card"><div class="label">Faturamento</div><div class="value">${formatCurrency(faturamento)}</div></div>
-        <div class="card"><div class="label">Ticket Médio</div><div class="value">${formatCurrency(ticketMedio)}</div></div>
-        <div class="card"><div class="label">Cancelados</div><div class="value">${orders.filter(o => new Date(o.created_at) >= hoje && o._frontStatus === "cancelado").length}</div></div>
+        <div class="card"><div class="label">Pedidos</div><div class="value">${d.total_pedidos}</div></div>
+        <div class="card"><div class="label">Faturamento</div><div class="value">${formatCurrency(d.faturamento)}</div></div>
+        <div class="card"><div class="label">Ticket Médio</div><div class="value">${formatCurrency(d.ticket_medio)}</div></div>
+        <div class="card"><div class="label">Cancelados</div><div class="value">${d.cancelados}</div></div>
       </div>
-
       <h2>Por Forma de Pagamento</h2>
       <table>
         <thead><tr><th>Método</th><th>Pedidos</th><th>Valor</th></tr></thead>
         <tbody>
-          ${Object.entries(porPagamento).map(([m, i]) => `
+          ${Object.entries(d.por_pagamento).map(([m, i]) => `
             <tr><td style="text-transform:capitalize">${m}</td><td>${i.qtd}</td><td>${formatCurrency(i.valor)}</td></tr>
           `).join("")}
-          <tr class="total-row"><td>TOTAL</td><td>${pedidosHoje.length}</td><td>${formatCurrency(faturamento)}</td></tr>
+          <tr class="total-row"><td>TOTAL</td><td>${d.total_pedidos}</td><td>${formatCurrency(d.faturamento)}</td></tr>
         </tbody>
       </table>
-
-      ${topSorted.length > 0 ? `
+      ${d.top_itens.length > 0 ? `
       <h2>Top Itens do Dia</h2>
       <table>
         <thead><tr><th>#</th><th>Item</th><th>Qtd</th></tr></thead>
         <tbody>
-          ${topSorted.map(([nome, qty], i) => `<tr><td>${i+1}</td><td>${nome}</td><td>${qty}x</td></tr>`).join("")}
+          ${d.top_itens.map(({ nome, qty }, i) => `<tr><td>${i+1}</td><td>${nome}</td><td>${qty}x</td></tr>`).join("")}
         </tbody>
       </table>` : ""}
-
       <div class="footer">Gerado pelo FluxON · ${new Date().toLocaleString("pt-BR")}</div>
-
       <script>window.onload = function(){ window.print(); }<\/script>
     </body></html>
   `;
-
   const win = window.open('', '_blank', 'width=800,height=700');
   win.document.write(html);
   win.document.close();
 }
-
 
 function gerarQrCodes() {
   const qtd = parseInt(document.getElementById("input-mesas").value) || 10;
