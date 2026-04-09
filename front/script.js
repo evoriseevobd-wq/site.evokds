@@ -2688,42 +2688,35 @@ function normalizarNome(nome) {
   return String(nome || "").toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
 }
 
-function renderTopProductsChart(allOrders) {
+async function renderTopProductsChart() {
   const canvas = document.getElementById("topProductsChart");
   if (!canvas) return;
-  const days = resultsState.period === "all" ? 3650 : (parseInt(resultsState.period) || 30);
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days);
-  const ranking = {};
-  (allOrders || []).forEach(o => {
-    if (new Date(o.created_at) < startDate) return;
-    (o.itens || []).forEach(item => {
-      const nome = normalizarNome(item.name || item.nome || "");
-      if (!nome) return;
-      ranking[nome] = (ranking[nome] || 0) + (item.qty || item.quantidade || 1);
-    });
-  });
-  const sorted = Object.entries(ranking).sort((a, b) => b[1] - a[1]).slice(0, 10);
-  if (sorted.length === 0) return;
-  const labels = sorted.map(([nome]) => nome.charAt(0).toUpperCase() + nome.slice(1));
-  const valores = sorted.map(([, qty]) => qty);
-  const cores = ['rgba(251,191,36,0.85)','rgba(249,115,115,0.85)','rgba(139,92,246,0.85)','rgba(34,197,94,0.85)','rgba(59,130,246,0.85)','rgba(236,72,153,0.85)','rgba(251,191,36,0.6)','rgba(249,115,115,0.6)','rgba(139,92,246,0.6)','rgba(34,197,94,0.6)'];
-  if (topProductsChartInstance) topProductsChartInstance.destroy();
-  topProductsChartInstance = new Chart(canvas, {
-    type: 'bar',
-    data: { labels, datasets: [{ label: 'Unidades vendidas', data: valores, backgroundColor: cores, borderWidth: 2, borderRadius: 8, borderSkipped: false }] },
-    options: {
-      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: { backgroundColor: 'rgba(17,24,39,0.95)', titleColor: 'rgba(252,228,228,0.95)', bodyColor: 'rgba(252,228,228,0.8)', padding: 12, callbacks: { label: ctx => ` ${ctx.parsed.x} unidades` } }
-      },
-      scales: {
-        x: { beginAtZero: true, ticks: { color: 'rgba(252,228,228,0.7)', font: { family: 'Space Grotesk', size: 11 } }, grid: { color: 'rgba(249,115,115,0.08)' } },
-        y: { ticks: { color: 'rgba(252,228,228,0.9)', font: { family: 'Space Grotesk', size: 12, weight: '700' } }, grid: { display: false } }
+  const rid = getRestaurantId();
+  if (!rid) return;
+  try {
+    const resp = await fetch(`${METRICS_URL}/${rid}/top-products?period=${resultsState.period}`);
+    const data = await resp.json();
+    if (!resp.ok || !data.length) return;
+    const labels = data.map(i => i.nome);
+    const valores = data.map(i => i.qty);
+    const cores = ['rgba(251,191,36,0.85)','rgba(249,115,115,0.85)','rgba(139,92,246,0.85)','rgba(34,197,94,0.85)','rgba(59,130,246,0.85)','rgba(236,72,153,0.85)','rgba(251,191,36,0.6)','rgba(249,115,115,0.6)','rgba(139,92,246,0.6)','rgba(34,197,94,0.6)'];
+    if (topProductsChartInstance) topProductsChartInstance.destroy();
+    topProductsChartInstance = new Chart(canvas, {
+      type: 'bar',
+      data: { labels, datasets: [{ label: 'Unidades vendidas', data: valores, backgroundColor: cores, borderWidth: 2, borderRadius: 8, borderSkipped: false }] },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { backgroundColor: 'rgba(17,24,39,0.95)', titleColor: 'rgba(252,228,228,0.95)', bodyColor: 'rgba(252,228,228,0.8)', padding: 12, callbacks: { label: ctx => ` ${ctx.parsed.x} unidades` } }
+        },
+        scales: {
+          x: { beginAtZero: true, ticks: { color: 'rgba(252,228,228,0.7)', font: { family: 'Space Grotesk', size: 11 } }, grid: { color: 'rgba(249,115,115,0.08)' } },
+          y: { ticks: { color: 'rgba(252,228,228,0.9)', font: { family: 'Space Grotesk', size: 12, weight: '700' } }, grid: { display: false } }
+        }
       }
-    }
-  });
+    });
+  } catch(e) { console.error("Erro top products:", e); }
 }
 
 // 🕐 PICO DE VENDAS POR HORÁRIO
