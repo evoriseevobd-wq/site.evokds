@@ -312,7 +312,7 @@ const hadOrdersBefore = {};
 let recurringRevenue = 0;
 (currentOrders || []).forEach(order => {
   const phone = normalizePhone(order.client_phone);
-  if (phone && hadOrdersBefore[phone]) {
+  if (phone && (hadOrdersBefore[phone] || (ordersInPeriod[phone] || 0) >= 2)) {
     recurringRevenue += parseFloat(order.total_price) || 0;
   }
 });
