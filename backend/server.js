@@ -586,7 +586,14 @@ app.get("/crm/:restaurant_id", async (req, res) => {
 app.get("/orders/:restaurant_id", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
-    const { data, error } = await supabase.from("orders").select("*").eq("restaurant_id", restaurant_id).order("created_at", { ascending: true });
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 2);
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("restaurant_id", restaurant_id)
+      .gte("created_at", cutoff.toISOString())
+      .order("created_at", { ascending: true });
     if (error) return sendError(res, 500, "Erro ao listar pedidos");
     return res.json(data || []);
   } catch (err) {
@@ -1375,6 +1382,44 @@ app.get("/api/v1/metrics/:restaurant_id/timing", async (req, res) => {
       gargalos
     });
 
+  } catch (err) {
+    return sendError(res, 500, `Erro interno: ${err.message}`);
+  }
+});
+
+app.get("/api/v1/metrics/:restaurant_id/top-products", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { period = "30d" } = req.query;
+    const exists = await restaurantExists(restaurant_id);
+    if (!exists) return sendError(res, 404, "Restaurante não encontrado");
+    const plan = await getRestaurantPlan(restaurant_id);
+    if (!canUseResults(plan)) return res.status(403).json({ error: "Plano insuficiente" });
+    const days = period === "all" ? 3650 : (parseInt(period) || 30);
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    const { data: orders, error } = await supabase
+      .from("orders")
+      .select("itens")
+      .eq("restaurant_id", restaurant_id)
+      .gte("created_at", startDate.toISOString());
+    if (error) return sendError(res, 500, "Erro ao buscar pedidos");
+    const ranking = {};
+    (orders || []).forEach(order => {
+      (order.itens || []).forEach(item => {
+        const nome = String(item.name || item.nome || "")
+          .toLowerCase().trim()
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .replace(/\s+/g, " ");
+        if (!nome) return;
+        ranking[nome] = (ranking[nome] || 0) + (item.qty || item.quantidade || 1);
+      });
+    });
+    const sorted = Object.entries(ranking)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([nome, qty]) => ({ nome: nome.charAt(0).toUpperCase() + nome.slice(1), qty }));
+    return res.json(sorted);
   } catch (err) {
     return sendError(res, 500, `Erro interno: ${err.message}`);
   }
