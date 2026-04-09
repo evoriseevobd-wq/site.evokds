@@ -121,8 +121,8 @@ let currentView = "ativos";
 let orders = [];
 let activeOrderId = null;
 let isFetching = false;
-let _fetchController = null;
 let editingOrderId = null;
+let socket = null;
 
 let restaurantPlan = "basic";
 let restaurantPlanPrice = 1200; // Preço padrão
@@ -2127,7 +2127,34 @@ if (unauthClose) unauthClose.addEventListener("click", () => closeBackdrop(unaut
 // Polling de pedidos
 setInterval(fetchOrders, 5000);
 fetchOrders();
+  
+// Conecta WebSocket
+socket = io(API_BASE, { transports: ["websocket"] });
 
+socket.on("connect", () => {
+  const rid = getRestaurantId();
+  if (rid) {
+    socket.emit("join_restaurant", rid);
+    console.log("🔌 WebSocket conectado");
+  }
+});
+
+socket.on("order_updated", (order) => {
+  const idx = orders.findIndex(o => o.id === order.id);
+  if (idx !== -1) {
+    orders[idx] = { ...order, _frontStatus: toFrontStatus(order.status) };
+  } else {
+    orders.push({ ...order, _frontStatus: toFrontStatus(order.status) });
+  }
+  if (!modalBackdrop?.classList.contains("open") && !createModal?.classList.contains("open")) {
+    renderBoard();
+  }
+});
+
+socket.on("disconnect", () => {
+  console.log("❌ WebSocket desconectado");
+});
+  
 // Atualiza semáforo a cada 60s
 setInterval(() => {
   orders.forEach(o => {
