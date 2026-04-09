@@ -15,6 +15,13 @@ dotenv.config();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
 const PORT = process.env.PORT || 3001;
 const HOST = '0.0.0.0';
 
@@ -37,6 +44,25 @@ const supabase = createClient(
     console.error("❌ Erro Supabase:", err.message);
   }
 })();
+
+// ===== WEBSOCKET =====
+io.on("connection", (socket) => {
+  console.log(`🔌 Cliente conectado: ${socket.id}`);
+
+  socket.on("join_restaurant", (restaurant_id) => {
+    socket.join(restaurant_id);
+    console.log(`🏠 Socket ${socket.id} entrou na sala: ${restaurant_id}`);
+  });
+
+  socket.on("disconnect", () => {
+    console.log(`❌ Cliente desconectado: ${socket.id}`);
+  });
+});
+
+// Função global para emitir atualização de pedido
+export function emitOrderUpdate(restaurant_id, order) {
+  io.to(restaurant_id).emit("order_updated", order);
+}
 
 app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'], allowedHeaders: ['Content-Type', 'Authorization'] }));
 app.use((req, res, next) => {
@@ -2446,7 +2472,7 @@ app.use((req, res) => {
   res.status(404).json({ error: "Rota não encontrada" });
 });
 
-app.listen(PORT, HOST, () => {
+httpServer.listen(PORT, HOST, () => {
   console.log(`🚀 Fluxon Backend v4.0 DASHBOARD COMPLETO em http://${HOST}:${PORT}`);
   console.log(`✅ COM origin (IA/PDV/Balcão)`);
   console.log(`✅ SEM tracking_id`);
