@@ -2902,11 +2902,12 @@ renderComparison("delta-frequencia", data.comparison?.frequencia?.growth    || 0
   safeSetText("ia-orders", data.ia_performance?.orders || 0);
   safeSetText("ia-revenue", formatCurrency(data.ia_performance?.revenue || 0));
   safeSetText("ia-percentage", `${(data.ia_performance?.percentage || 0).toFixed(1)}%`);
+
+  const iaPedidosPct = data.total_orders > 0
+    ? ((data.ia_performance?.orders || 0) / data.total_orders * 100).toFixed(1)
+    : 0;
+  safeSetText("ia-orders-pct", `${iaPedidosPct}%`);
 }
-const iaPedidosPct = data.total_orders > 0
-  ? ((data.ia_performance?.orders || 0) / data.total_orders * 100).toFixed(1)
-  : 0;
-safeSetText("ia-orders-pct", `${iaPedidosPct}%`);
 
 function renderComparison(elementId, percentage) {
   const el = document.getElementById(elementId);
