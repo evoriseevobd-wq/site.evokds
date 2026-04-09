@@ -1479,6 +1479,26 @@ app.get("/api/v1/metrics/:restaurant_id/resumo-dia", async (req, res) => {
   }
 });
 
+app.get("/api/v1/pedidos-cliente", async (req, res) => {
+  try {
+    const { restaurant_id, phone } = req.query;
+    if (!restaurant_id || !phone) return sendError(res, 400, "restaurant_id e phone são obrigatórios");
+    const phoneNorm = normalizePhone(phone);
+    if (!phoneNorm) return sendError(res, 400, "Telefone inválido");
+    const { data, error } = await supabase
+      .from("orders")
+      .select("id, order_number, itens, total_price, created_at, status, service_type, payment_method")
+      .eq("restaurant_id", restaurant_id)
+      .eq("client_phone", phoneNorm)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) return sendError(res, 500, "Erro ao buscar pedidos");
+    return res.json(data || []);
+  } catch (err) {
+    return sendError(res, 500, `Erro interno: ${err.message}`);
+  }
+});
+
 // GET - Lista cardápio do restaurante
 app.get("/api/v1/cardapio/:restaurant_id", async (req, res) => {
   const { restaurant_id } = req.params;
