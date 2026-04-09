@@ -667,6 +667,7 @@ app.patch("/orders/:id/status", async (req, res) => {
       .single();
     
    if (error || !data) return sendError(res, 500, "Erro ao atualizar pedido");
+    emitOrderUpdate(data.restaurant_id, data);
 
     // Agenda webhook de satisfação 2h após finalizar
     if (status === "finished" || status === "delivered") {
@@ -861,6 +862,7 @@ return res.status(201).json({
   tracking_code: trackingCode,
   tracking_link: trackingLink
 });  
+  emitOrderUpdate(restaurant_id, resultData);
 
   } catch (err) {
     console.error("❌ Erro em /api/v1/pedidos:", err);
