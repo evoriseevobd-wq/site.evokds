@@ -296,15 +296,28 @@ orders_by_origin: {
     });
 
     // Verifica se cliente tinha pedidos ANTES do período
-    const hadOrdersBefore = {};
-    (allOrders || []).forEach(order => {
-      const phone = normalizePhone(order.client_phone);
-      const orderDate = new Date(order.created_at);
-      if (phone && orderDate < currentStart) {
-        hadOrdersBefore[phone] = true;
-      }
-    });
+   const ninetyDaysBeforeStart = new Date(currentStart);
+ninetyDaysBeforeStart.setDate(ninetyDaysBeforeStart.getDate() - 90);
 
+const hadOrdersBefore = {};
+(allOrders || []).forEach(order => {
+  const phone = normalizePhone(order.client_phone);
+  const orderDate = new Date(order.created_at);
+  if (phone && orderDate < currentStart && orderDate >= ninetyDaysBeforeStart) {
+    hadOrdersBefore[phone] = true;
+  }
+});
+
+// Faturamento recorrente — soma pedidos do período de clientes que já compraram antes
+let recurringRevenue = 0;
+(currentOrders || []).forEach(order => {
+  const phone = normalizePhone(order.client_phone);
+  if (phone && hadOrdersBefore[phone]) {
+    recurringRevenue += parseFloat(order.total_price) || 0;
+  }
+});
+metrics.recurring_revenue = recurringRevenue;
+    
     // Classifica clientes
     uniquePhones.forEach(phone => {
       const ordersCount = ordersInPeriod[phone] || 0;
