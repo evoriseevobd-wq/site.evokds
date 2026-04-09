@@ -1425,6 +1425,60 @@ app.get("/api/v1/metrics/:restaurant_id/top-products", async (req, res) => {
   }
 });
 
+app.get("/api/v1/metrics/:restaurant_id/resumo-dia", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const exists = await restaurantExists(restaurant_id);
+    if (!exists) return sendError(res, 404, "Restaurante não encontrado");
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const amanha = new Date(hoje);
+    amanha.setDate(amanha.getDate() + 1);
+    const { data: orders, error } = await supabase
+      .from("orders").select("*")
+      .eq("restaurant_id", restaurant_id)
+      .gte("created_at", hoje.toISOString())
+      .lt("created_at", amanha.toISOString());
+    if (error) return sendError(res, 500, "Erro ao buscar pedidos");
+    const finalizados = (orders || []).filter(o => o.status === "finished");
+    const cancelados = (orders || []).filter(o => o.status === "canceled" || o.status === "cancelled");
+    const faturamento = finalizados.reduce((s, o) => s + (parseFloat(o.total_price) || 0), 0);
+    const ticketMedio = finalizados.length > 0 ? faturamento / finalizados.length : 0;
+    const delivery = finalizados.filter(o => String(o.service_type || "").toLowerCase() === "delivery").length;
+    const local = finalizados.filter(o => String(o.service_type || "").toLowerCase() !== "delivery").length;
+    const porPagamento = {};
+    finalizados.forEach(o => {
+      const m = o.payment_method || "Não informado";
+      if (!porPagamento[m]) porPagamento[m] = { qtd: 0, valor: 0 };
+      porPagamento[m].qtd++;
+      porPagamento[m].valor += parseFloat(o.total_price) || 0;
+    });
+    const topItens = {};
+    finalizados.forEach(o => {
+      (o.itens || []).forEach(it => {
+        const nome = it.name || it.nome || "?";
+        topItens[nome] = (topItens[nome] || 0) + (it.qty || it.quantidade || 1);
+      });
+    });
+    const topSorted = Object.entries(topItens)
+      .sort((a, b) => b[1] - a[1]).slice(0, 5)
+      .map(([nome, qty]) => ({ nome, qty }));
+    return res.json({
+      data: hoje.toISOString(),
+      total_pedidos: finalizados.length,
+      faturamento,
+      ticket_medio: ticketMedio,
+      cancelados: cancelados.length,
+      delivery,
+      local,
+      por_pagamento: porPagamento,
+      top_itens: topSorted
+    });
+  } catch (err) {
+    return sendError(res, 500, `Erro interno: ${err.message}`);
+  }
+});
+
 // GET - Lista cardápio do restaurante
 app.get("/api/v1/cardapio/:restaurant_id", async (req, res) => {
   const { restaurant_id } = req.params;
@@ -1458,6 +1512,8 @@ app.get("/api/v1/cardapio/:restaurant_id/busca", async (req, res) => {
   if (error) return sendError(res, 500, "Erro ao buscar itens");
   return res.json(data || []);
 });
+
+
 
 // POST - Cria item no cardápio
 app.post("/api/v1/cardapio", async (req, res) => {
