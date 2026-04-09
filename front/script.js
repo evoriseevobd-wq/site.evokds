@@ -2909,7 +2909,7 @@ renderComparison("delta-frequencia", data.comparison?.frequencia?.growth    || 0
   fetchAndRenderInsights();
   console.log("✅ Métricas renderizadas com sucesso!");
   fetchAndRenderTiming();
-  renderTopProductsChart(orders);
+renderTopProductsChart();
   renderPeakHoursChart(orders);
 
   // Performance IA
