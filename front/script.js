@@ -121,6 +121,7 @@ let currentView = "ativos";
 let orders = [];
 let activeOrderId = null;
 let isFetching = false;
+let _fetchController = null;
 let editingOrderId = null;
 
 let restaurantPlan = "basic";
@@ -625,9 +626,11 @@ async function fetchOrders() {
   const rid = getRestaurantId();
   if (!rid || isFetching) return;
 
-  isFetching = true;
-  try {
-    const resp = await fetch(`${API_URL}/${rid}`);
+ isFetching = true;
+if (_fetchController) _fetchController.abort();
+_fetchController = new AbortController();
+try {
+    const resp = await fetch(`${API_URL}/${rid}`, { signal: _fetchController.signal });
     if (!resp.ok) throw new Error("Erro ao buscar pedidos");
     
     const data = await resp.json();
@@ -643,8 +646,8 @@ async function fetchOrders() {
     } else if (!resultsView?.classList.contains("hidden")) {
       // Não renderiza (metrics já atualiza sozinho)
     }
-  } catch (e) {
-    console.error("Polling Error:", e);
+ } catch (e) {
+    if (e.name !== "AbortError") console.error("Polling Error:", e);
   } finally {
     isFetching = false;
     if (!modalBackdrop?.classList.contains("open") && !createModal?.classList.contains("open")) {
@@ -1586,7 +1589,8 @@ async function fetchAndRenderMetrics() {
   const rid = getRestaurantId();
   if (!rid) return;
 
-  try {
+ try {
+    destroyAllCharts();
     // Converte período para query
     let queryPeriod = resultsState.period;
     if (queryPeriod === "all") {
@@ -2153,6 +2157,23 @@ let originChartInstance = null;
 let serviceChartInstance = null;
 let clientsChartInstance = null;
 let statusChartInstance = null;
+
+function destroyAllCharts() {
+  [
+    originChartInstance, serviceChartInstance,
+    clientsChartInstance, statusChartInstance,
+    insightsChartInstance, timingChartInstance,
+    topProductsChartInstance, peakHoursChartInstance
+  ].forEach(c => { if (c) { c.destroy(); } });
+  originChartInstance = null;
+  serviceChartInstance = null;
+  clientsChartInstance = null;
+  statusChartInstance = null;
+  insightsChartInstance = null;
+  timingChartInstance = null;
+  topProductsChartInstance = null;
+  peakHoursChartInstance = null;
+}
 
 // Função principal para renderizar TODOS os gráficos
 function renderAllCharts(data) {
@@ -3363,45 +3384,6 @@ function carrosselAnterior() {
   const total = track.children.length;
   const prev = (window._carrosselIndex - 1 + total) % total;
   irParaFoto(prev, total);
-}
-
-function setupFotoDropzone(existingUrl = "") {
-  const dropzone = document.getElementById("foto-dropzone");
-  const fileInput = document.getElementById("foto-file-input");
-  const preview = document.getElementById("foto-preview");
-  const previewWrap = document.getElementById("foto-preview-wrap");
-  const placeholder = document.getElementById("foto-placeholder");
-  const hiddenInput = document.getElementById("item-foto");
-
-  if (existingUrl) {
-    preview.src = existingUrl;
-    previewWrap.style.display = "block";
-    placeholder.style.display = "none";
-  }
-
-  dropzone.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    dropzone.style.borderColor = "rgba(249,115,115,0.9)";
-    dropzone.style.background = "rgba(249,115,115,0.1)";
-  });
-
-  dropzone.addEventListener("dragleave", () => {
-    dropzone.style.borderColor = "rgba(249,115,115,0.5)";
-    dropzone.style.background = "rgba(46,8,8,0.3)";
-  });
-
-  dropzone.addEventListener("drop", (e) => {
-    e.preventDefault();
-    dropzone.style.borderColor = "rgba(249,115,115,0.5)";
-    dropzone.style.background = "rgba(46,8,8,0.3)";
-    const file = e.dataTransfer.files[0];
-    if (file) handleFileUpload(file);
-  });
-
-  fileInput.addEventListener("change", () => {
-    const file = fileInput.files[0];
-    if (file) handleFileUpload(file);
-  });
 }
 
 function resizeImage(file, maxWidth, maxHeight) {
