@@ -2633,45 +2633,32 @@ async function fetchAndRenderTiming() {
 }
 
 function renderTimingChart(data) {
-  const canvas = document.getElementById("timingChart");
-  if (!canvas) return;
   const { medias, metas } = data;
-  const labels = ['⏳ Confirmação', '👨‍🍳 Preparo', '📦 Montagem', '🚚 Entrega'];
-  const valores = [medias.confirmacao, medias.preparo, medias.montagem, medias.entrega];
-  const metasArr = [metas.confirmacao, metas.preparo, metas.montagem, metas.entrega];
-  const cores = valores.map((v, i) => v <= metasArr[i] ? 'rgba(34,197,94,0.85)' : 'rgba(239,68,68,0.85)');
-  const coresBorda = valores.map((v, i) => v <= metasArr[i] ? 'rgba(34,197,94,1)' : 'rgba(239,68,68,1)');
-  if (timingChartInstance) timingChartInstance.destroy();
-  timingChartInstance = new Chart(canvas, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        { label: 'Tempo Médio (min)', data: valores, backgroundColor: cores, borderColor: coresBorda, borderWidth: 3, borderRadius: 10, borderSkipped: false },
-        { label: 'Meta', data: metasArr, type: 'line', borderColor: 'rgba(251,191,36,0.9)', borderDash: [6,4], borderWidth: 2, pointBackgroundColor: 'rgba(251,191,36,1)', pointRadius: 5, fill: false, tension: 0 }
-      ]
-    },
-    options: {
-      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: true, position: 'top', labels: { color: 'rgba(252,228,228,0.8)', font: { family: 'Space Grotesk', size: 12, weight: '700' }, padding: 16 } },
-        tooltip: {
-          backgroundColor: 'rgba(17,24,39,0.95)', titleColor: 'rgba(252,228,228,0.95)', bodyColor: 'rgba(252,228,228,0.8)', padding: 12,
-          callbacks: { label: function(ctx) {
-            const v = ctx.parsed.x || 0;
-            if (ctx.datasetIndex === 0) {
-              const diff = v - metasArr[ctx.dataIndex];
-              return [`Média: ${v.toFixed(1)} min`, diff <= 0 ? `✅ ${Math.abs(diff).toFixed(1)}min abaixo da meta` : `🔴 ${diff.toFixed(1)}min acima da meta`];
-            }
-            return `Meta: ${v} min`;
-          }}
-        }
-      },
-      scales: {
-        x: { beginAtZero: true, ticks: { color: 'rgba(252,228,228,0.7)', font: { family: 'Space Grotesk', size: 11 }, callback: v => `${v} min` }, grid: { color: 'rgba(249,115,115,0.08)' } },
-        y: { ticks: { color: 'rgba(252,228,228,0.9)', font: { family: 'Space Grotesk', size: 13, weight: '700' } }, grid: { display: false } }
-      }
-    }
+
+  const etapas = [
+    { key: 'confirmacao', meta: metas.confirmacao, val: medias.confirmacao },
+    { key: 'preparo',     meta: metas.preparo,     val: medias.preparo     },
+    { key: 'montagem',    meta: metas.montagem,     val: medias.montagem    },
+    { key: 'entrega',     meta: metas.entrega,      val: medias.entrega     },
+  ];
+
+  etapas.forEach(({ key, meta, val }) => {
+    const card = document.getElementById(`timing-card-${key}`);
+    const valEl = document.getElementById(`timing-val-${key}`);
+    if (!card || !valEl) return;
+
+    const dentro = val <= meta;
+    valEl.textContent = val > 0 ? `${val.toFixed(1)} min` : '—';
+
+    card.style.background = dentro
+      ? 'rgba(34,197,94,0.1)'
+      : 'rgba(239,68,68,0.1)';
+    card.style.borderColor = dentro
+      ? 'rgba(34,197,94,0.3)'
+      : 'rgba(239,68,68,0.3)';
+    valEl.style.color = dentro
+      ? 'rgba(34,197,94,1)'
+      : 'rgba(239,68,68,1)';
   });
 }
 
@@ -2877,7 +2864,13 @@ safeSetText("card-frequencia", `${(data.frequencia_media || 0).toFixed(1)}x`);
 safeSetText("inativos-7",      data.clientes_inativos?.dias_7  || 0);
 safeSetText("inativos-15",     data.clientes_inativos?.dias_15 || 0);
 safeSetText("inativos-30",     data.clientes_inativos?.dias_30 || 0);
-safeSetText("card-recompensa", data.proximos_recompensa?.count  || 0);
+safeSetText("card-unique-clients",  data.unique_clients || 0);
+safeSetText("card-recurring-clients", data.client_base?.recurring_clients || 0);
+
+const pct = data.unique_clients > 0
+  ? ((data.client_base?.recurring_clients || 0) / data.unique_clients * 100).toFixed(0)
+  : 0;
+safeSetText("card-recurring-pct", `${pct}% da base`);
 
 renderComparison("delta-retorno",    data.comparison?.taxa_retorno?.growth  || 0);
 renderComparison("delta-frequencia", data.comparison?.frequencia?.growth    || 0);
