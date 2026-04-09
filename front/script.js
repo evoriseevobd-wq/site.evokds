@@ -2864,14 +2864,26 @@ safeSetText("card-frequencia", `${(data.frequencia_media || 0).toFixed(1)}x`);
 safeSetText("inativos-7",      data.clientes_inativos?.dias_7  || 0);
 safeSetText("inativos-15",     data.clientes_inativos?.dias_15 || 0);
 safeSetText("inativos-30",     data.clientes_inativos?.dias_30 || 0);
-safeSetText("card-unique-clients",  data.unique_clients || 0);
-safeSetText("card-recurring-clients", data.client_base?.recurring_clients || 0);
+  
+// Novos vs recorrentes
+const totalClients = data.unique_clients || 0;
+const newClients = data.client_base?.new_clients || 0;
+const recurringClients = data.client_base?.recurring_clients || 0;
+const newPct = totalClients > 0 ? ((newClients / totalClients) * 100).toFixed(0) : 0;
+const recurringPct = totalClients > 0 ? ((recurringClients / totalClients) * 100).toFixed(0) : 0;
 
-const pct = data.unique_clients > 0
-  ? ((data.client_base?.recurring_clients || 0) / data.unique_clients * 100).toFixed(0)
+safeSetText("card-new-clients", newClients);
+safeSetText("card-new-clients-pct", `(${newPct}%)`);
+safeSetText("card-recurring-clients", recurringClients);
+safeSetText("card-recurring-pct", `(${recurringPct}%)`);
+
+// Faturamento recorrente
+safeSetText("card-recurring-revenue", formatCurrency(data.recurring_revenue || 0));
+const recurringRevenuePct = data.total_revenue > 0
+  ? ((data.recurring_revenue || 0) / data.total_revenue * 100).toFixed(0)
   : 0;
-safeSetText("card-recurring-pct", `${pct}% da base`);
-
+safeSetText("card-recurring-revenue-pct", `${recurringRevenuePct}% do total`);
+  
 renderComparison("delta-retorno",    data.comparison?.taxa_retorno?.growth  || 0);
 renderComparison("delta-frequencia", data.comparison?.frequencia?.growth    || 0);
   safeSetText("card-plan-price", formatCurrency(restaurantPlanPrice));
@@ -2891,6 +2903,10 @@ renderComparison("delta-frequencia", data.comparison?.frequencia?.growth    || 0
   safeSetText("ia-revenue", formatCurrency(data.ia_performance?.revenue || 0));
   safeSetText("ia-percentage", `${(data.ia_performance?.percentage || 0).toFixed(1)}%`);
 }
+const iaPedidosPct = data.total_orders > 0
+  ? ((data.ia_performance?.orders || 0) / data.total_orders * 100).toFixed(1)
+  : 0;
+safeSetText("ia-orders-pct", `${iaPedidosPct}%`);
 
 function renderComparison(elementId, percentage) {
   const el = document.getElementById(elementId);
