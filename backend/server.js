@@ -2106,6 +2106,7 @@ app.patch("/api/v1/pedidos/:id/payment", async (req, res) => {
       .single();
 
     if (error || !data) return sendError(res, 500, "Erro ao atualizar pagamento");
+    emitOrderUpdate(data.restaurant_id, data.order);
 
     return res.json({ success: true, order: data });
   } catch (err) {
