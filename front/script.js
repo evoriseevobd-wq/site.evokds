@@ -2794,16 +2794,16 @@ function renderStatusChart(data) {
       responsive: true,
       maintainAspectRatio: true,
       plugins: {
-        legend: {
-          position: 'bottom',
-          labels: {
-            color: 'rgba(252, 228, 228, 0.9)',
-            font: { size: 13, family: 'Space Grotesk', weight: '600' },
-            padding: 15,
-            boxWidth: 15,
-            boxHeight: 15
-          }
-        },
+       legend: {
+  position: 'right',
+  labels: {
+    color: 'rgba(252, 228, 228, 0.9)',
+    font: { size: 12, family: 'Space Grotesk', weight: '600' },
+    padding: 12,
+    boxWidth: 12,
+    boxHeight: 12
+  }
+},
         tooltip: {
           backgroundColor: 'rgba(17, 24, 39, 0.95)',
           titleColor: 'rgba(252, 228, 228, 0.95)',
