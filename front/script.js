@@ -2950,14 +2950,24 @@ function setupAutoatendimentoTabs() {
 
 async function fetchCardapio() {
   const rid = getRestaurantId();
-  if (!rid) return;
+  if (!rid) {
+    console.error("❌ restaurant_id não encontrado ao carregar cardápio");
+    return;
+  }
   try {
     const resp = await fetch(`${API_BASE}/api/v1/cardapio/${rid}`);
+    if (!resp.ok) {
+      console.error("❌ Erro HTTP cardápio:", resp.status);
+      return;
+    }
     const data = await resp.json();
+    console.log("✅ Cardápio recebido:", data);
     cardapioItems = Array.isArray(data) ? data : [];
     renderCardapio();
   } catch (e) {
-    console.error("Erro ao buscar cardápio:", e);
+    console.error("❌ Erro ao buscar cardápio:", e);
+    const lista = document.getElementById("lista-cardapio-view");
+    if (lista) lista.innerHTML = `<p style="color:#ef4444; text-align:center; padding:40px 0;">Erro ao carregar cardápio. Tente novamente.</p>`;
   }
 }
 
