@@ -2124,8 +2124,11 @@ document.getElementById("btn-salvar-marketplace")?.addEventListener("click", sal
 if (logoutBtn) logoutBtn.addEventListener("click", logout);
 if (unauthClose) unauthClose.addEventListener("click", () => closeBackdrop(unauthorizedModal));
 
-// Polling de pedidos
-setInterval(fetchOrders, 5000);
+
+
+setInterval(() => {
+  if (!isFetching) fetchOrders();
+}, 20000);
 fetchOrders();
   
 // Conecta WebSocket
