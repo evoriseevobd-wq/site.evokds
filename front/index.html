@@ -397,25 +397,28 @@
     </div>
 
     <!-- PERFORMANCE IA REFORMULADO -->
-    <div class="results-premium-chart-section performance-ia-card">
-      <h3>🤖 Performance da IA</h3>
-      <div class="chart-container">
-        <div class="ia-stats">
-          <div class="ia-stat-item">
-            <div class="ia-stat-label">Pedidos da IA</div>
-            <div class="ia-stat-value" id="ia-orders">0</div>
-          </div>
-          <div class="ia-stat-item">
-            <div class="ia-stat-label">Faturamento IA</div>
-            <div class="ia-stat-value" id="ia-revenue">R$ 0,00</div>
-          </div>
-          <div class="ia-stat-item">
-            <div class="ia-stat-label">% do Total</div>
-            <div class="ia-stat-value ia-percentage" id="ia-percentage">0%</div>
-          </div>
-        </div>
+   <div class="results-premium-chart-section performance-ia-card">
+  <h3>🤖 Performance da IA</h3>
+  <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+    
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:rgba(46,8,8,0.5); border:1px solid rgba(91,28,28,0.6); border-radius:12px;">
+      <span style="color:rgba(252,228,228,0.6); font-size:13px; font-weight:700;">Pedidos via IA</span>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="color:rgba(252,228,228,1); font-size:18px; font-weight:900;" id="ia-orders">0</span>
+        <span style="background:rgba(34,197,94,0.2); color:rgba(34,197,94,1); font-size:11px; font-weight:700; padding:3px 8px; border-radius:99px;" id="ia-orders-pct">0%</span>
       </div>
     </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:rgba(46,8,8,0.5); border:1px solid rgba(91,28,28,0.6); border-radius:12px;">
+      <span style="color:rgba(252,228,228,0.6); font-size:13px; font-weight:700;">Receita via IA</span>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="color:rgba(252,228,228,1); font-size:18px; font-weight:900;" id="ia-revenue">R$ 0,00</span>
+        <span style="background:rgba(251,191,36,0.2); color:rgba(251,191,36,1); font-size:11px; font-weight:700; padding:3px 8px; border-radius:99px;" id="ia-percentage">0%</span>
+      </div>
+    </div>
+
+  </div>
+</div>
 
     <!-- STATUS OPERACIONAL -->
     <div class="results-premium-chart-section">
