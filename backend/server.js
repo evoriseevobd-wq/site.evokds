@@ -60,7 +60,7 @@ io.on("connection", (socket) => {
 });
 
 // Função global para emitir atualização de pedido
-export function emitOrderUpdate(restaurant_id, order) {
+function emitOrderUpdate(restaurant_id, order) {
   io.to(restaurant_id).emit("order_updated", order);
 }
 
