@@ -1809,6 +1809,9 @@ function toggleAccordion(id) {
   const arrow = document.getElementById(`arrow-${id}`);
   const isOpen = body.style.display === 'flex';
   body.style.display = isOpen ? 'none' : 'flex';
+  body.style.flexDirection = 'column';
+  body.style.gap = '12px';
+  body.style.padding = '0 24px 24px 24px';
   arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
 }
 
