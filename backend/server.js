@@ -2582,6 +2582,33 @@ app.post("/api/v1/restaurante/:restaurant_id/mp/cobrar", async (req, res) => {
   }
 });
 
+app.post("/api/v1/restaurante/:restaurant_id/mp/ativar-pdv", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const config = await getIntegracao(restaurant_id, "maquininha");
+    if (!config?.mp_access_token || !config?.mp_device_id)
+      return sendError(res, 400, "Maquininha não configurada");
+
+    const mpResp = await fetch(
+      `https://api.mercadopago.com/point/integration-api/devices/${config.mp_device_id}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Authorization": `Bearer ${config.mp_access_token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ operating_mode: "PDV" })
+      }
+    );
+
+    const data = await mpResp.json();
+    console.log("🔧 Ativar PDV:", data);
+    return res.json({ success: mpResp.ok, data });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
 // POST - Webhook do Mercado Pago
 app.post("/api/v1/mp/webhook", async (req, res) => {
   try {
@@ -2660,7 +2687,7 @@ const statusResp = await fetch(
     return res.sendStatus(500);
   }
 });
-    
+
 // ===== WEBHOOK SATISFAÇÃO =====
 async function dispararWebhookSatisfacao(order) {
   try {
