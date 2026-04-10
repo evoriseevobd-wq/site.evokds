@@ -2678,10 +2678,10 @@ const dataId = req.body?.data?.id || req.body?.data_id || req.query?.["data.id"]
       return res.sendStatus(200);
     }
 
-    if (type !== "payment_intent") return res.sendStatus(200);
+    if (type !== "payment_intent" && type !== "point_integration_wh") return res.sendStatus(200);if (type !== "payment_intent") return res.sendStatus(200);
 
-    const paymentIntentId = data?.id;
-    if (!paymentIntentId) return res.sendStatus(200);
+    const paymentIntentId = dataId;
+if (!paymentIntentId) return res.sendStatus(200);
 
     const { data: order, error } = await supabase
       .from("orders")
