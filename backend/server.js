@@ -1680,7 +1680,6 @@ app.get("/api/v1/dominio-cardapio/:dominio", async (req, res) => {
 });
 
 // GET - Busca config do restaurante (logo, cores, nome)
-// GET - Busca config do restaurante (logo, cores, nome)
 app.get("/api/v1/restaurante/:restaurant_id/config", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
@@ -1735,15 +1734,10 @@ app.patch("/api/v1/restaurante/:restaurant_id/config", async (req, res) => {
 app.get("/api/v1/restaurante/:restaurant_id/impressora", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
-    const { data, error } = await supabase
-      .from("restaurants")
-      .select("printnode_api_key, printnode_printer_id")
-      .eq("id", restaurant_id)
-      .single();
-    if (error || !data) return sendError(res, 404, "Restaurante não encontrado");
+    const dados = await getIntegracao(restaurant_id, "printnode");
     return res.json({
-      printnode_api_key: data.printnode_api_key || "",
-      printnode_printer_id: data.printnode_printer_id || ""
+      printnode_api_key: dados?.printnode_api_key ? "configurado" : "",
+      printnode_printer_id: dados?.printnode_printer_id || ""
     });
   } catch (err) {
     return sendError(res, 500, "Erro interno");
@@ -1755,11 +1749,20 @@ app.patch("/api/v1/restaurante/:restaurant_id/impressora", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
     const { printnode_api_key, printnode_printer_id } = req.body;
-    const { error } = await supabase
-      .from("restaurants")
-      .update({ printnode_api_key, printnode_printer_id })
-      .eq("id", restaurant_id);
-    if (error) return sendError(res, 500, "Erro ao salvar impressora");
+    if (!printnode_api_key || !printnode_printer_id)
+      return sendError(res, 400, "API Key e Printer ID são obrigatórios");
+
+    const existing = await getIntegracao(restaurant_id, "printnode");
+    const dados = {
+      printnode_api_key: printnode_api_key !== "configurado" ? printnode_api_key : existing?.printnode_api_key,
+      printnode_printer_id
+    };
+
+    await supabase.from("integracoes").upsert({
+      restaurant_id, tipo: "printnode", dados, ativo: true,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "restaurant_id,tipo" });
+
     return res.json({ success: true });
   } catch (err) {
     return sendError(res, 500, "Erro interno");
@@ -1786,17 +1789,12 @@ app.patch("/api/v1/restaurante/:restaurant_id/tracking-url", async (req, res) =>
 app.get("/api/v1/restaurante/:restaurant_id/fiscal", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
-    const { data, error } = await supabase
-      .from("restaurants")
-      .select("focusnfe_token, cnpj, inscricao_estadual, regime_tributario")
-      .eq("id", restaurant_id)
-      .single();
-    if (error || !data) return sendError(res, 404, "Restaurante não encontrado");
+    const dados = await getIntegracao(restaurant_id, "focusnfe");
     return res.json({
-      focusnfe_token: data.focusnfe_token || "",
-      cnpj: data.cnpj || "",
-      inscricao_estadual: data.inscricao_estadual || "",
-      regime_tributario: data.regime_tributario || "1"
+      focusnfe_token: dados?.focusnfe_token ? "configurado" : "",
+      cnpj: dados?.cnpj || "",
+      inscricao_estadual: dados?.inscricao_estadual || "",
+      regime_tributario: dados?.regime_tributario || "1"
     });
   } catch (err) {
     return sendError(res, 500, "Erro interno");
@@ -1808,11 +1806,15 @@ app.patch("/api/v1/restaurante/:restaurant_id/fiscal", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
     const { focusnfe_token, cnpj, inscricao_estadual, regime_tributario } = req.body;
-    const { error } = await supabase
-      .from("restaurants")
-      .update({ focusnfe_token, cnpj, inscricao_estadual, regime_tributario })
-      .eq("id", restaurant_id);
-    if (error) return sendError(res, 500, "Erro ao salvar config fiscal");
+    const existing = await getIntegracao(restaurant_id, "focusnfe");
+    const dados = {
+      focusnfe_token: focusnfe_token !== "configurado" ? focusnfe_token : existing?.focusnfe_token,
+      cnpj, inscricao_estadual, regime_tributario
+    };
+    await supabase.from("integracoes").upsert({
+      restaurant_id, tipo: "focusnfe", dados, ativo: true,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "restaurant_id,tipo" });
     return res.json({ success: true });
   } catch (err) {
     return sendError(res, 500, "Erro interno");
@@ -2026,13 +2028,9 @@ lf();
 app.post("/api/v1/restaurante/:restaurant_id/impressora/teste", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
-    const { data, error } = await supabase
-      .from("restaurants")
-      .select("printnode_api_key, printnode_printer_id")
-      .eq("id", restaurant_id)
-      .single();
-    if (error || !data?.printnode_api_key || !data?.printnode_printer_id)
-      return sendError(res, 400, "Impressora não configurada");
+    const data = await getIntegracao(restaurant_id, "printnode");
+if (!data?.printnode_api_key || !data?.printnode_printer_id)
+  return sendError(res, 400, "Impressora não configurada");
 
     const testOrder = {
       order_number: "TESTE",
@@ -2058,15 +2056,9 @@ app.post("/api/v1/restaurante/:restaurant_id/imprimir-pedido", async (req, res) 
 
     if (!order_id) return sendError(res, 400, "order_id é obrigatório");
 
-    // Busca config da impressora
-    const { data: config, error: configError } = await supabase
-      .from("restaurants")
-      .select("printnode_api_key, printnode_printer_id")
-      .eq("id", restaurant_id)
-      .single();
-
-    if (configError || !config?.printnode_api_key || !config?.printnode_printer_id)
-      return sendError(res, 400, "Impressora não configurada");
+   const config = await getIntegracao(restaurant_id, "printnode");
+if (!config?.printnode_api_key || !config?.printnode_printer_id)
+  return sendError(res, 400, "Impressora não configurada");
 
     // Busca os dados do pedido
     const { data: order, error: orderError } = await supabase
@@ -2440,15 +2432,11 @@ app.delete("/api/v1/restaurante/:restaurant_id/integracao/:tipo", async (req, re
 app.get("/api/v1/restaurante/:restaurant_id/marketplace", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
-    const { data, error } = await supabase
-      .from("restaurants")
-      .select("ifood_api_key, aiqfome_api_key")
-      .eq("id", restaurant_id)
-      .single();
-    if (error || !data) return sendError(res, 404, "Restaurante não encontrado");
+    const ifood = await getIntegracao(restaurant_id, "ifood");
+    const aiqfome = await getIntegracao(restaurant_id, "aiqfome");
     return res.json({
-      ifood_api_key: data.ifood_api_key || "",
-      aiqfome_api_key: data.aiqfome_api_key || ""
+      ifood_api_key: ifood?.api_key ? "configurado" : "",
+      aiqfome_api_key: aiqfome?.api_key ? "configurado" : ""
     });
   } catch (err) {
     return sendError(res, 500, "Erro interno");
@@ -2459,20 +2447,14 @@ app.post("/api/v1/restaurante/:restaurant_id/marketplace", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
     const { platform, api_key } = req.body;
-
     if (!platform || !api_key) return sendError(res, 400, "platform e api_key são obrigatórios");
-
-    const allowedPlatforms = { ifood: "ifood_api_key", aiqfome: "aiqfome_api_key" };
-    const column = allowedPlatforms[platform];
-    if (!column) return sendError(res, 400, "platform inválido. Use: ifood ou aiqfome");
-
-    const { error } = await supabase
-      .from("restaurants")
-      .update({ [column]: api_key })
-      .eq("id", restaurant_id);
-
-    if (error) return sendError(res, 500, "Erro ao salvar chave");
-    return res.json({ success: true, platform, message: "Chave salva com sucesso" });
+    const allowedPlatforms = ["ifood", "aiqfome"];
+    if (!allowedPlatforms.includes(platform)) return sendError(res, 400, "platform inválido");
+    await supabase.from("integracoes").upsert({
+      restaurant_id, tipo: platform, dados: { api_key }, ativo: true,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "restaurant_id,tipo" });
+    return res.json({ success: true, platform });
   } catch (err) {
     return sendError(res, 500, "Erro interno");
   }
@@ -2524,17 +2506,12 @@ app.post("/api/v1/restaurante/:restaurant_id/mp/cobrar", async (req, res) => {
     if (!order_id || !valor) 
       return sendError(res, 400, "order_id e valor são obrigatórios");
 
-    const { data: config, error } = await supabase
-      .from("restaurants")
-      .select("mp_access_token, mp_device_id")
-      .eq("id", restaurant_id)
-      .single();
-
-    if (error || !config?.mp_access_token || !config?.mp_device_id)
-      return sendError(res, 400, "Mercado Pago não configurado");
+    const config = await getIntegracao(restaurant_id, "mercadopago");
+if (!config?.access_token || !config?.device_id)
+  return sendError(res, 400, "Mercado Pago não configurado");
 
     const mpResp = await fetch(
-      `https://api.mercadopago.com/point/integration-api/devices/${config.mp_device_id}/payment-intents`,
+      `https://api.mercadopago.com/point/integration-api/devices/${config.device_id}/payment-intents`,
       {
         method: "POST",
         headers: {
@@ -2599,16 +2576,12 @@ app.post("/api/v1/mp/webhook", async (req, res) => {
     }
 
     // Verifica status no MP
-    const { data: config } = await supabase
-      .from("restaurants")
-      .select("mp_access_token")
-      .eq("id", order.restaurant_id)
-      .single();
+    const config = await getIntegracao(order.restaurant_id, "mercadopago");
 
     const statusResp = await fetch(
       `https://api.mercadopago.com/point/integration-api/payment-intents/${paymentIntentId}`,
       {
-        headers: { "Authorization": `Bearer ${config.mp_access_token}` }
+       headers: { "Authorization": `Bearer ${config.access_token}` }
       }
     );
 
@@ -2638,13 +2611,8 @@ app.post("/api/v1/mp/webhook", async (req, res) => {
 // ===== WEBHOOK SATISFAÇÃO =====
 async function dispararWebhookSatisfacao(order) {
   try {
-    const { data: restaurant } = await supabase
-      .from("restaurants")
-      .select("webhook_satisfaction")
-      .eq("id", order.restaurant_id)
-      .single();
-
-    const webhookUrl = restaurant?.webhook_satisfaction;
+    const webhookConfig = await getIntegracao(order.restaurant_id, "webhook_satisfaction");
+const webhookUrl = webhookConfig?.webhook_url;
     if (!webhookUrl) return;
 
     await fetch(webhookUrl, {
@@ -2671,13 +2639,8 @@ async function dispararWebhookSatisfacao(order) {
 app.get("/api/v1/restaurante/:restaurant_id/webhook-satisfaction", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
-    const { data, error } = await supabase
-      .from("restaurants")
-      .select("webhook_satisfaction")
-      .eq("id", restaurant_id)
-      .single();
-    if (error || !data) return sendError(res, 404, "Restaurante não encontrado");
-    return res.json({ success: true, webhook_url: data.webhook_satisfaction || "" });
+    const dados = await getIntegracao(restaurant_id, "webhook_satisfaction");
+return res.json({ success: true, webhook_url: dados?.webhook_url || "" });
   } catch (err) {
     return sendError(res, 500, "Erro interno");
   }
@@ -2688,13 +2651,13 @@ app.post("/api/v1/restaurante/:restaurant_id/webhook-satisfaction", async (req, 
     const { restaurant_id } = req.params;
     const { webhook_url } = req.body;
 
-    const { error } = await supabase
-      .from("restaurants")
-      .update({ webhook_satisfaction: webhook_url || null })
-      .eq("id", restaurant_id);
-
-    if (error) return sendError(res, 500, "Erro ao salvar webhook");
-    return res.json({ success: true, message: "Webhook salvo com sucesso" });
+   await supabase.from("integracoes").upsert({
+  restaurant_id, tipo: "webhook_satisfaction",
+  dados: { webhook_url: webhook_url || null }, ativo: true,
+  updated_at: new Date().toISOString()
+}, { onConflict: "restaurant_id,tipo" });
+return res.json({ success: true });
+    
   } catch (err) {
     return sendError(res, 500, "Erro interno");
   }
