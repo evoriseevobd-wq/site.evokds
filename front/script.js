@@ -496,19 +496,20 @@ async function loadSettingsData() {
   const rid = getRestaurantId();
   if (!rid) return;
 
+  // Impressora
   try {
     const resp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/impressora`);
     const data = await resp.json();
-    console.log("🖨️ Config carregada:", data);
     if (data.printnode_api_key)
       document.getElementById("settings-printnode-key").value = data.printnode_api_key;
     if (data.printnode_printer_id)
       document.getElementById("settings-printnode-printer").value = data.printnode_printer_id;
   } catch (e) {
-    console.error("Erro ao carregar config impressora:", e);
+    console.error("Erro ao carregar impressora:", e);
   }
 
-try {
+  // Fiscal
+  try {
     const respFiscal = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/fiscal`);
     const dataFiscal = await respFiscal.json();
     if (dataFiscal.focusnfe_token)
@@ -520,41 +521,62 @@ try {
     if (dataFiscal.regime_tributario)
       document.getElementById("settings-regime").value = dataFiscal.regime_tributario;
   } catch (e) {
-    console.error("Erro ao carregar config fiscal:", e);
+    console.error("Erro ao carregar fiscal:", e);
   }
 
+  // Marketplace
   try {
-    const respMarket = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/marketplace`);
-    const dataMarket = await respMarket.json();
-    if (dataMarket.ifood_api_key)
-      document.getElementById("settings-ifood-key").value = dataMarket.ifood_api_key;
-    if (dataMarket.aiqfome_api_key)
-      document.getElementById("settings-aiqfome-key").value = dataMarket.aiqfome_api_key;
+    const mktResp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/marketplace`);
+    const mktData = await mktResp.json();
+    if (mktData.ifood_api_key)
+      document.getElementById("settings-ifood-key").value = mktData.ifood_api_key;
+    if (mktData.aiqfome_api_key)
+      document.getElementById("settings-aiqfome-key").value = mktData.aiqfome_api_key;
   } catch (e) {
-    console.error("Erro ao carregar config marketplace:", e);
+    console.error("Erro ao carregar marketplace:", e);
   }
-  
- const trackingUrl = localStorage.getItem("tracking_url") || "https://rastreio.evoriseai.com.br";
-document.getElementById("settings-tracking-url").value = trackingUrl;
 
-// Carrega chaves marketplace
-try {
-  const mktResp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/marketplace`);
-  const mktData = await mktResp.json();
-  if (mktData.ifood_api_key) document.getElementById("settings-ifood-key").value = mktData.ifood_api_key;
-  if (mktData.aiqfome_api_key) document.getElementById("settings-aiqfome-key").value = mktData.aiqfome_api_key;
-} catch (e) {
-  console.error("Erro ao carregar chaves marketplace:", e);
-}
+  // Link de rastreio
+  try {
+    const respTracking = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/tracking-url`);
+    const dataTracking = await respTracking.json();
+    if (dataTracking.tracking_url)
+      document.getElementById("settings-tracking-url").value = dataTracking.tracking_url;
+    else {
+      const local = localStorage.getItem("tracking_url") || "https://rastreio.evoriseai.com.br";
+      document.getElementById("settings-tracking-url").value = local;
+    }
+  } catch (e) {
+    const local = localStorage.getItem("tracking_url") || "https://rastreio.evoriseai.com.br";
+    document.getElementById("settings-tracking-url").value = local;
+  }
 
-// Carrega webhook satisfação
-try {
-  const whResp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/webhook-satisfaction`);
-  const whData = await whResp.json();
-  if (whData.webhook_url) document.getElementById("settings-webhook-satisfaction").value = whData.webhook_url;
-} catch (e) {
-  console.error("Erro ao carregar webhook:", e);
-}
+  // Webhook satisfação
+  try {
+    const whResp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/webhook-satisfaction`);
+    const whData = await whResp.json();
+    if (whData.webhook_url)
+      document.getElementById("settings-webhook-satisfaction").value = whData.webhook_url;
+  } catch (e) {
+    console.error("Erro ao carregar webhook:", e);
+  }
+
+  // Maquininha
+  try {
+    const mpResp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/integracao/maquininha`);
+    const mpData = await mpResp.json();
+    if (mpData.configurado && mpData.dados) {
+      const tipo = mpData.dados.tipo || "mercadopago";
+      document.getElementById("settings-maquininha-tipo").value = tipo;
+      onMaquininhaChange(tipo);
+      if (mpData.dados.mp_access_token)
+        document.getElementById("settings-mp-token").value = mpData.dados.mp_access_token;
+      if (mpData.dados.mp_device_id)
+        document.getElementById("settings-mp-device").value = mpData.dados.mp_device_id;
+    }
+  } catch (e) {
+    console.error("Erro ao carregar maquininha:", e);
+  }
 }
 
 function setupPeriodButtons() {
