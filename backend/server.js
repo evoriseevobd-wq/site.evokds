@@ -2573,6 +2573,67 @@ app.post("/api/v1/restaurante/:restaurant_id/mp/cobrar", async (req, res) => {
       .update({ mp_payment_intent_id: mpData.id })
       .eq("id", order_id);
 
+// Inicia polling para verificar status do pagamento
+const intentId = mpData.id;
+let tentativas = 0;
+const MAX = 60; // 2 minutos
+
+const pollInterval = setInterval(async () => {
+  tentativas++;
+  if (tentativas > MAX) {
+    clearInterval(pollInterval);
+    console.log(`⏰ Polling expirado para intent ${intentId}`);
+    return;
+  }
+
+  try {
+    const statusResp = await fetch(
+      `https://api.mercadopago.com/point/integration-api/payment-intents/${intentId}`,
+      { headers: { "Authorization": `Bearer ${config.mp_access_token}` } }
+    );
+    const statusData = await statusResp.json();
+    console.log(`🔄 Polling intent ${intentId}: ${statusData.state}`);
+
+    if (statusData.state === "FINISHED") {
+      clearInterval(pollInterval);
+      const now = new Date().toISOString();
+      const { data: updated } = await supabase
+        .from("orders")
+        .update({
+          status: "finished",
+          payment_method: statusData.payment?.type || "maquininha",
+          delivered_at: now,
+          update_at: now
+        })
+        .eq("id", order_id)
+        .select()
+        .single();
+
+      if (updated) {
+        emitOrderUpdate(updated.restaurant_id, updated);
+        console.log(`✅ Pedido ${order_id} finalizado via polling MP`);
+      }
+
+    } else if (statusData.state === "CANCELED" || statusData.state === "ERROR") {
+      clearInterval(pollInterval);
+      const now = new Date().toISOString();
+      const { data: updated } = await supabase
+        .from("orders")
+        .update({ status: "cancelled", update_at: now })
+        .eq("id", order_id)
+        .select()
+        .single();
+
+      if (updated) {
+        emitOrderUpdate(updated.restaurant_id, updated);
+        console.log(`❌ Pedido ${order_id} cancelado via polling MP`);
+      }
+    }
+  } catch (e) {
+    console.warn(`⚠️ Erro no polling MP:`, e.message);
+  }
+}, 3000);
+    
     console.log(`💳 Cobrança criada: ${mpData.id} para pedido ${order_id}`);
     return res.json({ success: true, payment_intent_id: mpData.id });
 
