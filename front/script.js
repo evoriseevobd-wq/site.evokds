@@ -1075,7 +1075,7 @@ function showPaymentModal(orderId) {
       && (metodo === "credito" || metodo === "debito" || metodo === "pix");
 
     if (!usaMaquininha) {
-      // Fluxo simples: só salva e finaliza
+      // Dinheiro ou PIX → finaliza direto
       await fetch(`${API_BASE}/api/v1/pedidos/${orderId}/payment`, {
         method: "PATCH",
         headers: buildHeaders(),
@@ -1098,11 +1098,17 @@ function showPaymentModal(orderId) {
     statusMsg.style.display = "block";
     statusMsg.textContent = "📲 Enviando para a maquininha...";
 
-    let paymentIntentId = null;
     let pollingInterval = null;
 
     try {
-      // 1. Cria intenção de pagamento
+      // 1. Salva método de pagamento
+      await fetch(`${API_BASE}/api/v1/pedidos/${orderId}/payment`, {
+        method: "PATCH",
+        headers: buildHeaders(),
+        body: JSON.stringify({ payment_method: metodo })
+      });
+
+      // 2. Cria intenção de pagamento na maquininha
       const cobrarResp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/mp/cobrar`, {
         method: "POST",
         headers: buildHeaders(),
@@ -1118,7 +1124,6 @@ function showPaymentModal(orderId) {
         throw new Error(cobrarData.error || "Erro ao enviar para maquininha");
       }
 
-      paymentIntentId = cobrarData.payment_intent_id;
       statusMsg.textContent = "💳 Aguardando pagamento na maquininha...";
 
     } catch (err) {
@@ -1131,9 +1136,9 @@ function showPaymentModal(orderId) {
       return;
     }
 
-    // 2. Polling: fica observando o status do pedido via WebSocket/polling
+    // 3. Polling: verifica status do pedido a cada 2s
     let tentativas = 0;
-    const MAX_TENTATIVAS = 60; // 2 minutos (2s cada)
+    const MAX_TENTATIVAS = 60; // 2 minutos
 
     pollingInterval = setInterval(async () => {
       tentativas++;
@@ -1159,7 +1164,6 @@ function showPaymentModal(orderId) {
 
         if (frontStatus === "finalizado") {
           clearInterval(pollingInterval);
-          // Atualiza lista local
           const idx = orders.findIndex(x => x.id === orderId);
           if (idx !== -1) {
             orders[idx] = { ...updated, _frontStatus: "finalizado" };
@@ -1171,7 +1175,7 @@ function showPaymentModal(orderId) {
 
         if (frontStatus === "cancelado") {
           clearInterval(pollingInterval);
-          // Pagamento recusado — só fecha o modal silenciosamente
+          // Pagamento recusado — fecha modal silenciosamente
           modal.remove();
           return;
         }
@@ -1181,7 +1185,7 @@ function showPaymentModal(orderId) {
       }
     }, 2000);
 
-    // Cancela o polling se o usuário fechar o modal manualmente
+    // Fecha polling se fechar o modal manualmente
     modal.addEventListener("click", (e) => {
       if (e.target === modal) {
         clearInterval(pollingInterval);
@@ -1190,8 +1194,7 @@ function showPaymentModal(orderId) {
     });
   });
 
-  modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
-}
+  modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(
 
 async function imprimirPedido(orderId) {
   const order = orders.find(o => o.id === orderId);
