@@ -2554,16 +2554,13 @@ if (!config?.access_token || !config?.device_id)
 app.post("/api/v1/mp/webhook", async (req, res) => {
   try {
     const { type, data } = req.body;
-
     console.log("📩 Webhook MP recebido:", type, data);
 
-    // MP só nos interessa quando o pagamento é aprovado
     if (type !== "payment_intent") return res.sendStatus(200);
 
     const paymentIntentId = data?.id;
     if (!paymentIntentId) return res.sendStatus(200);
 
-    // Busca o pedido pelo payment_intent_id
     const { data: order, error } = await supabase
       .from("orders")
       .select("*")
@@ -2575,13 +2572,12 @@ app.post("/api/v1/mp/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // Verifica status no MP
     const config = await getIntegracao(order.restaurant_id, "mercadopago");
 
     const statusResp = await fetch(
       `https://api.mercadopago.com/point/integration-api/payment-intents/${paymentIntentId}`,
       {
-       headers: { "Authorization": `Bearer ${config.access_token}` }
+        headers: { "Authorization": `Bearer ${config.access_token}` }
       }
     );
 
@@ -2606,24 +2602,32 @@ app.post("/api/v1/mp/webhook", async (req, res) => {
         emitOrderUpdate(order.restaurant_id, updated);
         console.log(`✅ Pedido ${order.order_number} finalizado via MP`);
       }
-      
-   } else if (statusData.state === "CANCELED" || statusData.state === "ERROR") {
-  const now = new Date().toISOString();
-  const { data: updated } = await supabase
-    .from("orders")
-    .update({
-      status: "cancelled",
-      update_at: now
-    })
-    .eq("id", order.id)
-    .select()
-    .single();
 
-  if (updated) {
-    emitOrderUpdate(order.restaurant_id, updated);
-    console.log(`❌ Pedido ${order.order_number} cancelado via MP`);
+    } else if (statusData.state === "CANCELED" || statusData.state === "ERROR") {
+      const now = new Date().toISOString();
+      const { data: updated } = await supabase
+        .from("orders")
+        .update({
+          status: "cancelled",
+          update_at: now
+        })
+        .eq("id", order.id)
+        .select()
+        .single();
+
+      if (updated) {
+        emitOrderUpdate(order.restaurant_id, updated);
+        console.log(`❌ Pedido ${order.order_number} cancelado via MP`);
+      }
+    }
+
+    return res.sendStatus(200);
+
+  } catch (err) {
+    console.error("❌ Erro no webhook MP:", err);
+    return res.sendStatus(500);
   }
-}
+});
     
 // ===== WEBHOOK SATISFAÇÃO =====
 async function dispararWebhookSatisfacao(order) {
