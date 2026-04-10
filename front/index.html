@@ -768,27 +768,108 @@
 </div>
         </div>
 
-<!-- 💳 MERCADO PAGO POINT -->
+<!-- 💳 MAQUININHA -->
 <div style="background:rgba(46,8,8,0.5); border:1px solid rgba(91,28,28,0.85); border-radius:16px; overflow:hidden;">
   <button onclick="toggleAccordion('mp')" style="width:100%; display:flex; align-items:center; justify-content:space-between; padding:20px 24px; background:transparent; border:none; cursor:pointer;">
     <div style="display:flex; align-items:center; gap:10px;">
       <span style="font-size:20px;">💳</span>
-      <span style="color:rgba(252,228,228,1); font-size:16px; font-weight:800;">Mercado Pago Point</span>
+      <span style="color:rgba(252,228,228,1); font-size:16px; font-weight:800;">Maquininha</span>
     </div>
     <span id="arrow-mp" style="color:rgba(252,228,228,0.5); font-size:18px; transition:transform 0.2s;">▼</span>
   </button>
   <div id="accordion-mp" style="display:none; padding:0 24px 24px 24px; flex-direction:column; gap:12px;">
-    <p style="color:rgba(252,228,228,0.45); font-size:13px; margin:0 0 8px 0;">Configure a maquininha para receber pagamentos diretamente pelo FluxON.</p>
+    <p style="color:rgba(252,228,228,0.45); font-size:13px; margin:0 0 8px 0;">Selecione sua maquininha e configure a integração.</p>
+
+    <!-- SELEÇÃO DA MAQUININHA -->
     <label style="display:flex; flex-direction:column; gap:6px;">
-      <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Access Token</span>
-      <input type="password" id="settings-mp-token" placeholder="APP_USR-..."
-        style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+      <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Maquininha</span>
+      <select id="settings-maquininha-tipo" onchange="onMaquininhaChange(this.value)"
+        style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit; cursor:pointer;">
+        <option value="">Selecione...</option>
+        <option value="mercadopago">Mercado Pago Point</option>
+        <option value="cielo">Cielo LIO</option>
+        <option value="stone">Stone</option>
+        <option value="pagseguro">PagSeguro</option>
+        <option value="outra">Outra (webhook)</option>
+      </select>
     </label>
-    <label style="display:flex; flex-direction:column; gap:6px;">
-      <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Device ID</span>
-      <input type="text" id="settings-mp-device" placeholder="PAX_A910__SMARTPOS..."
-        style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
-    </label>
+
+    <!-- CAMPOS MERCADO PAGO -->
+    <div id="fields-mercadopago" style="display:none; flex-direction:column; gap:12px;">
+      <label style="display:flex; flex-direction:column; gap:6px;">
+        <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Access Token</span>
+        <input type="password" id="settings-mp-token" placeholder="APP_USR-..."
+          style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+      </label>
+      <label style="display:flex; flex-direction:column; gap:6px;">
+        <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Device ID</span>
+        <input type="text" id="settings-mp-device" placeholder="PAX_A910__SMARTPOS..."
+          style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+      </label>
+      <small style="color:rgba(252,228,228,0.35); font-size:11px; line-height:1.5;">
+        Encontre o Device ID no app Mercado Pago Point → Configurações → Meu dispositivo.
+      </small>
+    </div>
+
+    <!-- CAMPOS CIELO -->
+    <div id="fields-cielo" style="display:none; flex-direction:column; gap:12px;">
+      <label style="display:flex; flex-direction:column; gap:6px;">
+        <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Client ID</span>
+        <input type="text" id="settings-cielo-client-id" placeholder="Seu Client ID Cielo"
+          style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+      </label>
+      <label style="display:flex; flex-direction:column; gap:6px;">
+        <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Access Token</span>
+        <input type="password" id="settings-cielo-token" placeholder="Seu Access Token Cielo"
+          style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+      </label>
+      <label style="display:flex; flex-direction:column; gap:6px;">
+        <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Serial Number (LIO)</span>
+        <input type="text" id="settings-cielo-serial" placeholder="Número de série da LIO"
+          style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+      </label>
+    </div>
+
+    <!-- CAMPOS STONE -->
+    <div id="fields-stone" style="display:none; flex-direction:column; gap:12px;">
+      <label style="display:flex; flex-direction:column; gap:6px;">
+        <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Stone Code</span>
+        <input type="text" id="settings-stone-code" placeholder="Seu Stone Code"
+          style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+      </label>
+      <label style="display:flex; flex-direction:column; gap:6px;">
+        <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Token de Autenticação</span>
+        <input type="password" id="settings-stone-token" placeholder="Token Stone"
+          style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+      </label>
+    </div>
+
+    <!-- CAMPOS PAGSEGURO -->
+    <div id="fields-pagseguro" style="display:none; flex-direction:column; gap:12px;">
+      <label style="display:flex; flex-direction:column; gap:6px;">
+        <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Token PagSeguro</span>
+        <input type="password" id="settings-pagseguro-token" placeholder="Seu token PagSeguro"
+          style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+      </label>
+      <label style="display:flex; flex-direction:column; gap:6px;">
+        <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Email da conta</span>
+        <input type="email" id="settings-pagseguro-email" placeholder="email@dominio.com"
+          style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+      </label>
+    </div>
+
+    <!-- CAMPOS OUTRA (webhook genérico) -->
+    <div id="fields-outra" style="display:none; flex-direction:column; gap:12px;">
+      <label style="display:flex; flex-direction:column; gap:6px;">
+        <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">URL do Webhook de Cobrança</span>
+        <input type="text" id="settings-outra-webhook" placeholder="https://sua-maquininha.com/cobrar"
+          style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+      </label>
+      <small style="color:rgba(252,228,228,0.35); font-size:11px; line-height:1.5;">
+        O FluxON vai enviar um POST com o valor e o ID do pedido para essa URL.
+      </small>
+    </div>
+
     <button class="primary-button" id="btn-salvar-mp" style="margin-top:4px; width:100%;">Salvar configuração</button>
     <p id="settings-mp-status" style="margin-top:4px; font-size:13px; min-height:18px;"></p>
   </div>
