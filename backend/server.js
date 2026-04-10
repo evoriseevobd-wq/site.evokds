@@ -1785,6 +1785,22 @@ app.patch("/api/v1/restaurante/:restaurant_id/tracking-url", async (req, res) =>
   }
 });
 
+// GET - Busca tracking_url
+app.get("/api/v1/restaurante/:restaurant_id/tracking-url", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { data, error } = await supabase
+      .from("restaurants")
+      .select("tracking_url")
+      .eq("id", restaurant_id)
+      .single();
+    if (error || !data) return sendError(res, 404, "Não encontrado");
+    return res.json({ tracking_url: data.tracking_url || "" });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
 // GET - Busca config fiscal
 app.get("/api/v1/restaurante/:restaurant_id/fiscal", async (req, res) => {
   try {
