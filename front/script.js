@@ -1028,7 +1028,7 @@ function showPaymentModal(orderId) {
   const existing = document.getElementById("payment-modal");
   if (existing) existing.remove();
 
-  const o = orders.find((x) => x.id === orderId); // 🔥 busca o pedido aqui
+  const o = orders.find((x) => x.id === orderId);
   if (!o) return;
 
   const modal = document.createElement("div");
@@ -1053,6 +1053,7 @@ function showPaymentModal(orderId) {
           <option value="debito">Cartão de débito</option>
           <option value="dinheiro">Dinheiro</option>
         </select>
+        <div id="payment-status-msg" style="margin-top:14px; text-align:center; font-size:14px; font-weight:700; color:rgba(252,228,228,0.7); display:none;"></div>
       </div>
       <div class="modal-actions">
         <button class="ghost-button" id="payment-cancel">Cancelar</button>
@@ -1065,42 +1066,131 @@ function showPaymentModal(orderId) {
 
   document.getElementById("payment-cancel").addEventListener("click", () => modal.remove());
 
- document.getElementById("payment-confirm").addEventListener("click", async () => {
-  const metodo = document.getElementById("payment-select").value;
-  if (!metodo) { alert("Selecione o método de pagamento."); return; }
+  document.getElementById("payment-confirm").addEventListener("click", async () => {
+    const metodo = document.getElementById("payment-select").value;
+    if (!metodo) { alert("Selecione o método de pagamento."); return; }
 
-  await fetch(`${API_BASE}/api/v1/pedidos/${orderId}/payment`, {
-    method: "PATCH",
-    headers: buildHeaders(),
-    body: JSON.stringify({ payment_method: metodo })
+    const origin = String(o.origin || "").toLowerCase();
+    const usaMaquininha = (origin === "balcao" || origin === "autoatendimento")
+      && (metodo === "credito" || metodo === "debito" || metodo === "pix");
+
+    if (!usaMaquininha) {
+      // Fluxo simples: só salva e finaliza
+      await fetch(`${API_BASE}/api/v1/pedidos/${orderId}/payment`, {
+        method: "PATCH",
+        headers: buildHeaders(),
+        body: JSON.stringify({ payment_method: metodo })
+      });
+      modal.remove();
+      updateOrderStatus(orderId, "finalizado");
+      return;
+    }
+
+    // ===== FLUXO MAQUININHA =====
+    const rid = getRestaurantId();
+    const confirmBtn = document.getElementById("payment-confirm");
+    const cancelBtn = document.getElementById("payment-cancel");
+    const statusMsg = document.getElementById("payment-status-msg");
+
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = "Aguardando...";
+    cancelBtn.disabled = true;
+    statusMsg.style.display = "block";
+    statusMsg.textContent = "📲 Enviando para a maquininha...";
+
+    let paymentIntentId = null;
+    let pollingInterval = null;
+
+    try {
+      // 1. Cria intenção de pagamento
+      const cobrarResp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/mp/cobrar`, {
+        method: "POST",
+        headers: buildHeaders(),
+        body: JSON.stringify({
+          order_id: orderId,
+          valor: parseFloat(o.total_price || 0)
+        })
+      });
+
+      const cobrarData = await cobrarResp.json();
+
+      if (!cobrarResp.ok || !cobrarData.success) {
+        throw new Error(cobrarData.error || "Erro ao enviar para maquininha");
+      }
+
+      paymentIntentId = cobrarData.payment_intent_id;
+      statusMsg.textContent = "💳 Aguardando pagamento na maquininha...";
+
+    } catch (err) {
+      console.error("Erro maquininha:", err);
+      statusMsg.style.color = "rgba(239,68,68,0.9)";
+      statusMsg.textContent = `❌ ${err.message}`;
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = "Tentar novamente";
+      cancelBtn.disabled = false;
+      return;
+    }
+
+    // 2. Polling: fica observando o status do pedido via WebSocket/polling
+    let tentativas = 0;
+    const MAX_TENTATIVAS = 60; // 2 minutos (2s cada)
+
+    pollingInterval = setInterval(async () => {
+      tentativas++;
+
+      if (tentativas > MAX_TENTATIVAS) {
+        clearInterval(pollingInterval);
+        statusMsg.style.color = "rgba(239,68,68,0.9)";
+        statusMsg.textContent = "⏰ Tempo esgotado. Verifique a maquininha.";
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = "Tentar novamente";
+        cancelBtn.disabled = false;
+        return;
+      }
+
+      try {
+        const ordersResp = await fetch(`${API_URL}/${rid}`);
+        const allOrders = await ordersResp.json();
+        const updated = allOrders.find(x => x.id === orderId);
+
+        if (!updated) return;
+
+        const frontStatus = toFrontStatus(updated.status);
+
+        if (frontStatus === "finalizado") {
+          clearInterval(pollingInterval);
+          // Atualiza lista local
+          const idx = orders.findIndex(x => x.id === orderId);
+          if (idx !== -1) {
+            orders[idx] = { ...updated, _frontStatus: "finalizado" };
+          }
+          modal.remove();
+          renderBoard();
+          return;
+        }
+
+        if (frontStatus === "cancelado") {
+          clearInterval(pollingInterval);
+          // Pagamento recusado — só fecha o modal silenciosamente
+          modal.remove();
+          return;
+        }
+
+      } catch (e) {
+        console.warn("Erro no polling:", e);
+      }
+    }, 2000);
+
+    // Cancela o polling se o usuário fechar o modal manualmente
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        clearInterval(pollingInterval);
+        modal.remove();
+      }
+    });
   });
 
-  modal.remove();
-  updateOrderStatus(orderId, "finalizado");
-});
-
   modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
-}
-
-function regressStatus(orderId) {
-  const o = orders.find((x) => x.id === orderId);
-  if (!o) return;
-  
-  const s = getFrontStatus(orderId);
-  const isDelivery = String(o.service_type || "").toLowerCase() === "delivery";
-  
-  const seq = isDelivery 
-    ? ["recebido", "preparo", "pronto", "caminho", "finalizado"]
-    : ["recebido", "preparo", "pronto", "finalizado"];
-  
-  const i = seq.indexOf(s);
-  if (i <= 0) return;
-  
-  // ✅ Atualiza o status
-  updateOrderStatus(orderId, seq[i - 1]);
-  
-  // ✅ FECHA O MODAL
-  closeOrderModal();
 }
 
 async function imprimirPedido(orderId) {
