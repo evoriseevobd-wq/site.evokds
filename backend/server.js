@@ -2618,7 +2618,7 @@ app.delete("/api/v1/restaurante/:restaurant_id/mp/cancelar-intent/:intent_id", a
       return sendError(res, 400, "Maquininha não configurada");
 
     const mpResp = await fetch(
-      `https://api.mercadopago.com/point/integration-api/payment-intents/${intent_id}`,
+      `https://api.mercadopago.com/point/integration-api/devices/${config.mp_device_id}/payment-intents/${intent_id}`,
       {
         method: "DELETE",
         headers: {
