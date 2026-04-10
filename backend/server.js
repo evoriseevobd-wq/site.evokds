@@ -2635,6 +2635,31 @@ app.delete("/api/v1/restaurante/:restaurant_id/mp/cancelar-intent/:intent_id", a
   }
 });
 
+// GET - Lista intenções pendentes do device
+app.get("/api/v1/restaurante/:restaurant_id/mp/intent-atual", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const config = await getIntegracao(restaurant_id, "maquininha");
+    if (!config?.mp_access_token || !config?.mp_device_id)
+      return sendError(res, 400, "Maquininha não configurada");
+
+    const mpResp = await fetch(
+      `https://api.mercadopago.com/point/integration-api/devices/${config.mp_device_id}/payment-intents`,
+      {
+        headers: {
+          "Authorization": `Bearer ${config.mp_access_token}`
+        }
+      }
+    );
+
+    const data = await mpResp.json();
+    console.log("🔍 Intent atual:", data);
+    return res.json({ success: mpResp.ok, data });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
 // POST - Webhook do Mercado Pago
 app.post("/api/v1/mp/webhook", async (req, res) => {
   try {
