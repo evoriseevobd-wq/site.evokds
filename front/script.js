@@ -385,6 +385,7 @@ function showBoard() {
   document.getElementById("fidelidade-view")?.classList.add("hidden");
   board?.classList.remove("hidden");
   showTabsBar();
+  document.getElementById("tabs-bar")?.classList.remove("hidden"); // ← aqui
   closeDrawer();
   renderBoard();
 }
@@ -485,6 +486,7 @@ function showSettings() {
   document.getElementById("settings-view")?.classList.remove("hidden");
   document.getElementById("fidelidade-view")?.classList.add("hidden");  // adiciona
   document.getElementById("cardapio-view")?.classList.add("hidden");    // adiciona
+  document.getElementById("tabs-bar")?.classList.add("hidden");
   hideTabsBar();
   closeDrawer();
   loadSettingsData();
