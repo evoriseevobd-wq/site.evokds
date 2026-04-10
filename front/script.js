@@ -2132,6 +2132,48 @@ document.getElementById("btn-testar-impressora")?.addEventListener("click", test
 document.getElementById("btn-salvar-rastreio")?.addEventListener("click", salvarRastreio);
 document.getElementById("btn-salvar-nfe")?.addEventListener("click", () => salvarFiscal());
 document.getElementById("btn-salvar-marketplace")?.addEventListener("click", salvarMarketplace);
+  document.getElementById("btn-salvar-mp")?.addEventListener("click", async () => {
+  const rid = getRestaurantId();
+  const tipo = document.getElementById("settings-maquininha-tipo")?.value;
+  const status = document.getElementById("settings-mp-status");
+
+  if (!tipo) { if (status) status.textContent = "❌ Selecione a maquininha."; return; }
+
+  let dados = { tipo };
+
+  if (tipo === "mercadopago") {
+    dados.mp_access_token = document.getElementById("settings-mp-token")?.value?.trim();
+    dados.mp_device_id = document.getElementById("settings-mp-device")?.value?.trim();
+    if (!dados.mp_access_token || !dados.mp_device_id) {
+      if (status) status.textContent = "❌ Preencha Access Token e Device ID.";
+      return;
+    }
+  } else if (tipo === "cielo") {
+    dados.client_id = document.getElementById("settings-cielo-client-id")?.value?.trim();
+    dados.access_token = document.getElementById("settings-cielo-token")?.value?.trim();
+    dados.serial_number = document.getElementById("settings-cielo-serial")?.value?.trim();
+  } else if (tipo === "stone") {
+    dados.stone_code = document.getElementById("settings-stone-code")?.value?.trim();
+    dados.token = document.getElementById("settings-stone-token")?.value?.trim();
+  } else if (tipo === "pagseguro") {
+    dados.token = document.getElementById("settings-pagseguro-token")?.value?.trim();
+    dados.email = document.getElementById("settings-pagseguro-email")?.value?.trim();
+  } else if (tipo === "outra") {
+    dados.webhook_url = document.getElementById("settings-outra-webhook")?.value?.trim();
+  }
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/integracao/maquininha`, {
+      method: "PATCH",
+      headers: buildHeaders(),
+      body: JSON.stringify({ dados, ativo: true })
+    });
+    const data = await resp.json();
+    if (status) status.textContent = data.success ? "✅ Maquininha salva!" : "❌ Erro ao salvar.";
+  } catch (e) {
+    if (status) status.textContent = "❌ Erro de conexão.";
+  }
+});
   
 // Logout
 if (logoutBtn) logoutBtn.addEventListener("click", logout);
@@ -4431,6 +4473,14 @@ async function deletarPremio(id) {
       method: "DELETE", headers: buildHeaders()
     });
     await fetchFidelidadePremios();
+  });
+}
+
+function onMaquininhaChange(tipo) {
+  const todos = ['mercadopago', 'cielo', 'stone', 'pagseguro', 'outra'];
+  todos.forEach(t => {
+    const el = document.getElementById(`fields-${t}`);
+    if (el) el.style.display = t === tipo ? 'flex' : 'none';
   });
 }
 
