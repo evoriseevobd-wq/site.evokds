@@ -2606,7 +2606,7 @@ app.post("/api/v1/mp/webhook", async (req, res) => {
         emitOrderUpdate(order.restaurant_id, updated);
         console.log(`✅ Pedido ${order.order_number} finalizado via MP`);
       }
-    } else if (statusData.state === "CANCELED" || statusData.state === "ERR
+   } else if (statusData.state === "CANCELED" || statusData.state === "ERROR") {
 
 // ===== WEBHOOK SATISFAÇÃO =====
 async function dispararWebhookSatisfacao(order) {
