@@ -2610,15 +2610,15 @@ app.post("/api/v1/restaurante/:restaurant_id/mp/ativar-pdv", async (req, res) =>
 });
 
 // DELETE - Cancela intenção de pagamento pendente
-app.delete("/api/v1/restaurante/:restaurant_id/mp/cancelar-intent", async (req, res) => {
+app.delete("/api/v1/restaurante/:restaurant_id/mp/cancelar-intent/:intent_id", async (req, res) => {
   try {
-    const { restaurant_id } = req.params;
+    const { restaurant_id, intent_id } = req.params;
     const config = await getIntegracao(restaurant_id, "maquininha");
-    if (!config?.mp_access_token || !config?.mp_device_id)
+    if (!config?.mp_access_token)
       return sendError(res, 400, "Maquininha não configurada");
 
     const mpResp = await fetch(
-      `https://api.mercadopago.com/point/integration-api/devices/${config.mp_device_id}/payment-intents`,
+      `https://api.mercadopago.com/point/integration-api/payment-intents/${intent_id}`,
       {
         method: "DELETE",
         headers: {
