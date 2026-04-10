@@ -2669,7 +2669,8 @@ app.post("/api/v1/mp/webhook", async (req, res) => {
     console.log("📩 Query:", JSON.stringify(req.query));
     
     const type = req.body.type || req.body.action || req.query.type;
-    const dataId = req.body?.data?.id || req.body?.data_id || req.query?.data_id;
+    const type = req.body.type || req.body.action || req.query.type;
+const dataId = req.body?.data?.id || req.body?.data_id || req.query?.["data.id"] || req.query?.data_id;
     
     console.log("📩 Type:", type, "| Data ID:", dataId);
     
