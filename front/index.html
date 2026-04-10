@@ -656,7 +656,7 @@
           </div>
           <span id="arrow-impressora" style="color:rgba(252,228,228,0.5); font-size:18px; transition:transform 0.2s;">▼</span>
         </button>
-        <div id="accordion-impressora" style="display:none; padding:0 24px 24px 24px; display:flex; flex-direction:column; gap:12px;">
+        <div id="accordion-impressora" style="display:none; padding:0 24px 24px 24px; flex-direction:column; gap:12px;">
           <p style="color:rgba(252,228,228,0.45); font-size:13px; margin:0 0 8px 0;">Configure sua impressora para imprimir pedidos automaticamente.</p>
           <label style="display:flex; flex-direction:column; gap:6px;">
             <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">API Key</span>
@@ -685,7 +685,7 @@
           </div>
           <span id="arrow-rastreio" style="color:rgba(252,228,228,0.5); font-size:18px; transition:transform 0.2s;">▼</span>
         </button>
-        <div id="accordion-rastreio" style="display:none; padding:0 24px 24px 24px; display:flex; flex-direction:column; gap:12px;">
+        <div id="accordion-rastreio" style="display:none; padding:0 24px 24px 24px; flex-direction:column; gap:12px;">
           <p style="color:rgba(252,228,228,0.45); font-size:13px; margin:0 0 8px 0;">URL enviada ao cliente para acompanhar o pedido em tempo real.</p>
           <label style="display:flex; flex-direction:column; gap:6px;">
             <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">URL Base</span>
@@ -706,7 +706,7 @@
           </div>
           <span id="arrow-nfe" style="color:rgba(252,228,228,0.5); font-size:18px; transition:transform 0.2s;">▼</span>
         </button>
-        <div id="accordion-nfe" style="display:none; padding:0 24px 24px 24px; display:flex; flex-direction:column; gap:12px;">
+        <div id="accordion-nfe" style="display:none; padding:0 24px 24px 24px; flex-direction:column; gap:12px;">
           <p style="color:rgba(252,228,228,0.45); font-size:13px; margin:0 0 8px 0;">Configure a emissão automática de NFC-e ao finalizar pedidos.</p>
           <label style="display:flex; flex-direction:column; gap:6px;">
             <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Token Focus NF-e</span>
@@ -745,7 +745,7 @@
           </div>
           <span id="arrow-marketplace" style="color:rgba(252,228,228,0.5); font-size:18px; transition:transform 0.2s;">▼</span>
         </button>
-        <div id="accordion-marketplace" style="display:none; padding:0 24px 24px 24px; display:flex; flex-direction:column; gap:12px;">
+        <div id="accordion-marketplace" style="display:none; padding:0 24px 24px 24px; flex-direction:column; gap:12px;">
           <p style="color:rgba(252,228,228,0.45); font-size:13px; margin:0 0 8px 0;">Cole as chaves de API fornecidas pelos marketplaces para integrar os pedidos.</p>
           <label style="display:flex; flex-direction:column; gap:6px;">
             <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">iFood — API Key</span>
@@ -768,6 +768,32 @@
 </div>
         </div>
 
+<!-- 💳 MERCADO PAGO POINT -->
+<div style="background:rgba(46,8,8,0.5); border:1px solid rgba(91,28,28,0.85); border-radius:16px; overflow:hidden;">
+  <button onclick="toggleAccordion('mp')" style="width:100%; display:flex; align-items:center; justify-content:space-between; padding:20px 24px; background:transparent; border:none; cursor:pointer;">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <span style="font-size:20px;">💳</span>
+      <span style="color:rgba(252,228,228,1); font-size:16px; font-weight:800;">Mercado Pago Point</span>
+    </div>
+    <span id="arrow-mp" style="color:rgba(252,228,228,0.5); font-size:18px; transition:transform 0.2s;">▼</span>
+  </button>
+  <div id="accordion-mp" style="display:none; padding:0 24px 24px 24px; flex-direction:column; gap:12px;">
+    <p style="color:rgba(252,228,228,0.45); font-size:13px; margin:0 0 8px 0;">Configure a maquininha para receber pagamentos diretamente pelo FluxON.</p>
+    <label style="display:flex; flex-direction:column; gap:6px;">
+      <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Access Token</span>
+      <input type="password" id="settings-mp-token" placeholder="APP_USR-..."
+        style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+    </label>
+    <label style="display:flex; flex-direction:column; gap:6px;">
+      <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Device ID</span>
+      <input type="text" id="settings-mp-device" placeholder="PAX_A910__SMARTPOS..."
+        style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+    </label>
+    <button class="primary-button" id="btn-salvar-mp" style="margin-top:4px; width:100%;">Salvar configuração</button>
+    <p id="settings-mp-status" style="margin-top:4px; font-size:13px; min-height:18px;"></p>
+  </div>
+</div>
+  
 <!-- 🔔 WEBHOOK SATISFAÇÃO -->
 <div style="background:rgba(46,8,8,0.5); border:1px solid rgba(91,28,28,0.85); border-radius:16px; overflow:hidden;">
   <button onclick="toggleAccordion('webhook')" style="width:100%; display:flex; align-items:center; justify-content:space-between; padding:20px 24px; background:transparent; border:none; cursor:pointer;">
@@ -777,7 +803,7 @@
     </div>
     <span id="arrow-webhook" style="color:rgba(252,228,228,0.5); font-size:18px; transition:transform 0.2s;">▼</span>
   </button>
-  <div id="accordion-webhook" style="display:none; padding:0 24px 24px 24px; display:flex; flex-direction:column; gap:12px;">
+  <div id="accordion-webhook" style="display:none; padding:0 24px 24px 24px; flex-direction:column; gap:12px;">
     <p style="color:rgba(252,228,228,0.45); font-size:13px; margin:0 0 8px 0;">
       2 horas após um pedido ser finalizado, os detalhes serão enviados automaticamente para essa URL.
     </p>
