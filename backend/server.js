@@ -2606,8 +2606,25 @@ app.post("/api/v1/mp/webhook", async (req, res) => {
         emitOrderUpdate(order.restaurant_id, updated);
         console.log(`✅ Pedido ${order.order_number} finalizado via MP`);
       }
+      
    } else if (statusData.state === "CANCELED" || statusData.state === "ERROR") {
+  const now = new Date().toISOString();
+  const { data: updated } = await supabase
+    .from("orders")
+    .update({
+      status: "cancelled",
+      update_at: now
+    })
+    .eq("id", order.id)
+    .select()
+    .single();
 
+  if (updated) {
+    emitOrderUpdate(order.restaurant_id, updated);
+    console.log(`❌ Pedido ${order.order_number} cancelado via MP`);
+  }
+}
+    
 // ===== WEBHOOK SATISFAÇÃO =====
 async function dispararWebhookSatisfacao(order) {
   try {
