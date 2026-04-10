@@ -2390,6 +2390,163 @@ app.post("/api/v1/restaurante/:restaurant_id/marketplace", async (req, res) => {
   }
 });
 
+// GET - Busca config Mercado Pago
+app.get("/api/v1/restaurante/:restaurant_id/mp", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { data, error } = await supabase
+      .from("restaurants")
+      .select("mp_access_token, mp_device_id")
+      .eq("id", restaurant_id)
+      .single();
+    if (error || !data) return sendError(res, 404, "Restaurante não encontrado");
+    return res.json({
+      mp_access_token: data.mp_access_token ? "configurado" : "",
+      mp_device_id: data.mp_device_id || ""
+    });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
+// PATCH - Salva config Mercado Pago
+app.patch("/api/v1/restaurante/:restaurant_id/mp", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { mp_access_token, mp_device_id } = req.body;
+    if (!mp_access_token || !mp_device_id) 
+      return sendError(res, 400, "Access Token e Device ID são obrigatórios");
+    const { error } = await supabase
+      .from("restaurants")
+      .update({ mp_access_token, mp_device_id })
+      .eq("id", restaurant_id);
+    if (error) return sendError(res, 500, "Erro ao salvar configuração");
+    return res.json({ success: true });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
+// POST - Cria intenção de pagamento na maquininha
+app.post("/api/v1/restaurante/:restaurant_id/mp/cobrar", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { order_id, valor } = req.body;
+
+    if (!order_id || !valor) 
+      return sendError(res, 400, "order_id e valor são obrigatórios");
+
+    const { data: config, error } = await supabase
+      .from("restaurants")
+      .select("mp_access_token, mp_device_id")
+      .eq("id", restaurant_id)
+      .single();
+
+    if (error || !config?.mp_access_token || !config?.mp_device_id)
+      return sendError(res, 400, "Mercado Pago não configurado");
+
+    const mpResp = await fetch(
+      `https://api.mercadopago.com/point/integration-api/devices/${config.mp_device_id}/payment-intents`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${config.mp_access_token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          amount: Math.round(valor * 100),
+          additional_info: {
+            external_reference: order_id,
+            print_on_terminal: true
+          }
+        })
+      }
+    );
+
+    const mpData = await mpResp.json();
+
+    if (!mpResp.ok) {
+      console.error("❌ Erro MP:", mpData);
+      return sendError(res, 500, mpData.message || "Erro ao criar cobrança");
+    }
+
+    // Salva o payment_intent_id no pedido para conferir no webhook
+    await supabase
+      .from("orders")
+      .update({ mp_payment_intent_id: mpData.id })
+      .eq("id", order_id);
+
+    console.log(`💳 Cobrança criada: ${mpData.id} para pedido ${order_id}`);
+    return res.json({ success: true, payment_intent_id: mpData.id });
+
+  } catch (err) {
+    console.error("❌ Erro em /mp/cobrar:", err);
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
+// POST - Webhook do Mercado Pago
+app.post("/api/v1/mp/webhook", async (req, res) => {
+  try {
+    const { type, data } = req.body;
+
+    console.log("📩 Webhook MP recebido:", type, data);
+
+    // MP só nos interessa quando o pagamento é aprovado
+    if (type !== "payment_intent") return res.sendStatus(200);
+
+    const paymentIntentId = data?.id;
+    if (!paymentIntentId) return res.sendStatus(200);
+
+    // Busca o pedido pelo payment_intent_id
+    const { data: order, error } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("mp_payment_intent_id", paymentIntentId)
+      .single();
+
+    if (error || !order) {
+      console.warn("⚠️ Pedido não encontrado para payment_intent:", paymentIntentId);
+      return res.sendStatus(200);
+    }
+
+    // Verifica status no MP
+    const { data: config } = await supabase
+      .from("restaurants")
+      .select("mp_access_token")
+      .eq("id", order.restaurant_id)
+      .single();
+
+    const statusResp = await fetch(
+      `https://api.mercadopago.com/point/integration-api/payment-intents/${paymentIntentId}`,
+      {
+        headers: { "Authorization": `Bearer ${config.mp_access_token}` }
+      }
+    );
+
+    const statusData = await statusResp.json();
+    console.log("💳 Status MP:", statusData.state);
+
+    if (statusData.state === "FINISHED") {
+      const now = new Date().toISOString();
+      const { data: updated } = await supabase
+        .from("orders")
+        .update({
+          status: "finished",
+          payment_method: statusData.payment?.type || "maquininha",
+          delivered_at: now,
+          update_at: now
+        })
+        .eq("id", order.id)
+        .select()
+        .single();
+
+      if (updated) {
+        emitOrderUpdate(order.restaurant_id, updated);
+        console.log(`✅ Pedido ${order.order_number} finalizado via MP`);
+      }
+    } else if (statusData.state === "CANCELED" || statusData.state === "ERR
+
 // ===== WEBHOOK SATISFAÇÃO =====
 async function dispararWebhookSatisfacao(order) {
   try {
