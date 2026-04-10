@@ -2506,12 +2506,12 @@ app.post("/api/v1/restaurante/:restaurant_id/mp/cobrar", async (req, res) => {
     if (!order_id || !valor) 
       return sendError(res, 400, "order_id e valor são obrigatórios");
 
-    const config = await getIntegracao(restaurant_id, "mercadopago");
-if (!config?.access_token || !config?.device_id)
-  return sendError(res, 400, "Mercado Pago não configurado");
+    const config = await getIntegracao(restaurant_id, "maquininha");
+    if (!config?.mp_access_token || !config?.mp_device_id)
+      return sendError(res, 400, "Mercado Pago não configurado");
 
     const mpResp = await fetch(
-      `https://api.mercadopago.com/point/integration-api/devices/${config.device_id}/payment-intents`,
+      `https://api.mercadopago.com/point/integration-api/devices/${config.mp_device_id}/payment-intents`,
       {
         method: "POST",
         headers: {
