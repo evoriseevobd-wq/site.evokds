@@ -483,6 +483,8 @@ function showSettings() {
   resultsView?.classList.add("hidden");
   document.getElementById("autoatendimento-view")?.classList.add("hidden");
   document.getElementById("settings-view")?.classList.remove("hidden");
+  document.getElementById("fidelidade-view")?.classList.add("hidden");  // adiciona
+  document.getElementById("cardapio-view")?.classList.add("hidden");    // adiciona
   hideTabsBar();
   closeDrawer();
   loadSettingsData();
