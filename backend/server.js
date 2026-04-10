@@ -2348,6 +2348,94 @@ app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
   }
 });
 
+// ===== INTEGRAÇÕES =====
+
+// GET - Busca integração por tipo
+app.get("/api/v1/restaurante/:restaurant_id/integracao/:tipo", async (req, res) => {
+  try {
+    const { restaurant_id, tipo } = req.params;
+    const { data, error } = await supabase
+      .from("integracoes")
+      .select("dados, ativo")
+      .eq("restaurant_id", restaurant_id)
+      .eq("tipo", tipo)
+      .single();
+    if (error || !data) return res.json({ configurado: false });
+    
+    // Nunca retorna tokens/secrets para o frontend
+    const dadosSeguros = {};
+    Object.keys(data.dados).forEach(key => {
+      const camposSensiveis = ["access_token", "client_secret", "token", "merchant_key", "api_key"];
+      const isSensivel = camposSensiveis.some(s => key.includes(s));
+      dadosSeguros[key] = isSensivel ? "configurado" : data.dados[key];
+    });
+
+    return res.json({ configurado: true, ativo: data.ativo, dados: dadosSeguros });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
+// PATCH - Salva ou atualiza integração
+app.patch("/api/v1/restaurante/:restaurant_id/integracao/:tipo", async (req, res) => {
+  try {
+    const { restaurant_id, tipo } = req.params;
+    const { dados, ativo } = req.body;
+    if (!dados) return sendError(res, 400, "dados são obrigatórios");
+
+    // Verifica se já existe
+    const { data: existing } = await supabase
+      .from("integracoes")
+      .select("id, dados")
+      .eq("restaurant_id", restaurant_id)
+      .eq("tipo", tipo)
+      .single();
+
+    if (existing) {
+      // Merge dos dados — não sobrescreve campos que vieram como "configurado"
+      const dadosMerge = { ...existing.dados };
+      Object.keys(dados).forEach(key => {
+        if (dados[key] !== "configurado" && dados[key] !== "") {
+          dadosMerge[key] = dados[key];
+        }
+      });
+
+      const { error } = await supabase
+        .from("integracoes")
+        .update({ dados: dadosMerge, ativo: ativo ?? true, updated_at: new Date().toISOString() })
+        .eq("id", existing.id);
+
+      if (error) return sendError(res, 500, "Erro ao atualizar integração");
+    } else {
+      const { error } = await supabase
+        .from("integracoes")
+        .insert([{ restaurant_id, tipo, dados, ativo: ativo ?? true }]);
+
+      if (error) return sendError(res, 500, "Erro ao criar integração");
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
+// DELETE - Remove integração
+app.delete("/api/v1/restaurante/:restaurant_id/integracao/:tipo", async (req, res) => {
+  try {
+    const { restaurant_id, tipo } = req.params;
+    const { error } = await supabase
+      .from("integracoes")
+      .delete()
+      .eq("restaurant_id", restaurant_id)
+      .eq("tipo", tipo);
+    if (error) return sendError(res, 500, "Erro ao remover integração");
+    return res.json({ success: true });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
 // ===== MARKETPLACE =====
 app.get("/api/v1/restaurante/:restaurant_id/marketplace", async (req, res) => {
   try {
