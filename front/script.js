@@ -1195,7 +1195,10 @@ modal.innerHTML = `
     });
   });
 
-  modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.remove();
+  });
+}
 
 async function imprimirPedido(orderId) {
   const order = orders.find(o => o.id === orderId);
