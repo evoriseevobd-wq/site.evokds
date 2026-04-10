@@ -2572,14 +2572,14 @@ app.post("/api/v1/mp/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    const config = await getIntegracao(order.restaurant_id, "mercadopago");
+    const config = await getIntegracao(order.restaurant_id, "maquininha");
 
-    const statusResp = await fetch(
-      `https://api.mercadopago.com/point/integration-api/payment-intents/${paymentIntentId}`,
-      {
-        headers: { "Authorization": `Bearer ${config.access_token}` }
-      }
-    );
+const statusResp = await fetch(
+  `https://api.mercadopago.com/point/integration-api/payment-intents/${paymentIntentId}`,
+  {
+    headers: { "Authorization": `Bearer ${config.mp_access_token}` }
+  }
+);
 
     const statusData = await statusResp.json();
     console.log("💳 Status MP:", statusData.state);
