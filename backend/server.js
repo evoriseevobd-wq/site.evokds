@@ -2663,8 +2663,9 @@ app.get("/api/v1/restaurante/:restaurant_id/mp/intent-atual", async (req, res) =
 // POST - Webhook do Mercado Pago
 app.post("/api/v1/mp/webhook", async (req, res) => {
   try {
-    const { type, data } = req.body;
-    console.log("📩 Webhook MP recebido:", type, data);
+    console.log("📩 Webhook MP body completo:", JSON.stringify(req.body));
+    const type = req.body.type || req.body.action;
+    const data = req.body.data || { id: req.body.data_id };
 
     if (type !== "payment_intent") return res.sendStatus(200);
 
