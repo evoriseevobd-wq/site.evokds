@@ -124,6 +124,7 @@ let isFetching = false;
 var _fetchController = null;
 let editingOrderId = null;
 let socket = null;
+let searchTerm = "";
 
 let restaurantPlan = "basic";
 let restaurantPlanPrice = 1200; // Preço padrão
@@ -709,7 +710,13 @@ function renderBoard() {
     }
   });
 
-  const filtered = orders.filter((o) => visibleStatuses.includes(o._frontStatus));
+ const filtered = orders.filter((o) => {
+  if (!visibleStatuses.includes(o._frontStatus)) return false;
+  if (!searchTerm) return true;
+  const num = String(o.order_number || "").toLowerCase();
+  const name = String(o.client_name || "").toLowerCase();
+  return num.includes(searchTerm) || name.includes(searchTerm);
+});
 
   filtered.forEach((o) => {
     const card = buildOrderCard(o);
@@ -2131,6 +2138,11 @@ setInterval(() => {
   if (!isFetching) fetchOrders();
 }, 20000);
 fetchOrders();
+// Busca no board
+document.getElementById("search-order")?.addEventListener("input", function() {
+  searchTerm = this.value.toLowerCase().trim();
+  renderBoard();
+});
   
 // Conecta WebSocket
 socket = io(API_BASE, { transports: ["websocket"] });
