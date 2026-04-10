@@ -98,6 +98,21 @@ async function restaurantExists(restaurant_id) {
   }
 }
 
+async function getIntegracao(restaurant_id, tipo) {
+  try {
+    const { data, error } = await supabase
+      .from("integracoes")
+      .select("dados")
+      .eq("restaurant_id", restaurant_id)
+      .eq("tipo", tipo)
+      .single();
+    if (error || !data) return null;
+    return data.dados;
+  } catch (err) {
+    return null;
+  }
+}
+
 async function getRestaurantPlan(restaurant_id) {
   try {
     const { data, error } = await supabase.from("restaurants").select("plan").eq("id", restaurant_id).single();
@@ -139,6 +154,7 @@ function normalizePhone(input) {
   const digits = String(input).replace(/\D/g, "").trim();
   return digits || null;
 }
+
 
 /* ========================================
    🔥 ROTA DE MÉTRICAS COMPLETA
