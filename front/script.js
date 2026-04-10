@@ -1035,7 +1035,8 @@ function showPaymentModal(orderId) {
   modal.id = "payment-modal";
   modal.className = "modal-backdrop open";
 
-  modal.innerHTML = `
+ const valorFormatado = formatCurrency(o.total_price || 0);
+modal.innerHTML = `
     <div class="modal confirm-modal">
       <div class="modal-header">
         <h3>💳 Forma de Pagamento</h3>
@@ -1043,7 +1044,7 @@ function showPaymentModal(orderId) {
       <div class="modal-body">
         <div style="background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px; padding:12px 14px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
           <span style="color:rgba(252,228,228,0.7); font-weight:700;">Valor Total</span>
-          <span style="color:rgba(252,228,228,1); font-size:18px; font-weight:900;">${formatCurrency(o.total_price || 0)}</span>
+          <span style="color:rgba(252,228,228,1); font-size:18px; font-weight:900;">${valorFormatado}</span>
         </div>
         <p style="color:rgba(252,228,228,0.8); margin-bottom:12px;">Como o cliente vai pagar?</p>
         <select id="payment-select" style="width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; font-family:inherit; outline:none;">
