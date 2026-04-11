@@ -1194,7 +1194,7 @@ function showPaymentModal(orderId) {
       const cobrarResp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/mp/cobrar`, {
         method: "POST",
         headers: buildHeaders(),
-        body: JSON.stringify({ order_id: orderId, valor: parseFloat(o.total_price || 0) })
+        body: JSON.stringify({ order_id: orderId, valor: parseFloat(o.total_price || 0), metodo: metodo })
       });
 
       const cobrarData = await cobrarResp.json();
