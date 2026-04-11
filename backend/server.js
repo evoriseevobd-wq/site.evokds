@@ -2555,10 +2555,6 @@ app.post("/api/v1/restaurante/:restaurant_id/mp/cobrar", async (req, res) => {
   additional_info: {
     external_reference: order_id,
     print_on_terminal: true
-  },
-  payment: {
-    installments: 1,
-    type: "credit_card"
   }
 })
       }
