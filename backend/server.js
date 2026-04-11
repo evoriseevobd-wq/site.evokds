@@ -2588,13 +2588,46 @@ const pollInterval = setInterval(async () => {
 
   try {
     const statusResp = await fetch(
-      `https://api.mercadopago.com/point/integration-api/payment-intents/${intentId}`,
-      { headers: { "Authorization": `Bearer ${config.mp_access_token}` } }
-    );
-    const statusData = await statusResp.json();
-    console.log(`🔄 Polling intent ${intentId}: ${statusData.state}`);
+  `https://api.mercadopago.com/point/integration-api/payment-intents/${intentId}`,
+  { headers: { "Authorization": `Bearer ${config.mp_access_token}` } }
+);
+const statusData = await statusResp.json();
+console.log(`🔄 Polling intent ${intentId}: ${statusData.state}`);
 
-    if (statusData.state === "FINISHED") {
+// Se o intent foi processado, busca o payment pelo external_reference
+if (statusData.state === "FINISHED" || statusData.additional_info?.external_reference) {
+  const paymentResp = await fetch(
+    `https://api.mercadopago.com/v1/payments/search?external_reference=${order_id}&sort=date_created&criteria=desc&range=date_created&begin_date=NOW-1HOURS&end_date=NOW`,
+    { headers: { "Authorization": `Bearer ${config.mp_access_token}` } }
+  );
+  const paymentData = await paymentResp.json();
+  console.log(`💳 Payment search:`, JSON.stringify(paymentData?.results?.[0]?.status));
+  
+  const payment = paymentData?.results?.[0];
+  if (payment?.status === "approved") {
+    clearInterval(pollInterval);
+    const now = new Date().toISOString();
+    const { data: updated } = await supabase
+      .from("orders")
+      .update({
+        status: "finished",
+        payment_method: payment.payment_type_id || "maquininha",
+        delivered_at: now,
+        update_at: now
+      })
+      .eq("id", order_id)
+      .select()
+      .single();
+
+    if (updated) {
+      emitOrderUpdate(updated.restaurant_id, updated);
+      console.log(`✅ Pedido ${order_id} finalizado via payment search`);
+    }
+    return;
+  }
+}
+
+if (statusData.state === "FINISHED") {
       clearInterval(pollInterval);
       const now = new Date().toISOString();
       const { data: updated } = await supabase
