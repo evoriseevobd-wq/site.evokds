@@ -2533,7 +2533,7 @@ app.patch("/api/v1/restaurante/:restaurant_id/mp", async (req, res) => {
 app.post("/api/v1/restaurante/:restaurant_id/mp/cobrar", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
-    const { order_id, valor } = req.body;
+    const { order_id, valor, metodo } = req.body; // ← metodo já aqui
 
     if (!order_id || !valor) 
       return sendError(res, 400, "order_id e valor são obrigatórios");
@@ -2541,6 +2541,12 @@ app.post("/api/v1/restaurante/:restaurant_id/mp/cobrar", async (req, res) => {
     const config = await getIntegracao(restaurant_id, "maquininha");
     if (!config?.mp_access_token || !config?.mp_device_id)
       return sendError(res, 400, "Mercado Pago não configurado");
+
+    const paymentTypeMap = {
+      credito: "credit_card",
+      debito:  "debit_card",
+      pix:     "wallet_purchase"
+    };
 
     const mpResp = await fetch(
       `https://api.mercadopago.com/point/integration-api/devices/${config.mp_device_id}/payment-intents`,
@@ -2550,25 +2556,16 @@ app.post("/api/v1/restaurante/:restaurant_id/mp/cobrar", async (req, res) => {
           "Authorization": `Bearer ${config.mp_access_token}`,
           "Content-Type": "application/json"
         },
-        
-        const { order_id, valor, metodo } = req.body; // ← adiciona metodo aqui em cima também
-
-const paymentTypeMap = {
-  credito: "credit_card",
-  debito:  "debit_card",
-  pix:     "wallet_purchase"
-};
-
-body: JSON.stringify({
-  amount: Math.round(valor * 100),
-  additional_info: {
-    external_reference: order_id,
-    print_on_terminal: true
-  },
-  payment: {
-    type: paymentTypeMap[metodo] || "credit_card"
-  }
-})
+        body: JSON.stringify({
+          amount: Math.round(valor * 100),
+          additional_info: {
+            external_reference: order_id,
+            print_on_terminal: true
+          },
+          payment: {
+            type: paymentTypeMap[metodo] || "credit_card"
+          }
+        })
       }
     );
 
@@ -2579,106 +2576,104 @@ body: JSON.stringify({
       return sendError(res, 500, mpData.message || "Erro ao criar cobrança");
     }
 
-    // Salva o payment_intent_id no pedido para conferir no webhook
     await supabase
       .from("orders")
       .update({ mp_payment_intent_id: mpData.id })
       .eq("id", order_id);
 
-// Inicia polling para verificar status do pagamento
-const intentId = mpData.id;
-let tentativas = 0;
-const MAX = 60; // 2 minutos
+    const intentId = mpData.id;
+    let tentativas = 0;
+    const MAX = 60;
 
-const pollInterval = setInterval(async () => {
-  tentativas++;
-  if (tentativas > MAX) {
-    clearInterval(pollInterval);
-    console.log(`⏰ Polling expirado para intent ${intentId}`);
-    return;
-  }
-
-  try {
-    const statusResp = await fetch(
-  `https://api.mercadopago.com/point/integration-api/payment-intents/${intentId}`,
-  { headers: { "Authorization": `Bearer ${config.mp_access_token}` } }
-);
-const statusData = await statusResp.json();
-console.log(`🔄 Polling intent ${intentId}: ${statusData.state}`);
-
-// Se o intent foi processado, busca o payment pelo external_reference
-if (statusData.state === "FINISHED" || statusData.additional_info?.external_reference) {
-    const paymentResp = await fetch(
-    `https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&external_reference=${order_id}`,
-    { headers: { "Authorization": `Bearer ${config.mp_access_token}` } }
-  );
-  const paymentData = await paymentResp.json();
-  console.log(`💳 Payment search:`, JSON.stringify(paymentData?.results?.[0]?.status));
-  
-  const payment = paymentData?.results?.[0];
-  if (payment?.status === "approved") {
-    clearInterval(pollInterval);
-    const now = new Date().toISOString();
-    const { data: updated } = await supabase
-      .from("orders")
-      .update({
-        status: "finished",
-        payment_method: payment.payment_type_id || "maquininha",
-        delivered_at: now,
-        update_at: now
-      })
-      .eq("id", order_id)
-      .select()
-      .single();
-
-    if (updated) {
-      emitOrderUpdate(updated.restaurant_id, updated);
-      console.log(`✅ Pedido ${order_id} finalizado via payment search`);
-    }
-    return;
-  }
-}
-
-if (statusData.state === "FINISHED") {
-      clearInterval(pollInterval);
-      const now = new Date().toISOString();
-      const { data: updated } = await supabase
-        .from("orders")
-        .update({
-          status: "finished",
-          payment_method: statusData.payment?.type || "maquininha",
-          delivered_at: now,
-          update_at: now
-        })
-        .eq("id", order_id)
-        .select()
-        .single();
-
-      if (updated) {
-        emitOrderUpdate(updated.restaurant_id, updated);
-        console.log(`✅ Pedido ${order_id} finalizado via polling MP`);
+    const pollInterval = setInterval(async () => {
+      tentativas++;
+      if (tentativas > MAX) {
+        clearInterval(pollInterval);
+        console.log(`⏰ Polling expirado para intent ${intentId}`);
+        return;
       }
 
-    } else if (statusData.state === "CANCELED" || statusData.state === "ERROR") {
-      clearInterval(pollInterval);
-      const now = new Date().toISOString();
-      const { data: updated } = await supabase
-        .from("orders")
-        .update({ status: "cancelled", update_at: now })
-        .eq("id", order_id)
-        .select()
-        .single();
+      try {
+        const statusResp = await fetch(
+          `https://api.mercadopago.com/point/integration-api/payment-intents/${intentId}`,
+          { headers: { "Authorization": `Bearer ${config.mp_access_token}` } }
+        );
+        const statusData = await statusResp.json();
+        console.log(`🔄 Polling intent ${intentId}: ${statusData.state}`);
 
-      if (updated) {
-        emitOrderUpdate(updated.restaurant_id, updated);
-        console.log(`❌ Pedido ${order_id} cancelado via polling MP`);
+        if (statusData.state === "FINISHED" || statusData.additional_info?.external_reference) {
+          const paymentResp = await fetch(
+            `https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&external_reference=${order_id}`,
+            { headers: { "Authorization": `Bearer ${config.mp_access_token}` } }
+          );
+          const paymentData = await paymentResp.json();
+          console.log(`💳 Payment search:`, JSON.stringify(paymentData?.results?.[0]?.status));
+
+          const payment = paymentData?.results?.[0];
+          if (payment?.status === "approved") {
+            clearInterval(pollInterval);
+            const now = new Date().toISOString();
+            const { data: updated } = await supabase
+              .from("orders")
+              .update({
+                status: "finished",
+                payment_method: payment.payment_type_id || "maquininha",
+                delivered_at: now,
+                update_at: now
+              })
+              .eq("id", order_id)
+              .select()
+              .single();
+
+            if (updated) {
+              emitOrderUpdate(updated.restaurant_id, updated);
+              console.log(`✅ Pedido ${order_id} finalizado via payment search`);
+            }
+            return;
+          }
+        }
+
+        if (statusData.state === "FINISHED") {
+          clearInterval(pollInterval);
+          const now = new Date().toISOString();
+          const { data: updated } = await supabase
+            .from("orders")
+            .update({
+              status: "finished",
+              payment_method: statusData.payment?.type || "maquininha",
+              delivered_at: now,
+              update_at: now
+            })
+            .eq("id", order_id)
+            .select()
+            .single();
+
+          if (updated) {
+            emitOrderUpdate(updated.restaurant_id, updated);
+            console.log(`✅ Pedido ${order_id} finalizado via polling MP`);
+          }
+
+        } else if (statusData.state === "CANCELED" || statusData.state === "ERROR") {
+          clearInterval(pollInterval);
+          const now = new Date().toISOString();
+          const { data: updated } = await supabase
+            .from("orders")
+            .update({ status: "cancelled", update_at: now })
+            .eq("id", order_id)
+            .select()
+            .single();
+
+          if (updated) {
+            emitOrderUpdate(updated.restaurant_id, updated);
+            console.log(`❌ Pedido ${order_id} cancelado via polling MP`);
+          }
+        }
+
+      } catch (e) {
+        console.warn(`⚠️ Erro no polling MP:`, e.message);
       }
-    }
-  } catch (e) {
-    console.warn(`⚠️ Erro no polling MP:`, e.message);
-  }
-}, 3000);
-    
+    }, 3000);
+
     console.log(`💳 Cobrança criada: ${mpData.id} para pedido ${order_id}`);
     return res.json({ success: true, payment_intent_id: mpData.id });
 
