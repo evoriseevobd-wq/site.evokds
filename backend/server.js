@@ -2551,12 +2551,16 @@ app.post("/api/v1/restaurante/:restaurant_id/mp/cobrar", async (req, res) => {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          amount: Math.round(valor * 100),
-          additional_info: {
-            external_reference: order_id,
-            print_on_terminal: true
-          }
-        })
+  amount: Math.round(valor * 100),
+  additional_info: {
+    external_reference: order_id,
+    print_on_terminal: true
+  },
+  payment: {
+    installments: 1,
+    type: "credit_card"
+  }
+})
       }
     );
 
@@ -2597,7 +2601,8 @@ console.log(`🔄 Polling intent ${intentId}: ${statusData.state}`);
 // Se o intent foi processado, busca o payment pelo external_reference
 if (statusData.state === "FINISHED" || statusData.additional_info?.external_reference) {
   const paymentResp = await fetch(
-    `https://api.mercadopago.com/v1/payments/search?external_reference=${order_id}&sort=date_created&criteria=desc&range=date_created&begin_date=NOW-1HOURS&end_date=NOW`,
+    const paymentResp = await fetch(
+    `https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&external_reference=${order_id}`,
     { headers: { "Authorization": `Bearer ${config.mp_access_token}` } }
   );
   const paymentData = await paymentResp.json();
