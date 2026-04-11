@@ -2550,11 +2550,23 @@ app.post("/api/v1/restaurante/:restaurant_id/mp/cobrar", async (req, res) => {
           "Authorization": `Bearer ${config.mp_access_token}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
+        
+        const { order_id, valor, metodo } = req.body; // ← adiciona metodo aqui em cima também
+
+const paymentTypeMap = {
+  credito: "credit_card",
+  debito:  "debit_card",
+  pix:     "wallet_purchase"
+};
+
+body: JSON.stringify({
   amount: Math.round(valor * 100),
   additional_info: {
     external_reference: order_id,
     print_on_terminal: true
+  },
+  payment: {
+    type: paymentTypeMap[metodo] || "credit_card"
   }
 })
       }
