@@ -938,7 +938,10 @@ function openOrderModal(orderId) {
 
    if (paymentPriceRow && modalPaymentEl && modalTotalPriceEl) {
   paymentPriceRow.style.display = "";
-  modalPaymentEl.textContent = String(order.payment_method || "—");
+  // Só mostra o método de pagamento se o pedido já foi finalizado
+  modalPaymentEl.textContent = order._frontStatus === "finalizado" 
+    ? String(order.payment_method || "—") 
+    : "Aguardando pagamento...";
   modalTotalPriceEl.textContent = order.total_price ? formatCurrency(order.total_price) : "—";
 }
 
