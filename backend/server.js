@@ -2600,7 +2600,6 @@ console.log(`🔄 Polling intent ${intentId}: ${statusData.state}`);
 
 // Se o intent foi processado, busca o payment pelo external_reference
 if (statusData.state === "FINISHED" || statusData.additional_info?.external_reference) {
-  const paymentResp = await fetch(
     const paymentResp = await fetch(
     `https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&external_reference=${order_id}`,
     { headers: { "Authorization": `Bearer ${config.mp_access_token}` } }
