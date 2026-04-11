@@ -1057,8 +1057,8 @@ function showPaymentModal(orderId) {
   modal.id = "payment-modal";
   modal.className = "modal-backdrop open";
 
- const valorFormatado = formatCurrency(o.total_price || 0);
-modal.innerHTML = `
+  const valorFormatado = formatCurrency(o.total_price || 0);
+  modal.innerHTML = `
     <div class="modal confirm-modal">
       <div class="modal-header">
         <h3>💳 Forma de Pagamento</h3>
@@ -1087,7 +1087,136 @@ modal.innerHTML = `
 
   document.body.appendChild(modal);
 
-  document.getElementById("payment-cancel").addEventListener("click", () => modal.remove());
+  const rid = getRestaurantId();
+  let pollingInterval = null;
+
+  // ===== FUNÇÃO QUE INICIA O POLLING =====
+  function iniciarPolling(metodo) {
+    let tentativas = 0;
+    const MAX_TENTATIVAS = 60;
+
+    const confirmBtn = document.getElementById("payment-confirm");
+    const cancelBtn = document.getElementById("payment-cancel");
+    const statusMsg = document.getElementById("payment-status-msg");
+
+    pollingInterval = setInterval(async () => {
+      tentativas++;
+
+      if (tentativas > MAX_TENTATIVAS) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+        statusMsg.style.color = "rgba(239,68,68,0.9)";
+        statusMsg.textContent = "⏰ Tempo esgotado. Verifique a maquininha.";
+        habilitarRetry(metodo);
+        return;
+      }
+
+      try {
+        const ordersResp = await fetch(`${API_URL}/${rid}`);
+        const allOrders = await ordersResp.json();
+        const updated = allOrders.find(x => x.id === orderId);
+        if (!updated) return;
+
+        const frontStatus = toFrontStatus(updated.status);
+
+        if (frontStatus === "finalizado") {
+          clearInterval(pollingInterval);
+          pollingInterval = null;
+          const idx = orders.findIndex(x => x.id === orderId);
+          if (idx !== -1) orders[idx] = { ...updated, _frontStatus: "finalizado" };
+          modal.remove();
+          renderBoard();
+          return;
+        }
+
+        if (frontStatus === "cancelado") {
+          clearInterval(pollingInterval);
+          pollingInterval = null;
+          statusMsg.style.color = "rgba(239,68,68,0.9)";
+          statusMsg.textContent = "❌ Pagamento cancelado ou recusado na maquininha.";
+
+          // Reverte o status do pedido para o estado anterior (pronto/preparo)
+          await fetch(`${API_URL}/${orderId}/status`, {
+            method: "PATCH",
+            headers: buildHeaders(),
+            body: JSON.stringify({ status: toBackStatus(o._frontStatus) })
+          });
+          const idx = orders.findIndex(x => x.id === orderId);
+          if (idx !== -1) orders[idx].status = toBackStatus(o._frontStatus);
+
+          habilitarRetry(metodo);
+          return;
+        }
+
+      } catch (e) {
+        console.warn("Erro no polling:", e);
+      }
+    }, 2000);
+  }
+
+  // ===== HABILITA BOTÃO DE RETRY =====
+  function habilitarRetry(metodo) {
+    const confirmBtn = document.getElementById("payment-confirm");
+    const cancelBtn = document.getElementById("payment-cancel");
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = "🔄 Tentar novamente";
+    cancelBtn.disabled = false;
+
+    // Troca o handler do botão para tentar de novo
+    confirmBtn.replaceWith(confirmBtn.cloneNode(true)); // remove listeners antigos
+    const novoBtn = document.getElementById("payment-confirm");
+    novoBtn.addEventListener("click", () => enviarParaMaquininha(metodo));
+  }
+
+  // ===== ENVIA PARA A MAQUININHA =====
+  async function enviarParaMaquininha(metodo) {
+    const confirmBtn = document.getElementById("payment-confirm");
+    const cancelBtn = document.getElementById("payment-cancel");
+    const statusMsg = document.getElementById("payment-status-msg");
+
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = "Aguardando...";
+    cancelBtn.disabled = true;
+    statusMsg.style.display = "block";
+    statusMsg.style.color = "rgba(252,228,228,0.7)";
+    statusMsg.textContent = "📲 Enviando para a maquininha...";
+
+    try {
+      await fetch(`${API_BASE}/api/v1/pedidos/${orderId}/payment`, {
+        method: "PATCH",
+        headers: buildHeaders(),
+        body: JSON.stringify({ payment_method: metodo })
+      });
+
+      const cobrarResp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/mp/cobrar`, {
+        method: "POST",
+        headers: buildHeaders(),
+        body: JSON.stringify({ order_id: orderId, valor: parseFloat(o.total_price || 0) })
+      });
+
+      const cobrarData = await cobrarResp.json();
+      if (!cobrarResp.ok || !cobrarData.success) {
+        throw new Error(cobrarData.error || "Erro ao enviar para maquininha");
+      }
+
+      statusMsg.textContent = "💳 Aguardando pagamento na maquininha...";
+      iniciarPolling(metodo);
+
+    } catch (err) {
+      console.error("Erro maquininha:", err);
+      statusMsg.style.color = "rgba(239,68,68,0.9)";
+      statusMsg.textContent = `❌ ${err.message}`;
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = "Tentar novamente";
+      cancelBtn.disabled = false;
+    }
+  }
+
+  // ===== HANDLER DO BOTÃO CONFIRMAR =====
+  document.getElementById("payment-cancel").addEventListener("click", () => {
+    if (pollingInterval) clearInterval(pollingInterval);
+    modal.remove();
+  });
 
   document.getElementById("payment-confirm").addEventListener("click", async () => {
     const metodo = document.getElementById("payment-select").value;
@@ -1098,7 +1227,6 @@ modal.innerHTML = `
       && (metodo === "credito" || metodo === "debito" || metodo === "pix");
 
     if (!usaMaquininha) {
-      // Dinheiro ou PIX → finaliza direto
       await fetch(`${API_BASE}/api/v1/pedidos/${orderId}/payment`, {
         method: "PATCH",
         headers: buildHeaders(),
@@ -1109,116 +1237,14 @@ modal.innerHTML = `
       return;
     }
 
-    // ===== FLUXO MAQUININHA =====
-    const rid = getRestaurantId();
-    const confirmBtn = document.getElementById("payment-confirm");
-    const cancelBtn = document.getElementById("payment-cancel");
-    const statusMsg = document.getElementById("payment-status-msg");
-
-    confirmBtn.disabled = true;
-    confirmBtn.textContent = "Aguardando...";
-    cancelBtn.disabled = true;
-    statusMsg.style.display = "block";
-    statusMsg.textContent = "📲 Enviando para a maquininha...";
-
-    let pollingInterval = null;
-
-    try {
-      // 1. Salva método de pagamento
-      await fetch(`${API_BASE}/api/v1/pedidos/${orderId}/payment`, {
-        method: "PATCH",
-        headers: buildHeaders(),
-        body: JSON.stringify({ payment_method: metodo })
-      });
-
-      // 2. Cria intenção de pagamento na maquininha
-      const cobrarResp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/mp/cobrar`, {
-        method: "POST",
-        headers: buildHeaders(),
-        body: JSON.stringify({
-          order_id: orderId,
-          valor: parseFloat(o.total_price || 0)
-        })
-      });
-
-      const cobrarData = await cobrarResp.json();
-
-      if (!cobrarResp.ok || !cobrarData.success) {
-        throw new Error(cobrarData.error || "Erro ao enviar para maquininha");
-      }
-
-      statusMsg.textContent = "💳 Aguardando pagamento na maquininha...";
-
-    } catch (err) {
-      console.error("Erro maquininha:", err);
-      statusMsg.style.color = "rgba(239,68,68,0.9)";
-      statusMsg.textContent = `❌ ${err.message}`;
-      confirmBtn.disabled = false;
-      confirmBtn.textContent = "Tentar novamente";
-      cancelBtn.disabled = false;
-      return;
-    }
-
-    // 3. Polling: verifica status do pedido a cada 2s
-    let tentativas = 0;
-    const MAX_TENTATIVAS = 60; // 2 minutos
-
-    pollingInterval = setInterval(async () => {
-      tentativas++;
-
-      if (tentativas > MAX_TENTATIVAS) {
-        clearInterval(pollingInterval);
-        statusMsg.style.color = "rgba(239,68,68,0.9)";
-        statusMsg.textContent = "⏰ Tempo esgotado. Verifique a maquininha.";
-        confirmBtn.disabled = false;
-        confirmBtn.textContent = "Tentar novamente";
-        cancelBtn.disabled = false;
-        return;
-      }
-
-      try {
-        const ordersResp = await fetch(`${API_URL}/${rid}`);
-        const allOrders = await ordersResp.json();
-        const updated = allOrders.find(x => x.id === orderId);
-
-        if (!updated) return;
-
-        const frontStatus = toFrontStatus(updated.status);
-
-        if (frontStatus === "finalizado") {
-          clearInterval(pollingInterval);
-          const idx = orders.findIndex(x => x.id === orderId);
-          if (idx !== -1) {
-            orders[idx] = { ...updated, _frontStatus: "finalizado" };
-          }
-          modal.remove();
-          renderBoard();
-          return;
-        }
-
-        if (frontStatus === "cancelado") {
-          clearInterval(pollingInterval);
-          // Pagamento recusado — fecha modal silenciosamente
-          modal.remove();
-          return;
-        }
-
-      } catch (e) {
-        console.warn("Erro no polling:", e);
-      }
-    }, 2000);
-
-    // Fecha polling se fechar o modal manualmente
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) {
-        clearInterval(pollingInterval);
-        modal.remove();
-      }
-    });
+    await enviarParaMaquininha(metodo);
   });
 
   modal.addEventListener("click", (e) => {
-    if (e.target === modal) modal.remove();
+    if (e.target === modal) {
+      if (pollingInterval) clearInterval(pollingInterval);
+      modal.remove();
+    }
   });
 }
 
