@@ -1430,34 +1430,35 @@ function parseItems(raw) {
   }
 }
 
- 
+let isSavingOrder = false; // ← adiciona no topo do arquivo, perto das outras variáveis globais
+
 async function saveNewOrder() {
+  if (isSavingOrder) return;
+  isSavingOrder = true;
+  if (saveCreateBtn) { saveCreateBtn.disabled = true; saveCreateBtn.textContent = "Salvando..."; }
+
   const editOrderId = editingOrderId || null;
   
   console.log("🧪 editOrderId:", editOrderId);
   console.log("🧪 tipo:", typeof editOrderId);
-
   const rid = getRestaurantId();
   const client = String(newCustomer?.value || "").trim();
   const itens = parseItems(newItems?.value);
-
   const isDelivery = !!newDelivery?.checked;
   const service_type = isDelivery ? "delivery" : "local";
   const address = String(newAddress?.value || "").trim();
   const payment_method = String(newPayment?.value || "").trim();
   const phoneRaw = String(newPhone?.value || "").trim();
   const client_phone = phoneRaw ? phoneRaw : null;
-
   const totalPriceFormatted = document.getElementById("new-total-price")?.value || '0';
   const total_price = parseFloat(totalPriceFormatted.replace(/\./g, '').replace(',', '.')) || 0;
 
-  if (!rid || !client) { alert("Preencha o nome do cliente."); return; }
-  if (!itens || itens.length === 0) { alert("Preencha os itens do pedido."); return; }
-  if (isDelivery && !address) { alert("Endereço é obrigatório para delivery."); return; }
-  if (isDelivery && !payment_method) { alert("Forma de pagamento é obrigatória para delivery."); return; }
+  if (!rid || !client) { alert("Preencha o nome do cliente."); isSavingOrder = false; if (saveCreateBtn) { saveCreateBtn.disabled = false; saveCreateBtn.textContent = "Salvar"; } return; }
+  if (!itens || itens.length === 0) { alert("Preencha os itens do pedido."); isSavingOrder = false; if (saveCreateBtn) { saveCreateBtn.disabled = false; saveCreateBtn.textContent = "Salvar"; } return; }
+  if (isDelivery && !address) { alert("Endereço é obrigatório para delivery."); isSavingOrder = false; if (saveCreateBtn) { saveCreateBtn.disabled = false; saveCreateBtn.textContent = "Salvar"; } return; }
+  if (isDelivery && !payment_method) { alert("Forma de pagamento é obrigatória para delivery."); isSavingOrder = false; if (saveCreateBtn) { saveCreateBtn.disabled = false; saveCreateBtn.textContent = "Salvar"; } return; }
 
   try {
-    // ← SEM segunda declaração de editOrderId aqui!
     const body = {
       restaurant_id: rid,
       client_name: client,
@@ -1485,19 +1486,26 @@ async function saveNewOrder() {
     }
 
     if (editOrderId) {
-  const idx = orders.findIndex(o => o.id === editOrderId);
-  if (idx !== -1) orders[idx] = { ...orders[idx], ...data.order, _frontStatus: toFrontStatus(data.order.status) };
-} else {
-  orders.push({ ...data.order, _frontStatus: toFrontStatus(data.order.status) });
-}
-editingOrderId = null;
-    
+      const idx = orders.findIndex(o => o.id === editOrderId);
+      if (idx !== -1) orders[idx] = { ...orders[idx], ...data.order, _frontStatus: toFrontStatus(data.order.status) };
+    } else {
+      orders.push({ ...data.order, _frontStatus: toFrontStatus(data.order.status) });
+    }
+    editingOrderId = null;
+
     closeCreateModal();
     saveCreateBtn.dataset.editOrderId = "";
     renderBoard();
+
   } catch (e) {
     console.error("Erro em saveNewOrder:", e);
     alert(`Erro ao criar pedido: ${e.message}`);
+  } finally {
+    isSavingOrder = false;
+    if (saveCreateBtn) {
+      saveCreateBtn.disabled = false;
+      saveCreateBtn.textContent = "Salvar";
+    }
   }
 }
 
