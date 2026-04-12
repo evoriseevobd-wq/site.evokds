@@ -982,8 +982,7 @@ if (modalItems) {
     });
   }
 
-  if (modalNotes) modalNotes.textContent = order.notes || "";
-
+if (modalNotes) modalNotes.textContent = order.notes || "";
   modalPrevBtn?.classList.toggle("hidden", ["cancelado", "finalizado", "recebido"].includes(order._frontStatus));
   // Botão imprimir — só aparece em "recebido"
 let printBtn = document.getElementById("modal-print-btn");
@@ -1007,13 +1006,12 @@ if (!resumoBtn) {
   modalNextBtn?.parentElement?.insertBefore(resumoBtn, modalNextBtn);
 }
 resumoBtn.onclick = () => imprimirResumo(activeOrderId);
-resumoBtn.classList.toggle("hidden", 
-  order._frontStatus === "recebido" || 
-  order._frontStatus === "cancelado" || 
-  order._frontStatus === "finalizado"
+const isDeliveryOrder = String(order.service_type || "").toLowerCase() === "delivery";
+resumoBtn.classList.toggle("hidden",
+  order._frontStatus !== "pronto" || isDeliveryOrder
 );
-  modalCancelBtn?.classList.toggle("hidden", ["cancelado", "finalizado"].includes(order._frontStatus));
 
+  modalCancelBtn?.classList.toggle("hidden", ["cancelado", "finalizado"].includes(order._frontStatus));
   if (modalNextBtn) {
     const s = getFrontStatus(orderId);
     const nextLabel =
