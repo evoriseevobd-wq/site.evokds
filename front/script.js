@@ -2264,10 +2264,12 @@ if (totalField) {
   window._selecionarItem = adicionarItem;
 
   document.addEventListener("click", (e) => {
-    if (!searchInput?.contains(e.target) && !dropdown?.contains(e.target)) {
-      dropdown.style.display = 'none';
+  document.querySelectorAll("[id^='cat-dropdown-']").forEach(d => {
+    if (!d.contains(e.target) && !e.target.id?.startsWith("cat-input-")) {
+      d.style.display = "none";
     }
   });
+});
 
   // Limpa itens ao fechar o modal
   const origClose = closeCreateModal;
