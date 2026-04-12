@@ -783,7 +783,7 @@ const mesaLabel = mesaMatch ? `· Mesa ${mesaMatch[1]}` : "";
 
   card.innerHTML = `
     <div class="order-top">
-      <div class="order-number">${order.order_number || ""} ${mesaLabel}</div>
+      <div class="order-number">#${order.order_number || ""} ${mesaLabel}</div>
       <div class="order-client">${escapeHtml(order.client_name || "Cliente")}</div>
     </div>
     <div class="order-meta">
