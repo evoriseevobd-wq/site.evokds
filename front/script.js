@@ -996,6 +996,22 @@ if (!printBtn) {
 }
 printBtn.onclick = () => imprimirPedido(activeOrderId);
 printBtn.classList.toggle("hidden", order._frontStatus !== "recebido");
+
+// Botão imprimir resumo
+let resumoBtn = document.getElementById("modal-resumo-btn");
+if (!resumoBtn) {
+  resumoBtn = document.createElement("button");
+  resumoBtn.id = "modal-resumo-btn";
+  resumoBtn.className = "ghost-button";
+  resumoBtn.innerHTML = "🖨️ Imprimir Resumo";
+  modalNextBtn?.parentElement?.insertBefore(resumoBtn, modalNextBtn);
+}
+resumoBtn.onclick = () => imprimirResumo(activeOrderId);
+resumoBtn.classList.toggle("hidden", 
+  order._frontStatus === "recebido" || 
+  order._frontStatus === "cancelado" || 
+  order._frontStatus === "finalizado"
+);
   modalCancelBtn?.classList.toggle("hidden", ["cancelado", "finalizado"].includes(order._frontStatus));
 
   if (modalNextBtn) {
@@ -1297,6 +1313,46 @@ async function imprimirPedido(orderId) {
     // Avança mesmo assim
     updateOrderStatus(orderId, 'preparo');
     closeOrderModal();
+  }
+}
+
+async function imprimirResumo(orderId) {
+  const order = orders.find(o => o.id === orderId);
+  if (!order) return;
+
+  const rid = getRestaurantId();
+
+  try {
+    // Busca impressora com "todos"
+    const respConfig = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/impressora`);
+    const config = await respConfig.json();
+
+    const impressoraTodos = (config.impressoras || []).find(imp =>
+      String(imp.categorias || "").toLowerCase().trim() === "todos"
+    );
+
+    if (!impressoraTodos) {
+      alert("Nenhuma impressora configurada com categoria 'todos'.");
+      return;
+    }
+
+    const resp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/imprimir-pedido`, {
+      method: 'POST',
+      headers: buildHeaders(),
+      body: JSON.stringify({ 
+        order_id: orderId,
+        printer_id_override: impressoraTodos.printer_id
+      })
+    });
+
+    const data = await resp.json();
+    if (!resp.ok || !data.success) throw new Error(data.error || 'Erro ao imprimir');
+
+    console.log('✅ Resumo impresso!');
+
+  } catch (e) {
+    console.error('Erro ao imprimir resumo:', e);
+    alert('Erro ao imprimir resumo: ' + e.message);
   }
 }
 
