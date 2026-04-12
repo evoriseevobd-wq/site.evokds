@@ -3962,51 +3962,55 @@ function renderImpressoras() {
           <input placeholder="Printer ID" value="${imp.printer_id || ""}"
             oninput="impressorasConfig[${i}].printer_id = this.value"
             style="padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,3,3,0.4); color:rgba(252,228,228,1); font-size:13px; outline:none; width:100%;" />
-          <!-- CAMPO DE TAGS -->
-          <div id="tags-box-${i}" style="
-            display:flex; flex-wrap:wrap; align-items:center; gap:6px;
-            padding:8px 12px; border-radius:10px;
-            border:1px solid rgba(91,28,28,0.85);
-            background:rgba(20,3,3,0.4);
-            cursor:text; min-height:44px; position:relative;
-          " onclick="document.getElementById('cat-input-${i}').focus()">
-            ${tags.map(tag => `
-              <span style="
-                display:inline-flex; align-items:center; gap:4px;
-                background:rgba(249,115,115,0.2); border:1px solid rgba(249,115,115,0.5);
-                color:rgba(252,228,228,0.95); font-size:12px; font-weight:700;
-                padding:4px 10px; border-radius:999px;
-              ">
-                ${tag}
-                <button onclick="removerTag(${i}, '${tag}')" style="
-                  background:none; border:none; color:rgba(249,115,115,0.8);
-                  font-size:14px; cursor:pointer; padding:0; line-height:1;
-                ">×</button>
-              </span>
-            `).join("")}
-            <input id="cat-input-${i}" placeholder="${tags.length === 0 ? 'Categorias...' : ''}"
-              style="
-                flex:1; min-width:80px; border:none; background:transparent;
-                color:rgba(252,228,228,1); font-size:13px; outline:none;
-                font-family:inherit; padding:4px 0;
-              "
-              oninput="onCatInput(${i}, this.value)"
-              onfocus="onCatInput(${i}, this.value)"
-              onkeydown="onCatKeydown(event, ${i})"
-              autocomplete="off"
-            />
+
+          <!-- CAMPO DE TAGS — oculto se for caixa -->
+          <div style="display:${imp.caixa ? 'none' : 'flex'}; flex-direction:column; gap:8px;">
+            <div id="tags-box-${i}" style="
+              display:flex; flex-wrap:wrap; align-items:center; gap:6px;
+              padding:8px 12px; border-radius:10px;
+              border:1px solid rgba(91,28,28,0.85);
+              background:rgba(20,3,3,0.4);
+              cursor:text; min-height:44px; position:relative;
+            " onclick="document.getElementById('cat-input-${i}').focus()">
+              ${tags.map(tag => `
+                <span style="
+                  display:inline-flex; align-items:center; gap:4px;
+                  background:rgba(249,115,115,0.2); border:1px solid rgba(249,115,115,0.5);
+                  color:rgba(252,228,228,0.95); font-size:12px; font-weight:700;
+                  padding:4px 10px; border-radius:999px;
+                ">
+                  ${tag}
+                  <button onclick="removerTag(${i}, '${tag}')" style="
+                    background:none; border:none; color:rgba(249,115,115,0.8);
+                    font-size:14px; cursor:pointer; padding:0; line-height:1;
+                  ">×</button>
+                </span>
+              `).join("")}
+              <input id="cat-input-${i}" placeholder="${tags.length === 0 ? 'Categorias...' : ''}"
+                style="
+                  flex:1; min-width:80px; border:none; background:transparent;
+                  color:rgba(252,228,228,1); font-size:13px; outline:none;
+                  font-family:inherit; padding:4px 0;
+                "
+                oninput="onCatInput(${i}, this.value)"
+                onfocus="onCatInput(${i}, this.value)"
+                onkeydown="onCatKeydown(event, ${i})"
+                autocomplete="off"
+              />
+            </div>
+            <div id="cat-dropdown-${i}" style="
+              display:none; position:relative; z-index:999;
+              background:rgba(30,6,6,0.98); border:1px solid rgba(91,28,28,0.85);
+              border-radius:12px; max-height:180px; overflow-y:auto;
+              box-shadow:0 8px 32px rgba(0,0,0,0.6); margin-top:-4px;
+            "></div>
           </div>
-          <!-- DROPDOWN AUTOCOMPLETE -->
-          <div id="cat-dropdown-${i}" style="
-            display:none; position:relative; z-index:999;
-            background:rgba(30,6,6,0.98); border:1px solid rgba(91,28,28,0.85);
-            border-radius:12px; max-height:180px; overflow-y:auto;
-            box-shadow:0 8px 32px rgba(0,0,0,0.6); margin-top:-4px;
-          "></div>
+
+          ${imp.caixa ? `<p style="color:rgba(252,228,228,0.4); font-size:12px; margin:0;">Imprime todos os itens automaticamente</p>` : ""}
 
           <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:4px;">
             <input type="checkbox" ${imp.caixa ? "checked" : ""}
-              onchange="impressorasConfig[${i}].caixa = this.checked"
+              onchange="impressorasConfig[${i}].caixa = this.checked; renderImpressoras();"
               style="width:16px; height:16px; accent-color:#f97373; cursor:pointer;" />
             <span style="color:rgba(252,228,228,0.7); font-size:13px; font-weight:700;">É impressora do caixa?</span>
           </label>
