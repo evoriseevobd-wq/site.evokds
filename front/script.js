@@ -743,7 +743,8 @@ function renderBoard() {
   if (!searchTerm) return true;
   const num = String(o.order_number || "").toLowerCase();
   const name = String(o.client_name || "").toLowerCase();
-  return num.includes(searchTerm) || name.includes(searchTerm);
+  const notes = String(o.notes || "").toLowerCase();
+  return num.includes(searchTerm) || name.includes(searchTerm) || notes.includes(searchTerm);
 });
 
   filtered.forEach((o) => {
