@@ -1869,6 +1869,16 @@ app.patch("/api/v1/restaurante/:restaurant_id/fiscal", async (req, res) => {
    🖨️ ROTAS DE IMPRESSORA (PrintNode)
 ======================================== */
 
+function gerarCupom(origin) {
+  const prefixo = String(origin || "").toLowerCase() === "ifood" ? "IFD" : "AQF";
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let codigo = "";
+  for (let i = 0; i < 6; i++) {
+    codigo += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `${prefixo}-${codigo}`;
+}
+
 async function printOrder(order, apiKey, printerId) {
   try {
     const isDelivery = String(order.service_type || '').toLowerCase() === 'delivery';
@@ -2037,7 +2047,37 @@ if (order.client_phone)          { txt(`Telefone: ${order.client_phone}`); lf();
   lf();
 }
 txt('Feito com FlowON'); lf();
-lf();
+    lf();
+
+    // Rodapé especial iFood/AiqFome
+    const origem = String(order.origin || "").toLowerCase();
+    if (origem === "ifood" || origem === "aiqfome") {
+      const nomeOrigem = origem === "ifood" ? "iFood" : "AiqFome";
+      const cupom = gerarCupom(origem);
+      const whatsapp = restConfig?.telefone
+        ? String(restConfig.telefone).replace(/\D/g, "")
+        : null;
+
+      b(ESC, 0x61, 0x01); // centralizar
+      txt('* * * * * * * * * * * * * * * * * * * *'); lf();
+      lf();
+      b(ESC, 0x45, 0x01);
+      txt(`Pediu no ${nomeOrigem}? Na proxima,`); lf();
+      txt('peca direto no nosso WhatsApp'); lf();
+      txt('e ganhe 15% de desconto!'); lf();
+      b(ESC, 0x45, 0x00);
+      lf();
+      txt('Envie este cupom:'); lf();
+      b(GS, 0x21, 0x01);
+      b(ESC, 0x45, 0x01);
+      txt(cupom); lf();
+      b(GS, 0x21, 0x00);
+      b(ESC, 0x45, 0x00);
+      lf();
+      if (whatsapp) { txt(`wa.me/55${whatsapp}`); lf(); }
+      txt('* * * * * * * * * * * * * * * * * * * *'); lf();
+      lf();
+    }
 
     // ── CORTE ──────────────────────────────────────
     b(GS, 0x56, 0x41, 0x06);
@@ -2072,21 +2112,33 @@ async function printByCategory(order, apiKey, impressoras) {
   try {
     const itens = Array.isArray(order.itens) ? order.itens : [];
 
+    const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
+
     for (const impressora of impressoras) {
       const { printer_id, categorias } = impressora;
       if (!printer_id) continue;
 
       const isTodos = String(categorias || "").toLowerCase().trim() === "todos";
 
-      // Filtra itens da impressora
+      // Delivery — imprime tudo só na primeira impressora que NÃO for "todos"
+      if (isDelivery) {
+        if (!isTodos) {
+          await printOrder(order, apiKey, printer_id);
+          console.log(`🖨️ Delivery — impressora ${printer_id} — nota completa`);
+          break; // só imprime uma vez
+        }
+        continue;
+      }
+
+      // Presencial — filtra por categoria
       const categoriasList = String(categorias || "")
         .split(",")
         .map(c => c.trim().toLowerCase())
         .filter(Boolean);
 
       const itensFiltrados = isTodos
-        ? itens
-        : itens.filter(it => {
+        ? order.itens
+        : (order.itens || []).filter(it => {
             const cat = String(it.categoria || it.category || "").toLowerCase().trim();
             const nome = String(it.name || it.nome || "").toLowerCase().trim();
             return categoriasList.some(c => cat.includes(c) || nome.includes(c));
@@ -2094,11 +2146,9 @@ async function printByCategory(order, apiKey, impressoras) {
 
       if (itensFiltrados.length === 0) continue;
 
-      // Monta cupom só com os itens filtrados
       const orderParaImprimir = { ...order, itens: itensFiltrados };
       await printOrder(orderParaImprimir, apiKey, printer_id);
-
-      console.log(`🖨️ Impressora ${printer_id} — ${itensFiltrados.length} item(ns) impressos`);
+      console.log(`🖨️ Impressora ${printer_id} — ${itensFiltrados.length} item(ns)`);
     }
 
     return true;
