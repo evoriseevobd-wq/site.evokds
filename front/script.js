@@ -3870,26 +3870,182 @@ function salvarDominio() {
 
 let impressorasConfig = [];
 
+let _categoriasCache = null;
+
+async function fetchCategoriasCardapio() {
+  if (_categoriasCache) return _categoriasCache;
+  const rid = getRestaurantId();
+  if (!rid) return [];
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/cardapio/${rid}`);
+    const data = await resp.json();
+    const cats = [...new Set((data || []).map(i => i.categoria).filter(Boolean))];
+    _categoriasCache = cats;
+    return cats;
+  } catch(e) {
+    return [];
+  }
+}
+
 function renderImpressoras() {
   const container = document.getElementById("impressoras-container");
   if (!container) return;
 
-  container.innerHTML = impressorasConfig.map((imp, i) => `
-    <div style="background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px; padding:16px; margin-bottom:12px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <span style="color:rgba(252,228,228,0.8); font-weight:700; font-size:13px;">Impressora ${i + 1}</span>
-        <button onclick="removerImpressora(${i})" style="background:none; border:none; color:rgba(239,68,68,0.8); font-size:18px; cursor:pointer;">×</button>
+  container.innerHTML = impressorasConfig.map((imp, i) => {
+    const tags = imp.categorias
+      ? imp.categorias.split(",").map(c => c.trim()).filter(Boolean)
+      : [];
+
+    return `
+      <div style="background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px; padding:16px; margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <span style="color:rgba(252,228,228,0.8); font-weight:700; font-size:13px;">Impressora ${i + 1}</span>
+          <button onclick="removerImpressora(${i})" style="background:none; border:none; color:rgba(239,68,68,0.8); font-size:18px; cursor:pointer;">×</button>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+
+          <input placeholder="Printer ID" value="${imp.printer_id || ""}"
+            oninput="impressorasConfig[${i}].printer_id = this.value"
+            style="padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,3,3,0.4); color:rgba(252,228,228,1); font-size:13px; outline:none; width:100%;" />
+
+          <!-- CAMPO DE TAGS -->
+          <div id="tags-box-${i}" style="
+            display:flex; flex-wrap:wrap; align-items:center; gap:6px;
+            padding:8px 12px; border-radius:10px;
+            border:1px solid rgba(91,28,28,0.85);
+            background:rgba(20,3,3,0.4);
+            cursor:text; min-height:44px; position:relative;
+          " onclick="document.getElementById('cat-input-${i}').focus()">
+            ${tags.map(tag => `
+              <span style="
+                display:inline-flex; align-items:center; gap:4px;
+                background:rgba(249,115,115,0.2); border:1px solid rgba(249,115,115,0.5);
+                color:rgba(252,228,228,0.95); font-size:12px; font-weight:700;
+                padding:4px 10px; border-radius:999px;
+              ">
+                ${tag}
+                <button onclick="removerTag(${i}, '${tag}')" style="
+                  background:none; border:none; color:rgba(249,115,115,0.8);
+                  font-size:14px; cursor:pointer; padding:0; line-height:1;
+                ">×</button>
+              </span>
+            `).join("")}
+            <input id="cat-input-${i}" placeholder="${tags.length === 0 ? 'Categorias...' : ''}"
+              style="
+                flex:1; min-width:80px; border:none; background:transparent;
+                color:rgba(252,228,228,1); font-size:13px; outline:none;
+                font-family:inherit; padding:4px 0;
+              "
+              oninput="onCatInput(${i}, this.value)"
+              onkeydown="onCatKeydown(event, ${i})"
+              autocomplete="off"
+            />
+          </div>
+
+          <!-- DROPDOWN AUTOCOMPLETE -->
+          <div id="cat-dropdown-${i}" style="
+            display:none; position:relative; z-index:999;
+            background:rgba(30,6,6,0.98); border:1px solid rgba(91,28,28,0.85);
+            border-radius:12px; max-height:180px; overflow-y:auto;
+            box-shadow:0 8px 32px rgba(0,0,0,0.6); margin-top:-4px;
+          "></div>
+
+        </div>
       </div>
-      <div style="display:flex; flex-direction:column; gap:8px;">
-        <input placeholder="Printer ID" value="${imp.printer_id || ""}"
-          oninput="impressorasConfig[${i}].printer_id = this.value"
-          style="padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,3,3,0.4); color:rgba(252,228,228,1); font-size:13px; outline:none; width:100%;" />
-        <input placeholder="Categorias (ex: bebidas, sucos, refri)" value="${imp.categorias || ""}"
-          oninput="impressorasConfig[${i}].categorias = this.value"
-          style="padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,3,3,0.4); color:rgba(252,228,228,1); font-size:13px; outline:none; width:100%;" />
-      </div>
+    `;
+  }).join("");
+}
+
+async function onCatInput(index, value) {
+  const dropdown = document.getElementById(`cat-dropdown-${index}`);
+  if (!dropdown) return;
+
+  const q = value.trim().toLowerCase();
+  const todas = await fetchCategoriasCardapio();
+
+  // Filtra categorias que já foram selecionadas
+  const jaAdicionadas = (impressorasConfig[index].categorias || "")
+    .split(",").map(c => c.trim().toLowerCase()).filter(Boolean);
+
+  const filtradas = todas.filter(cat =>
+    cat.toLowerCase().includes(q) && !jaAdicionadas.includes(cat.toLowerCase())
+  );
+
+  if (!q && filtradas.length === 0) {
+    dropdown.style.display = "none";
+    return;
+  }
+
+  // Mostra todas se campo vazio, filtra se digitando
+  const opcoes = q === "" ? todas.filter(c => !jaAdicionadas.includes(c.toLowerCase())) : filtradas;
+
+  if (opcoes.length === 0) {
+    dropdown.style.display = "none";
+    return;
+  }
+
+  dropdown.innerHTML = opcoes.map(cat => `
+    <div onclick="adicionarTag(${index}, '${cat}')" style="
+      padding:10px 16px; cursor:pointer; font-size:13px; font-weight:700;
+      color:rgba(252,228,228,0.9); border-bottom:1px solid rgba(91,28,28,0.3);
+      transition:background 0.15s;
+    "
+    onmouseover="this.style.background='rgba(91,28,28,0.5)'"
+    onmouseout="this.style.background='transparent'">
+      ${cat}
     </div>
   `).join("");
+
+  dropdown.style.display = "block";
+}
+
+function onCatKeydown(event, index) {
+  const input = document.getElementById(`cat-input-${index}`);
+  if (!input) return;
+
+  // Enter ou vírgula — adiciona tag digitada manualmente
+  if (event.key === "Enter" || event.key === ",") {
+    event.preventDefault();
+    const val = input.value.replace(",", "").trim();
+    if (val) adicionarTag(index, val);
+  }
+
+  // Backspace sem texto — remove última tag
+  if (event.key === "Backspace" && input.value === "") {
+    const tags = (impressorasConfig[index].categorias || "")
+      .split(",").map(c => c.trim()).filter(Boolean);
+    if (tags.length > 0) {
+      tags.pop();
+      impressorasConfig[index].categorias = tags.join(", ");
+      renderImpressoras();
+    }
+  }
+}
+
+function adicionarTag(index, cat) {
+  const tags = (impressorasConfig[index].categorias || "")
+    .split(",").map(c => c.trim()).filter(Boolean);
+
+  if (!tags.includes(cat)) {
+    tags.push(cat);
+    impressorasConfig[index].categorias = tags.join(", ");
+  }
+
+  renderImpressoras();
+
+  // Foca o input depois de renderizar
+  setTimeout(() => {
+    document.getElementById(`cat-input-${index}`)?.focus();
+  }, 50);
+}
+
+function removerTag(index, cat) {
+  const tags = (impressorasConfig[index].categorias || "")
+    .split(",").map(c => c.trim()).filter(Boolean)
+    .filter(t => t !== cat);
+
+  impressorasConfig[index].categorias = tags.join(", ");
+  renderImpressoras();
 }
 
 function adicionarImpressora() {
