@@ -654,13 +654,11 @@ app.patch("/orders/:id/status", async (req, res) => {
     
     const now = new Date().toISOString();
     
-    // Objeto de atualização base
     const updateData = {
       status,
       update_at: now
     };
     
-    // Adiciona timestamp específico baseado no status
     if (status === "pending") {
       updateData.confirmed_at = now;
     } else if (status === "preparing") {
@@ -682,12 +680,10 @@ app.patch("/orders/:id/status", async (req, res) => {
       .select()
       .single();
     
-   if (error || !data) return sendError(res, 500, "Erro ao atualizar pedido");
+    if (error || !data) return sendError(res, 500, "Erro ao atualizar pedido");
     emitOrderUpdate(data.restaurant_id, data);
 
-    // Agenda webhook de satisfação 2h após finalizar
-    if (status === "finished" || status === "delivered") {
-      // Impressão ao finalizar
+    if (status === "preparing") {
       try {
         const { data: orderCompleto } = await supabase
           .from("orders").select("*").eq("id", id).single();
@@ -695,15 +691,39 @@ app.patch("/orders/:id/status", async (req, res) => {
         if (orderCompleto) {
           const config = await getIntegracao(orderCompleto.restaurant_id, "printnode");
           if (config?.api_key && Array.isArray(config?.impressoras) && config.impressoras.length > 0) {
-            await printByCategory(orderCompleto, config.api_key, config.impressoras);
-            console.log(`🖨️ Impressão por categoria disparada — Pedido #${orderCompleto.order_number}`);
+            const impressorasSemCaixa = config.impressoras.filter(i => !i.caixa);
+            await printByCategory(orderCompleto, config.api_key, impressorasSemCaixa);
+            console.log(`🖨️ Impressão preparo — Pedido #${orderCompleto.order_number}`);
+          }
+        }
+      } catch (printErr) {
+        console.error("⚠️ Erro na impressão ao preparar:", printErr.message);
+      }
+    }
+
+    if (status === "finished" || status === "delivered") {
+      try {
+        const { data: orderCompleto } = await supabase
+          .from("orders").select("*").eq("id", id).single();
+
+        if (orderCompleto) {
+          const isDelivery = String(orderCompleto.service_type || "").toLowerCase() === "delivery";
+
+          if (!isDelivery) {
+            const config = await getIntegracao(orderCompleto.restaurant_id, "printnode");
+            if (config?.api_key && Array.isArray(config?.impressoras) && config.impressoras.length > 0) {
+              const impressoraCaixa = config.impressoras.filter(i => i.caixa);
+              if (impressoraCaixa.length > 0) {
+                await printByCategory(orderCompleto, config.api_key, impressoraCaixa);
+                console.log(`🖨️ Impressão caixa — Pedido #${orderCompleto.order_number}`);
+              }
+            }
           }
         }
       } catch (printErr) {
         console.error("⚠️ Erro na impressão ao finalizar:", printErr.message);
       }
 
-      // Webhook satisfação 2h depois
       setTimeout(async () => {
         const { data: orderCompleto } = await supabase
           .from("orders").select("*").eq("id", id).single();
@@ -716,17 +736,6 @@ app.patch("/orders/:id/status", async (req, res) => {
     return res.json(data);
   } catch (err) {
     return sendError(res, 500, "Erro ao atualizar pedido");
-  }
-});
-
-app.delete("/orders/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { error } = await supabase.from("orders").delete().eq("id", id);
-    if (error) return sendError(res, 500, "Erro ao deletar pedido");
-    return res.status(204).send();
-  } catch (err) {
-    return sendError(res, 500, "Erro ao deletar pedido");
   }
 });
 
