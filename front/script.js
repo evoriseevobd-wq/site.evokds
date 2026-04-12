@@ -1225,22 +1225,14 @@ function showPaymentModal(orderId) {
     const metodo = document.getElementById("payment-select").value;
     if (!metodo) { alert("Selecione o método de pagamento."); return; }
 
-    const origin = String(o.origin || "").toLowerCase();
-    const usaMaquininha = (origin === "balcao" || origin === "autoatendimento")
-      && (metodo === "credito" || metodo === "debito" || metodo === "pix");
-
-    if (!usaMaquininha) {
-      await fetch(`${API_BASE}/api/v1/pedidos/${orderId}/payment`, {
-        method: "PATCH",
-        headers: buildHeaders(),
-        body: JSON.stringify({ payment_method: metodo })
-      });
-      modal.remove();
-      updateOrderStatus(orderId, "finalizado");
-      return;
-    }
-
-    await enviarParaMaquininha(metodo);
+    // Maquininha desativada temporariamente — pagamento sempre manual
+await fetch(`${API_BASE}/api/v1/pedidos/${orderId}/payment`, {
+  method: "PATCH",
+  headers: buildHeaders(),
+  body: JSON.stringify({ payment_method: metodo })
+});
+modal.remove();
+updateOrderStatus(orderId, "finalizado");
   });
 
   modal.addEventListener("click", (e) => {
