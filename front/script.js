@@ -2361,6 +2361,30 @@ document.getElementById("btn-testar-impressora")?.addEventListener("click", test
 document.getElementById("btn-salvar-rastreio")?.addEventListener("click", salvarRastreio);
 document.getElementById("btn-salvar-nfe")?.addEventListener("click", () => salvarFiscal());
 document.getElementById("btn-salvar-marketplace")?.addEventListener("click", salvarMarketplace);
+  document.getElementById("btn-remover-mp")?.addEventListener("click", async () => {
+  const rid = getRestaurantId();
+  const status = document.getElementById("settings-mp-status");
+  showConfirmModal("Tem certeza que deseja remover a configuração da maquininha?", async () => {
+    try {
+      const resp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/integracao/maquininha`, {
+        method: "DELETE",
+        headers: buildHeaders()
+      });
+      const data = await resp.json();
+      if (data.success) {
+        status.textContent = "✅ Maquininha removida!";
+        status.style.color = "rgba(34,197,94,0.9)";
+        document.getElementById("settings-maquininha-tipo").value = "";
+        onMaquininhaChange("");
+      } else {
+        throw new Error();
+      }
+    } catch(e) {
+      status.textContent = "❌ Erro ao remover.";
+      status.style.color = "rgba(239,68,68,0.9)";
+    }
+  });
+});
   document.getElementById("btn-salvar-mp")?.addEventListener("click", async () => {
   const rid = getRestaurantId();
   const tipo = document.getElementById("settings-maquininha-tipo")?.value;
