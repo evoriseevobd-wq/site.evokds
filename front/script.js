@@ -3948,12 +3948,10 @@ async function fetchCategoriasCardapio() {
 function renderImpressoras() {
   const container = document.getElementById("impressoras-container");
   if (!container) return;
-
   container.innerHTML = impressorasConfig.map((imp, i) => {
     const tags = imp.categorias
       ? imp.categorias.split(",").map(c => c.trim()).filter(Boolean)
       : [];
-
     return `
       <div style="background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px; padding:16px; margin-bottom:12px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -3961,11 +3959,9 @@ function renderImpressoras() {
           <button onclick="removerImpressora(${i})" style="background:none; border:none; color:rgba(239,68,68,0.8); font-size:18px; cursor:pointer;">×</button>
         </div>
         <div style="display:flex; flex-direction:column; gap:8px;">
-
           <input placeholder="Printer ID" value="${imp.printer_id || ""}"
             oninput="impressorasConfig[${i}].printer_id = this.value"
             style="padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,3,3,0.4); color:rgba(252,228,228,1); font-size:13px; outline:none; width:100%;" />
-
           <!-- CAMPO DE TAGS -->
           <div id="tags-box-${i}" style="
             display:flex; flex-wrap:wrap; align-items:center; gap:6px;
@@ -3995,11 +3991,11 @@ function renderImpressoras() {
                 font-family:inherit; padding:4px 0;
               "
               oninput="onCatInput(${i}, this.value)"
+              onfocus="onCatInput(${i}, this.value)"
               onkeydown="onCatKeydown(event, ${i})"
               autocomplete="off"
             />
           </div>
-
           <!-- DROPDOWN AUTOCOMPLETE -->
           <div id="cat-dropdown-${i}" style="
             display:none; position:relative; z-index:999;
@@ -4007,6 +4003,13 @@ function renderImpressoras() {
             border-radius:12px; max-height:180px; overflow-y:auto;
             box-shadow:0 8px 32px rgba(0,0,0,0.6); margin-top:-4px;
           "></div>
+
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:4px;">
+            <input type="checkbox" ${imp.caixa ? "checked" : ""}
+              onchange="impressorasConfig[${i}].caixa = this.checked"
+              style="width:16px; height:16px; accent-color:#f97373; cursor:pointer;" />
+            <span style="color:rgba(252,228,228,0.7); font-size:13px; font-weight:700;">É impressora do caixa?</span>
+          </label>
 
         </div>
       </div>
