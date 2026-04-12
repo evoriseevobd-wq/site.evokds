@@ -970,12 +970,13 @@ if (modalItems) {
       const li = document.createElement("li");
       li.style.cssText = "list-style:none; display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:rgba(46,8,8,0.75); border:1px solid rgba(91,28,28,0.85); border-radius:10px; gap:12px;";
       li.innerHTML = `
-        <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
+       <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
           <span style="color:rgba(252,228,228,0.95); font-weight:700; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${name}</span>
+          <span style="color:rgba(252,228,228,0.3); font-size:12px;">—</span>
+          <span style="color:rgba(252,228,228,0.5); font-size:13px; font-weight:700;">${qty} un</span>
         </div>
-        <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
-          <span style="color:rgba(252,228,228,0.5); font-size:14px; font-weight:800;">x${qty}</span>
-          ${price > 0 ? `<span style="color:rgba(251,191,36,0.85); font-size:12px; font-weight:700; white-space:nowrap;">R$${(price * qty).toFixed(2)}</span>` : ""}
+        <div style="display:flex; align-items:center; flex-shrink:0;">
+          ${price > 0 ? `<span style="color:rgba(251,191,36,0.85); font-size:14px; font-weight:700; white-space:nowrap;">R$${(price * qty).toFixed(2)}</span>` : ""}
         </div>
       `;
       modalItems.appendChild(li);
