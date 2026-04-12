@@ -972,11 +972,10 @@ if (modalItems) {
       li.innerHTML = `
         <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
           <span style="color:rgba(252,228,228,0.95); font-weight:700; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${name}</span>
-          ${price > 0 ? `<span style="color:rgba(251,191,36,0.85); font-size:12px; font-weight:700; white-space:nowrap;">R$${(price * qty).toFixed(2)}</span>` : ""}
         </div>
-       <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
-        <span style="color:rgba(252,228,228,0.5); font-size:14px; font-weight:800;">x${qty}</span>
-          <span style="color:rgba(252,228,228,0.4); font-size:12px;">un</span>
+        <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+          <span style="color:rgba(252,228,228,0.5); font-size:14px; font-weight:800;">x${qty}</span>
+          ${price > 0 ? `<span style="color:rgba(251,191,36,0.85); font-size:12px; font-weight:700; white-space:nowrap;">R$${(price * qty).toFixed(2)}</span>` : ""}
         </div>
       `;
       modalItems.appendChild(li);
