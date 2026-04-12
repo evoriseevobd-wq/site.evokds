@@ -500,10 +500,12 @@ async function loadSettingsData() {
   try {
     const resp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/impressora`);
     const data = await resp.json();
-    if (data.printnode_api_key)
-      document.getElementById("settings-printnode-key").value = data.printnode_api_key;
-    if (data.printnode_printer_id)
-      document.getElementById("settings-printnode-printer").value = data.printnode_printer_id;
+    if (data.api_key)
+      document.getElementById("settings-printnode-key").value = data.api_key;
+    if (Array.isArray(data.impressoras)) {
+      impressorasConfig = data.impressoras;
+      renderImpressoras();
+    }
   } catch (e) {
     console.error("Erro ao carregar impressora:", e);
   }
@@ -3866,14 +3868,54 @@ function salvarDominio() {
   setTimeout(() => { btn.textContent = "⋯"; btn.style.color = "rgba(252,228,228,0.7)"; }, 1500);
 }
 
+let impressorasConfig = [];
+
+function renderImpressoras() {
+  const container = document.getElementById("impressoras-container");
+  if (!container) return;
+
+  container.innerHTML = impressorasConfig.map((imp, i) => `
+    <div style="background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px; padding:16px; margin-bottom:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <span style="color:rgba(252,228,228,0.8); font-weight:700; font-size:13px;">Impressora ${i + 1}</span>
+        <button onclick="removerImpressora(${i})" style="background:none; border:none; color:rgba(239,68,68,0.8); font-size:18px; cursor:pointer;">×</button>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <input placeholder="Printer ID" value="${imp.printer_id || ""}"
+          oninput="impressorasConfig[${i}].printer_id = this.value"
+          style="padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,3,3,0.4); color:rgba(252,228,228,1); font-size:13px; outline:none; width:100%;" />
+        <input placeholder="Categorias (ex: bebidas, sucos, refri)" value="${imp.categorias || ""}"
+          oninput="impressorasConfig[${i}].categorias = this.value"
+          style="padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,3,3,0.4); color:rgba(252,228,228,1); font-size:13px; outline:none; width:100%;" />
+      </div>
+    </div>
+  `).join("");
+}
+
+function adicionarImpressora() {
+  impressorasConfig.push({ printer_id: "", categorias: "" });
+  renderImpressoras();
+}
+
+function removerImpressora(index) {
+  impressorasConfig.splice(index, 1);
+  renderImpressoras();
+}
+
 async function salvarImpressora() {
   const rid = getRestaurantId();
   const key = document.getElementById("settings-printnode-key").value.trim();
-  const printer = document.getElementById("settings-printnode-printer").value.trim();
   const status = document.getElementById("settings-printer-status");
 
-  if (!key || !printer) {
-    status.textContent = "❌ Preencha API Key e Printer ID.";
+  if (!key) {
+    status.textContent = "❌ Preencha a API Key.";
+    status.style.color = "rgba(239,68,68,0.9)";
+    return;
+  }
+
+  const impressorasValidas = impressorasConfig.filter(i => i.printer_id.trim());
+  if (impressorasValidas.length === 0) {
+    status.textContent = "❌ Adicione pelo menos uma impressora com Printer ID.";
     status.style.color = "rgba(239,68,68,0.9)";
     return;
   }
@@ -3882,10 +3924,10 @@ async function salvarImpressora() {
     const resp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/impressora`, {
       method: "PATCH",
       headers: buildHeaders(),
-      body: JSON.stringify({ printnode_api_key: key, printnode_printer_id: printer })
+      body: JSON.stringify({ api_key: key, impressoras: impressorasValidas })
     });
     if (!resp.ok) throw new Error();
-    status.textContent = "✅ Impressora salva com sucesso!";
+    status.textContent = "✅ Impressoras salvas com sucesso!";
     status.style.color = "rgba(34,197,94,0.9)";
   } catch (e) {
     status.textContent = "❌ Erro ao salvar. Tente novamente.";
