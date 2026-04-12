@@ -687,17 +687,28 @@ app.patch("/orders/:id/status", async (req, res) => {
 
     // Agenda webhook de satisfação 2h após finalizar
     if (status === "finished" || status === "delivered") {
-      setTimeout(async () => {
+      // Impressão ao finalizar
+      try {
         const { data: orderCompleto } = await supabase
-          .from("orders")
-          .select("*")
-          .eq("id", id)
-          .single();
+          .from("orders").select("*").eq("id", id).single();
 
         if (orderCompleto) {
-          await dispararWebhookSatisfacao(orderCompleto);
+          const config = await getIntegracao(orderCompleto.restaurant_id, "printnode");
+          if (config?.api_key && Array.isArray(config?.impressoras) && config.impressoras.length > 0) {
+            await printByCategory(orderCompleto, config.api_key, config.impressoras);
+            console.log(`🖨️ Impressão por categoria disparada — Pedido #${orderCompleto.order_number}`);
+          }
         }
-      }, 2 * 60 * 60 * 1000); // 2 horas em ms
+      } catch (printErr) {
+        console.error("⚠️ Erro na impressão ao finalizar:", printErr.message);
+      }
+
+      // Webhook satisfação 2h depois
+      setTimeout(async () => {
+        const { data: orderCompleto } = await supabase
+          .from("orders").select("*").eq("id", id).single();
+        if (orderCompleto) await dispararWebhookSatisfacao(orderCompleto);
+      }, 2 * 60 * 60 * 1000);
 
       console.log(`⏱️ Webhook satisfação agendado para 2h — Pedido ${id}`);
     }
@@ -1752,8 +1763,8 @@ app.get("/api/v1/restaurante/:restaurant_id/impressora", async (req, res) => {
     const { restaurant_id } = req.params;
     const dados = await getIntegracao(restaurant_id, "printnode");
     return res.json({
-      printnode_api_key: dados?.printnode_api_key ? "configurado" : "",
-      printnode_printer_id: dados?.printnode_printer_id || ""
+      api_key: dados?.api_key ? "configurado" : "",
+      impressoras: dados?.impressoras || []
     });
   } catch (err) {
     return sendError(res, 500, "Erro interno");
@@ -1764,14 +1775,15 @@ app.get("/api/v1/restaurante/:restaurant_id/impressora", async (req, res) => {
 app.patch("/api/v1/restaurante/:restaurant_id/impressora", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
-    const { printnode_api_key, printnode_printer_id } = req.body;
-    if (!printnode_api_key || !printnode_printer_id)
-      return sendError(res, 400, "API Key e Printer ID são obrigatórios");
+    const { api_key, impressoras } = req.body;
+
+    if (!api_key || !Array.isArray(impressoras))
+      return sendError(res, 400, "api_key e impressoras são obrigatórios");
 
     const existing = await getIntegracao(restaurant_id, "printnode");
     const dados = {
-      printnode_api_key: printnode_api_key !== "configurado" ? printnode_api_key : existing?.printnode_api_key,
-      printnode_printer_id
+      api_key: api_key !== "configurado" ? api_key : existing?.api_key,
+      impressoras
     };
 
     await supabase.from("integracoes").upsert({
@@ -2052,6 +2064,46 @@ lf();
     return true;
   } catch (err) {
     console.error("⚠️ Erro ao imprimir:", err.message);
+    return false;
+  }
+}
+
+async function printByCategory(order, apiKey, impressoras) {
+  try {
+    const itens = Array.isArray(order.itens) ? order.itens : [];
+
+    for (const impressora of impressoras) {
+      const { printer_id, categorias } = impressora;
+      if (!printer_id) continue;
+
+      const isTodos = String(categorias || "").toLowerCase().trim() === "todos";
+
+      // Filtra itens da impressora
+      const categoriasList = String(categorias || "")
+        .split(",")
+        .map(c => c.trim().toLowerCase())
+        .filter(Boolean);
+
+      const itensFiltrados = isTodos
+        ? itens
+        : itens.filter(it => {
+            const cat = String(it.categoria || it.category || "").toLowerCase().trim();
+            const nome = String(it.name || it.nome || "").toLowerCase().trim();
+            return categoriasList.some(c => cat.includes(c) || nome.includes(c));
+          });
+
+      if (itensFiltrados.length === 0) continue;
+
+      // Monta cupom só com os itens filtrados
+      const orderParaImprimir = { ...order, itens: itensFiltrados };
+      await printOrder(orderParaImprimir, apiKey, printer_id);
+
+      console.log(`🖨️ Impressora ${printer_id} — ${itensFiltrados.length} item(ns) impressos`);
+    }
+
+    return true;
+  } catch (err) {
+    console.error("⚠️ Erro em printByCategory:", err.message);
     return false;
   }
 }
