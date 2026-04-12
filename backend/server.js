@@ -2186,13 +2186,23 @@ if (!data?.printnode_api_key || !data?.printnode_printer_id)
 app.post("/api/v1/restaurante/:restaurant_id/imprimir-pedido", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
-    const { order_id } = req.body;
+    const { order_id, printer_id_override } = req.body;
 
     if (!order_id) return sendError(res, 400, "order_id é obrigatório");
 
-   const config = await getIntegracao(restaurant_id, "printnode");
-if (!config?.printnode_api_key || !config?.printnode_printer_id)
-  return sendError(res, 400, "Impressora não configurada");
+    const config = await getIntegracao(restaurant_id, "printnode");
+    if (!config?.api_key) return sendError(res, 400, "Impressora não configurada");
+
+    // Usa printer_id_override se vier, senão pega o primeiro com "todos"
+    let printerId = printer_id_override;
+    if (!printerId) {
+      const todos = (config.impressoras || []).find(i =>
+        String(i.categorias || "").toLowerCase().trim() === "todos"
+      );
+      printerId = todos?.printer_id || config.impressoras?.[0]?.printer_id;
+    }
+
+    if (!printerId) return sendError(res, 400, "Nenhuma impressora disponível");
 
     // Busca os dados do pedido
     const { data: order, error: orderError } = await supabase
