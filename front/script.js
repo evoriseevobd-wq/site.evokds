@@ -1049,6 +1049,24 @@ function advanceStatus(orderId) {
   closeOrderModal();
 }
 
+function regressStatus(orderId) {
+  const o = orders.find((x) => x.id === orderId);
+  if (!o) return;
+
+  const s = getFrontStatus(orderId);
+  const isDelivery = String(o.service_type || "").toLowerCase() === "delivery";
+
+  const seq = isDelivery
+    ? ["recebido", "preparo", "pronto", "caminho", "finalizado"]
+    : ["recebido", "preparo", "pronto", "finalizado"];
+
+  const i = seq.indexOf(s);
+  if (i <= 0) return; // já está no início, não volta
+
+  updateOrderStatus(orderId, seq[i - 1]);
+  closeOrderModal();
+}
+
 function showPaymentModal(orderId) {
   const existing = document.getElementById("payment-modal");
   if (existing) existing.remove();
