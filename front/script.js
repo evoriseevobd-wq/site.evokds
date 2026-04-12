@@ -1327,12 +1327,10 @@ async function imprimirResumo(orderId) {
     const respConfig = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/impressora`);
     const config = await respConfig.json();
 
-    const impressoraTodos = (config.impressoras || []).find(imp =>
-      String(imp.categorias || "").toLowerCase().trim() === "todos"
-    );
+    const impressoraTodos = (config.impressoras || []).find(imp => imp.caixa);
 
     if (!impressoraTodos) {
-      alert("Nenhuma impressora configurada com categoria 'todos'.");
+      alert("Nenhuma impressora do caixa configurada.");
       return;
     }
 
