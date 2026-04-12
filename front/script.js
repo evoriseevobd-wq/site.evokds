@@ -975,8 +975,8 @@ if (modalItems) {
           ${price > 0 ? `<span style="color:rgba(251,191,36,0.85); font-size:12px; font-weight:700; white-space:nowrap;">R$${(price * qty).toFixed(2)}</span>` : ""}
         </div>
        <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+        <span style="color:rgba(252,228,228,0.5); font-size:14px; font-weight:800;">x${qty}</span>
           <span style="color:rgba(252,228,228,0.4); font-size:12px;">un</span>
-          <span style="color:rgba(252,228,228,0.5); font-size:14px; font-weight:800;">x${qty}</span>
         </div>
       `;
       modalItems.appendChild(li);
