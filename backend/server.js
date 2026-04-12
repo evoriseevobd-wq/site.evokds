@@ -2215,7 +2215,7 @@ app.post("/api/v1/restaurante/:restaurant_id/imprimir-pedido", async (req, res) 
       return sendError(res, 404, "Pedido não encontrado");
 
     // Usa a função printOrder que já gera o cupom corretamente
-    const success = await printOrder(order, config.printnode_api_key, config.printnode_printer_id);
+    const success = await printOrder(order, config.api_key, printerId);
 
     if (!success) return sendError(res, 500, "Erro ao enviar para impressora");
 
