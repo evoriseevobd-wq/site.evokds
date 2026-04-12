@@ -771,12 +771,16 @@ function buildOrderCard(order) {
   card.dataset.id = order.id;
 
   const itemsCount = Array.isArray(order.itens) ? order.itens.length : 0;
+  const mesaMatch = order.origin === "autoatendimento" 
+  ? String(order.notes || "").match(/mesa\s*(\d+)/i)
+  : null;
+const mesaLabel = mesaMatch ? `· Mesa ${mesaMatch[1]}` : "";
   const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
   const paymentText = isDelivery && order.payment_method ? order.payment_method : "";
 
   card.innerHTML = `
     <div class="order-top">
-      <div class="order-number">#${order.order_number || ""}</div>
+      <div class="order-number">#${order.order_number || ""} ${mesaLabel}</div>
       <div class="order-client">${escapeHtml(order.client_name || "Cliente")}</div>
     </div>
     <div class="order-meta">
