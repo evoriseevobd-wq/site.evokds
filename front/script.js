@@ -3425,20 +3425,28 @@ function setupCategoriaDragDrop() {
   let dragCat = null;
 
   container.querySelectorAll(".categoria-bloco").forEach(bloco => {
+    // Desabilita draggable por padrão, só ativa quando segura o handle
+    bloco.draggable = false;
+
+    const handle = bloco.querySelector(".cat-drag-handle");
+    if (handle) {
+      handle.addEventListener("mousedown", () => {
+        bloco.draggable = true;
+      });
+      handle.addEventListener("mouseup", () => {
+        bloco.draggable = false;
+      });
+    }
+
     bloco.addEventListener("dragstart", (e) => {
-      // Só inicia drag se clicou no handle da categoria
-      if (!e.target.classList.contains("cat-drag-handle")) {
-        e.preventDefault();
-        return;
-      }
       dragCat = bloco;
       setTimeout(() => bloco.style.opacity = "0.4", 0);
     });
 
     bloco.addEventListener("dragend", () => {
       bloco.style.opacity = "1";
+      bloco.draggable = false;
       dragCat = null;
-      // Salva nova ordem das categorias
       categoriasOrdem = [...container.querySelectorAll(".categoria-bloco")].map(b => b.dataset.cat);
     });
 
