@@ -3324,62 +3324,136 @@ async function fetchCardapio() {
   }
 }
 
+// Ordem das categorias salva localmente
+let categoriasOrdem = [];
+
 function renderCardapio() {
- const lista = document.getElementById("lista-cardapio-view") || document.getElementById("lista-cardapio");
-if (!lista) {
-  console.error("❌ Elemento da lista do cardápio não encontrado no HTML. IDs testados: lista-cardapio-view, lista-cardapio");
-  return;
-}
-console.log("✅ lista encontrada:", lista.id);
+  const lista = document.getElementById("lista-cardapio-view") || document.getElementById("lista-cardapio");
+  if (!lista) {
+    console.error("❌ Elemento da lista do cardápio não encontrado no HTML.");
+    return;
+  }
 
   if (cardapioItems.length === 0) {
     lista.innerHTML = `<p style="color:rgba(252,228,228,0.5); text-align:center; padding:40px 0;">Nenhum item cadastrado. Clique em "+ Novo Item" para começar.</p>`;
     return;
   }
 
-  const categorias = {};
+  const categoriasMap = {};
   cardapioItems.forEach(item => {
     const cat = item.categoria || "Geral";
-    if (!categorias[cat]) categorias[cat] = [];
-    categorias[cat].push(item);
+    if (!categoriasMap[cat]) categoriasMap[cat] = [];
+    categoriasMap[cat].push(item);
   });
 
-  lista.innerHTML = Object.entries(categorias).map(([cat, itens]) => `
-    <div style="margin-bottom:24px;">
-      <h4 style="color:rgba(252,228,228,0.6); font-size:12px; text-transform:uppercase; letter-spacing:2px; margin-bottom:12px;">${cat}</h4>
-      <div class="sortable-list" data-categoria="${cat}">
-        ${itens.map(item => `
-          <div class="sortable-item" data-id="${item.id}" draggable="true"
-            onclick="openItemDetailModal(${JSON.stringify(item).replace(/"/g, '&quot;')})"
-            style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px; background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px; margin-bottom:8px; cursor:pointer;">
-            <div style="display:flex; align-items:center; gap:12px;">
-              <span class="drag-handle" style="cursor:grab; font-size:16px; color:rgba(252,228,228,0.3); padding:0 4px;">⠿</span>
-              <div style="width:10px; height:10px; border-radius:50%; background:${item.ativo ? 'rgba(34,197,94,1)' : 'rgba(107,114,128,1)'}"></div>
-              <div>
-                <div style="color:rgba(252,228,228,0.95); font-weight:700; font-size:14px;">${escapeHtml(item.nome)}</div>
-                ${item.descricao ? `<div style="color:rgba(252,228,228,0.5); font-size:12px;">${escapeHtml(item.descricao)}</div>` : ""}
+  // Mantém ordem salva, adiciona novas categorias no fim
+  const todasCats = Object.keys(categoriasMap);
+  todasCats.forEach(c => { if (!categoriasOrdem.includes(c)) categoriasOrdem.push(c); });
+  categoriasOrdem = categoriasOrdem.filter(c => todasCats.includes(c));
+
+  lista.innerHTML = `
+    <div id="categorias-container">
+      ${categoriasOrdem.map((cat, catIndex) => {
+        const itens = categoriasMap[cat];
+        const collapsed = false;
+        return `
+          <div class="categoria-bloco" data-cat="${escapeHtml(cat)}" draggable="true" style="margin-bottom:24px;">
+            <div onclick="toggleCategoria('${escapeHtml(cat)}')" style="
+              display:flex; align-items:center; justify-content:space-between;
+              cursor:pointer; padding:8px 4px; user-select:none;
+              border-bottom:1px solid rgba(91,28,28,0.4); margin-bottom:12px;
+            ">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span class="cat-drag-handle" style="cursor:grab; font-size:18px; color:rgba(252,228,228,0.2);">⠿</span>
+                <h4 style="color:rgba(252,228,228,0.6); font-size:12px; text-transform:uppercase; letter-spacing:2px; margin:0;">${escapeHtml(cat)}</h4>
+                <span style="color:rgba(252,228,228,0.3); font-size:11px;">(${itens.length})</span>
               </div>
+              <span id="arrow-cat-${escapeHtml(cat)}" style="color:rgba(252,228,228,0.4); font-size:14px; transition:transform 0.2s;">▼</span>
             </div>
-            <div style="display:flex; align-items:center; gap:12px;">
-              <span style="color:rgba(251,191,36,1); font-weight:900; font-size:16px;">${formatCurrency(item.preco)}</span>
-              <button onclick="event.stopPropagation(); toggleAtivo('${item.id}', ${item.ativo})" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:transparent; color:rgba(252,228,228,0.7); cursor:pointer; font-size:11px;">
-                ${item.ativo ? "Desativar" : "Ativar"}
-              </button>
-              <button onclick="event.stopPropagation(); openItemModal(${JSON.stringify(item).replace(/"/g, '&quot;')})" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:transparent; color:rgba(252,228,228,0.7); cursor:pointer; font-size:11px;">
-                Editar
-              </button>
-              <button onclick="event.stopPropagation(); deletarItem('${item.id}')" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(239,68,68,0.5); background:transparent; color:rgba(239,68,68,0.8); cursor:pointer; font-size:11px;">
-                Excluir
-              </button>
+            <div id="itens-cat-${escapeHtml(cat)}" class="sortable-list" data-categoria="${escapeHtml(cat)}">
+              ${itens.map(item => `
+                <div class="sortable-item" data-id="${item.id}" draggable="true"
+                  onclick="openItemDetailModal(${JSON.stringify(item).replace(/"/g, '&quot;')})"
+                  style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px; background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px; margin-bottom:8px; cursor:pointer;">
+                  <div style="display:flex; align-items:center; gap:12px;">
+                    <span class="drag-handle" style="cursor:grab; font-size:16px; color:rgba(252,228,228,0.3); padding:0 4px;">⠿</span>
+                    <div style="width:10px; height:10px; border-radius:50%; background:${item.ativo ? 'rgba(34,197,94,1)' : 'rgba(107,114,128,1)'}"></div>
+                    <div>
+                      <div style="color:rgba(252,228,228,0.95); font-weight:700; font-size:14px;">${escapeHtml(item.nome)}</div>
+                      ${item.descricao ? `<div style="color:rgba(252,228,228,0.5); font-size:12px;">${escapeHtml(item.descricao)}</div>` : ""}
+                    </div>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:12px;">
+                    <span style="color:rgba(251,191,36,1); font-weight:900; font-size:16px;">${formatCurrency(item.preco)}</span>
+                    <button onclick="event.stopPropagation(); toggleAtivo('${item.id}', ${item.ativo})" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:transparent; color:rgba(252,228,228,0.7); cursor:pointer; font-size:11px;">
+                      ${item.ativo ? "Desativar" : "Ativar"}
+                    </button>
+                    <button onclick="event.stopPropagation(); openItemModal(${JSON.stringify(item).replace(/"/g, '&quot;')})" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:transparent; color:rgba(252,228,228,0.7); cursor:pointer; font-size:11px;">
+                      Editar
+                    </button>
+                    <button onclick="event.stopPropagation(); deletarItem('${item.id}')" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(239,68,68,0.5); background:transparent; color:rgba(239,68,68,0.8); cursor:pointer; font-size:11px;">
+                      Excluir
+                    </button>
+                  </div>
+                </div>
+              `).join("")}
             </div>
           </div>
-        `).join("")}
-      </div>
+        `;
+      }).join("")}
     </div>
-  `).join("");
+  `;
 
-  // Ativa drag and drop em todas as listas
+  // Drag and drop dos itens dentro de cada categoria
   document.querySelectorAll('.sortable-list').forEach(list => setupDragDrop(list));
+  // Drag and drop das categorias entre si
+  setupCategoriaDragDrop();
+}
+
+function toggleCategoria(cat) {
+  const painel = document.getElementById(`itens-cat-${cat}`);
+  const arrow = document.getElementById(`arrow-cat-${cat}`);
+  if (!painel) return;
+  const collapsed = painel.style.display === "none";
+  painel.style.display = collapsed ? "" : "none";
+  if (arrow) arrow.style.transform = collapsed ? "" : "rotate(-90deg)";
+}
+
+function setupCategoriaDragDrop() {
+  const container = document.getElementById("categorias-container");
+  if (!container) return;
+  let dragCat = null;
+
+  container.querySelectorAll(".categoria-bloco").forEach(bloco => {
+    bloco.addEventListener("dragstart", (e) => {
+      // Só inicia drag se clicou no handle da categoria
+      if (!e.target.classList.contains("cat-drag-handle")) {
+        e.preventDefault();
+        return;
+      }
+      dragCat = bloco;
+      setTimeout(() => bloco.style.opacity = "0.4", 0);
+    });
+
+    bloco.addEventListener("dragend", () => {
+      bloco.style.opacity = "1";
+      dragCat = null;
+      // Salva nova ordem das categorias
+      categoriasOrdem = [...container.querySelectorAll(".categoria-bloco")].map(b => b.dataset.cat);
+    });
+
+    bloco.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      if (!dragCat || dragCat === bloco) return;
+      const rect = bloco.getBoundingClientRect();
+      const mid = rect.top + rect.height / 2;
+      if (e.clientY < mid) {
+        container.insertBefore(dragCat, bloco);
+      } else {
+        container.insertBefore(dragCat, bloco.nextSibling);
+      }
+    });
+  });
 }
 
 function setupDragDrop(list) {
