@@ -1599,7 +1599,19 @@ app.get("/api/v1/cardapio/:restaurant_id/busca", async (req, res) => {
   return res.json(data || []);
 });
 
-
+// PATCH - Salva ordem das categorias
+app.patch("/api/v1/cardapio/:restaurant_id/ordem-categorias", async (req, res) => {
+  const { restaurant_id } = req.params;
+  const { ordem } = req.body;
+  if (!Array.isArray(ordem)) return sendError(res, 400, "ordem deve ser um array");
+  
+  const { error } = await supabase
+    .from("restaurante_config")
+    .upsert({ restaurant_id, categorias_ordem: ordem }, { onConflict: "restaurant_id" });
+  
+  if (error) return sendError(res, 500, "Erro ao salvar ordem");
+  return res.json({ success: true });
+});
 
 // POST - Cria item no cardápio
 app.post("/api/v1/cardapio", async (req, res) => {
