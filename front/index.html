@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <link rel="icon" type="image/png" href="fenix-logo-png.png" />
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#e53935" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FluxON</title>
   
@@ -1185,6 +1187,14 @@
 
   <!-- Seu JavaScript -->
   <script src="script.js"></script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js');
+  }
+</script>
+
+</body>
 <!-- CROP MODAL -->
 <div class="crop-modal-backdrop hidden" id="crop-modal-backdrop">
   <div class="crop-modal-box">
