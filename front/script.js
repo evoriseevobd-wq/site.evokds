@@ -1372,6 +1372,56 @@ function cancelOrder(orderId) {
 // ===== TIMER AUTOMÁTICO 3 MINUTOS =====
 const _autoTimers = {};
 
+const _autoTimers = {};
+
+// ↓ COLA AQUI
+let _audioCtx = null;
+
+function tocarBip() {
+  try {
+    if (!_audioCtx) {
+      _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (_audioCtx.state === 'suspended') {
+      _audioCtx.resume().then(() => _bipOscilador());
+      return;
+    }
+    _bipOscilador();
+    return;
+  } catch(e) {
+    console.warn('Web Audio API falhou:', e);
+  }
+  _tentarVibrar();
+}
+
+function _bipOscilador() {
+  try {
+    [0, 0.3].forEach(delay => {
+      const osc  = _audioCtx.createOscillator();
+      const gain = _audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(_audioCtx.destination);
+      osc.frequency.value = 880;
+      osc.type = 'sine';
+      const t = _audioCtx.currentTime + delay;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.6, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+      osc.start(t);
+      osc.stop(t + 0.25);
+    });
+  } catch(e) {}
+}
+
+function _tentarVibrar() {
+  if ('vibrate' in navigator) {
+    navigator.vibrate([200, 100, 200]);
+  }
+}
+// ↓ TERMINA AQUI
+
+function startAutoTimer(orderId, createdAt) {
+
 function startAutoTimer(orderId, createdAt) {
   if (_autoTimers[orderId]) return;
   const LIMIT_MS = 1.5 * 60 * 1000; // ← muda de 3 para 1.5 min
