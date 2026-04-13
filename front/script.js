@@ -1372,8 +1372,6 @@ function cancelOrder(orderId) {
 // ===== TIMER AUTOMÁTICO 3 MINUTOS =====
 const _autoTimers = {};
 
-const _autoTimers = {};
-
 // ↓ COLA AQUI
 let _audioCtx = null;
 
