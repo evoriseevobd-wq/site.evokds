@@ -8,7 +8,7 @@
   "theme_color": "#e53935",
   "icons": [
     {
-      "src": "fenix-logo-png.png",
+      "src": "pwa-icon.png",
       "sizes": "any",
       "type": "image/png"
     }
