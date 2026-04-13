@@ -3447,7 +3447,18 @@ function setupCategoriaDragDrop() {
       bloco.style.opacity = "1";
       bloco.draggable = false;
       dragCat = null;
-      categoriasOrdem = [...container.querySelectorAll(".categoria-bloco")].map(b => b.dataset.cat);
+     // linha 3450
+categoriasOrdem = [...container.querySelectorAll(".categoria-bloco")].map(b => b.dataset.cat);
+
+// 🔥 ADICIONA AQUI (linha 3451 em diante)
+const rid = getRestaurantId();
+if (rid) {
+  fetch(`${API_BASE}/api/v1/cardapio/${rid}/ordem-categorias`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ordem: categoriasOrdem })
+  }).catch(e => console.error("Erro ao salvar ordem:", e));
+}  
     });
 
     bloco.addEventListener("dragover", (e) => {
