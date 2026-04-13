@@ -1372,8 +1372,6 @@ function cancelOrder(orderId) {
 // ===== TIMER AUTOMÁTICO 3 MINUTOS =====
 const _autoTimers = {};
 
-const _autoTimers = {};
-
 // ↓ COLA AQUI
 let _audioCtx = null;
 
@@ -1419,8 +1417,6 @@ function _tentarVibrar() {
   }
 }
 // ↓ TERMINA AQUI
-
-function startAutoTimer(orderId, createdAt) {
 
 function startAutoTimer(orderId, createdAt) {
   if (_autoTimers[orderId]) return;
