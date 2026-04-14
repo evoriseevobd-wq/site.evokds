@@ -1660,6 +1660,7 @@ app.get("/api/v1/cardapio/:restaurant_id", async (req, res) => {
   });
 
   return res.json(ordered);
+});
 
 // GET - Lista só as categorias (sem produtos)
 app.get("/api/v1/cardapio/:restaurant_id/categorias", async (req, res) => {
