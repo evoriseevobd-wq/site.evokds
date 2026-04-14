@@ -2100,7 +2100,8 @@ const tipoSimples = order._forcar_simples === true ||
 if (tipoSimples) {
   b(ESC, 0x40); // reset
 
-  b(ESC, 0x61, 0x01); // centralizar
+  // Nome do restaurante
+  b(ESC, 0x61, 0x01);
   b(GS, 0x21, 0x11);
   b(ESC, 0x45, 0x01);
   txt(restConfig?.nome_exibicao || restData?.name || "Restaurante"); lf();
@@ -2108,19 +2109,37 @@ if (tipoSimples) {
   b(ESC, 0x45, 0x00);
   lf();
 
-  b(ESC, 0x61, 0x00); // esquerda
+  // Cliente e telefone
+  b(ESC, 0x61, 0x00);
+  lineDash();
   if (order.client_name)  { txt(`Cliente  : ${order.client_name}`);  lf(); }
   if (order.client_phone) { txt(`Telefone : ${order.client_phone}`); lf(); }
-  if (order.table_number) { txt(`Mesa     : ${order.table_number}`); lf(); }
-  lf();
 
+  // Mesa em destaque
+  if (order.table_number) {
+    lineDash();
+    b(ESC, 0x61, 0x01);
+    b(GS, 0x21, 0x11);
+    b(ESC, 0x45, 0x01);
+    txt(`MESA ${order.table_number}`); lf();
+    b(GS, 0x21, 0x00);
+    b(ESC, 0x45, 0x00);
+    b(ESC, 0x61, 0x00);
+  }
+
+  // Itens com valor
+  lineDash();
   b(ESC, 0x45, 0x01); txt("Itens:"); b(ESC, 0x45, 0x00); lf();
   lineDash();
 
   for (const it of itensComPreco) {
-    txt(`${it.qty}x ${it.nome}`); lf();
+    const nomeTxt = `${it.qty}x ${it.nome}`;
+    const valorTxt = `R$${(it.preco * it.qty).toFixed(2)}`;
+    const espacos = 48 - nomeTxt.length - valorTxt.length;
+    txt(nomeTxt + ' '.repeat(Math.max(1, espacos)) + valorTxt); lf();
   }
 
+  // Observações
   lineDash();
   if (order.notes) {
     b(ESC, 0x45, 0x01); txt("Obs:"); b(ESC, 0x45, 0x00); lf();
@@ -2132,6 +2151,7 @@ if (tipoSimples) {
   b(GS, 0x56, 0x41, 0x06); // corte
   return true;
 }
+    
 // ── FIM MODO SIMPLIFICADO ─────────────────────────
     
     // ── Reset ──────────────────────────────────────
@@ -3315,6 +3335,33 @@ app.post("/api/v1/restaurante/:restaurant_id/webhook-fechamento", async (req, re
     return res.json({ success: true });
   } catch (err) {
     return sendError(res, 500, "Erro interno");
+  }
+});
+
+app.post("/internal/processar-webhooks", async (req, res) => {
+  try {
+    const duasHorasAtras = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    const umDiaAtras = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: pedidos } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("status", "finished")
+      .is("webhook_satisfaction_sent", null)
+      .lte("delivered_at", duasHorasAtras)
+      .gte("delivered_at", umDiaAtras);
+
+    for (const order of pedidos || []) {
+      await dispararWebhookSatisfacao(order);
+      await supabase
+        .from("orders")
+        .update({ webhook_satisfaction_sent: new Date().toISOString() })
+        .eq("id", order.id);
+    }
+
+    return res.json({ success: true, processados: pedidos?.length || 0 });
+  } catch (err) {
+    return sendError(res, 500, err.message);
   }
 });
 
