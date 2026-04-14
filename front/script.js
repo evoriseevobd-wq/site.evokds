@@ -4986,21 +4986,26 @@ async function exportarFechamentoPDF() {
     </body></html>
   `;
 
-  const win = window.open("", "_blank", "width=800,height=700");
-  win.document.write(html);
-  win.document.close();
+  // COLOCA isso no lugar:
+const container = document.createElement("div");
+container.style.position = "absolute";
+container.style.left = "-9999px";
+container.innerHTML = html;
+document.body.appendChild(container);
 
-  if (ownerPhone) {
-    const msg = encodeURIComponent(
-      `Olá! Segue o fechamento de caixa do dia ${dataStr}.\n` +
-      `Operador: ${_caixaState.operador || "—"} · Turno: ${_caixaState.turno || "—"}\n` +
-      `Faturamento: ${_fmtCurrency(d.faturamento)} · Pedidos: ${d.total_pedidos}\n` +
-      `Conferência: ${diffStr}`
-    );
-    setTimeout(() => {
-      window.open(`https://wa.me/${ownerPhone}?text=${msg}`, "_blank");
-    }, 1500);
-  }
+const pdfBase64 = await new Promise((resolve) => {
+  html2pdf().from(container).outputPdf("datauristring").then((uri) => {
+    resolve(uri.split(",")[1]);
+    document.body.removeChild(container);
+  });
+});
+
+if (d.webhook_fechamento) {
+  await fetch(d.webhook_fechamento, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pdf: pdfBase64 })
+  });
 }
 
 // ---------- PONTO DE ENTRADA PÚBLICO ----------
