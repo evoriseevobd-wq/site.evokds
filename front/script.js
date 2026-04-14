@@ -2067,7 +2067,7 @@ function setupDrawer() {
   if (crmBtn) crmBtn.addEventListener("click", showCRM);
   if (resultsBtn) resultsBtn.addEventListener("click", showResults);
   const resumoDiaBtn = document.getElementById("drawer-resumo-dia");
-if (resumoDiaBtn) resumoDiaBtn.addEventListener("click", () => { closeDrawer(); showResumoDia(); });
+if (resumoDiaBtn) resumoDiaBtn.addEventListener("click", () => { closeDrawer(); showCaixa(); });
   const cardapioBtn = document.getElementById("drawer-cardapio");
 if (cardapioBtn) cardapioBtn.addEventListener("click", showCardapio);
 
