@@ -1707,8 +1707,8 @@ app.get("/api/v1/cardapio/:restaurant_id/busca", async (req, res) => {
     .eq("restaurant_id", restaurant_id)
     .eq("ativo", true)
     .ilike("nome", `%${q.trim()}%`)
-    .order("nome")
-    .limit(10);
+.order("nome")
+.limit(50);
 
   if (error) return sendError(res, 500, "Erro ao buscar itens");
   return res.json(data || []);
