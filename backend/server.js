@@ -2088,6 +2088,48 @@ const { data: restConfig } = await supabase
     const lineEq   = (n = 48) => { txt('='.repeat(n)); lf(); };
     const lineDash = (n = 48) => { txt('-'.repeat(n)); lf(); };
 
+// ── MODO SIMPLIFICADO (autoatendimento / balcão) ───
+const tipoSimples = ["autoatendimento", "balcao", "balcão"].includes(
+  String(order.service_type || "").toLowerCase().trim()
+);
+
+if (tipoSimples) {
+  b(ESC, 0x40); // reset
+
+  b(ESC, 0x61, 0x01); // centralizar
+  b(GS, 0x21, 0x11);
+  b(ESC, 0x45, 0x01);
+  txt(restConfig?.nome_exibicao || restData?.name || "Restaurante"); lf();
+  b(GS, 0x21, 0x00);
+  b(ESC, 0x45, 0x00);
+  lf();
+
+  b(ESC, 0x61, 0x00); // esquerda
+  if (order.client_name)  { txt(`Cliente  : ${order.client_name}`);  lf(); }
+  if (order.client_phone) { txt(`Telefone : ${order.client_phone}`); lf(); }
+  if (order.table_number) { txt(`Mesa     : ${order.table_number}`); lf(); }
+  lf();
+
+  b(ESC, 0x45, 0x01); txt("Itens:"); b(ESC, 0x45, 0x00); lf();
+  lineDash();
+
+  for (const it of itensComPreco) {
+    txt(`${it.qty}x ${it.nome}`); lf();
+  }
+
+  lineDash();
+  if (order.notes) {
+    b(ESC, 0x45, 0x01); txt("Obs:"); b(ESC, 0x45, 0x00); lf();
+    txt(order.notes); lf();
+    lf();
+  }
+
+  lf(); lf();
+  b(GS, 0x56, 0x41, 0x06); // corte
+  return true;
+}
+// ── FIM MODO SIMPLIFICADO ─────────────────────────
+    
     // ── Reset ──────────────────────────────────────
     b(ESC, 0x40);
 
