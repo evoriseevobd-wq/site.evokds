@@ -906,6 +906,36 @@ return res.status(201).json({
   }
 });
 
+// PATCH - Modifica itens de um pedido existente
+app.patch("/api/v1/pedidos/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { items, itens, notes, total_price, address, payment_method } = req.body;
+
+    const normalizedItems = Array.isArray(items) ? items : Array.isArray(itens) ? itens : undefined;
+
+    const updateData = { update_at: new Date().toISOString() };
+    if (normalizedItems) updateData.itens = normalizedItems;
+    if (notes !== undefined) updateData.notes = notes;
+    if (total_price !== undefined) updateData.total_price = total_price;
+    if (address !== undefined) updateData.address = address;
+    if (payment_method !== undefined) updateData.payment_method = payment_method;
+
+    const { data, error } = await supabase
+      .from("orders")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error || !data) return sendError(res, 500, "Erro ao modificar pedido");
+    emitOrderUpdate(data.restaurant_id, data);
+    return res.json({ success: true, order: data });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
 app.post("/auth/google", async (req, res) => {
   try {
     const { credential } = req.body; // recebe o token JWT do Google, não o email
