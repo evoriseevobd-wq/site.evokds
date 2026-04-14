@@ -2089,9 +2089,13 @@ const { data: restConfig } = await supabase
     const lineDash = (n = 48) => { txt('-'.repeat(n)); lf(); };
 
 // ── MODO SIMPLIFICADO (autoatendimento / balcão) ───
-const tipoSimples = ["autoatendimento", "balcao", "balcão"].includes(
-  String(order.service_type || "").toLowerCase().trim()
-);
+const tipoSimples = order._forcar_simples === true ||
+  ["autoatendimento", "balcao", "balcão"].includes(
+    String(order.service_type || "").toLowerCase().trim()
+  ) ||
+  ["autoatendimento", "balcao"].includes(
+    String(order.origin || "").toLowerCase().trim()
+  );
 
 if (tipoSimples) {
   b(ESC, 0x40); // reset
@@ -2287,6 +2291,11 @@ async function printByCategory(order, apiKey, impressoras) {
   try {
     const itens = Array.isArray(order.itens) ? order.itens : [];
     const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
+    const isModoSimples = ["autoatendimento", "balcao", "balcão"].includes(
+      String(order.service_type || "").toLowerCase().trim()
+    ) || ["autoatendimento", "balcao"].includes(
+      String(order.origin || "").toLowerCase().trim()
+    );
 
     let itensComCategoria = itens;
     if (order.restaurant_id && itens.length > 0) {
@@ -2331,19 +2340,40 @@ async function printByCategory(order, apiKey, impressoras) {
         continue;
       }
 
-      // ── DELIVERY ────────────────────────────────────
-     // ── DELIVERY ────────────────────────────────────
-if (isDelivery) {
-  if (is_caixa) {
-    await printOrder({ ...order, itens: itensComCategoria }, apiKey, printer_id);
-    console.log(`🖨️ Delivery — caixa ${printer_id} — pedido completo`);
-    continue;
-  }
-  // Imprime inteiro só na primeira impressora não-caixa (cozinha) e para
-  await printOrder({ ...order, itens: itensComCategoria }, apiKey, printer_id);
-  console.log(`🖨️ Delivery — cozinha ${printer_id} — pedido completo`);
-  break;
-}
+    // ── DELIVERY / RETIRADA ─────────────────────────
+      if (isDelivery) {
+        if (is_caixa) {
+          await printOrder({ ...order, itens: itensComCategoria }, apiKey, printer_id);
+          console.log(`🖨️ Delivery — caixa ${printer_id} — pedido completo`);
+          continue;
+        }
+        await printOrder({ ...order, itens: itensComCategoria }, apiKey, printer_id);
+        console.log(`🖨️ Delivery — cozinha ${printer_id} — pedido completo`);
+        break;
+      }
+
+      // ── BALCÃO / AUTOATENDIMENTO ────────────────────
+      if (isModoSimples) {
+        const categoriasList = String(categorias || "")
+          .split(",").map(c => c.trim().toLowerCase()).filter(Boolean);
+
+        const itensFiltrados = isTodos
+          ? itensComCategoria.filter(it => {
+              const cat  = String(it.categoria || it.category || "").toLowerCase().trim();
+              const nome = String(it.name || it.nome || "").toLowerCase().trim();
+              return !categoriasDeOutras.some(c => cat.includes(c) || nome.includes(c));
+            })
+          : itensComCategoria.filter(it => {
+              const cat  = String(it.categoria || it.category || "").toLowerCase().trim();
+              const nome = String(it.name || it.nome || "").toLowerCase().trim();
+              return categoriasList.some(c => cat.includes(c) || nome.includes(c));
+            });
+
+        if (itensFiltrados.length === 0) continue;
+        await printOrder({ ...order, itens: itensFiltrados, _forcar_simples: true }, apiKey, printer_id);
+        console.log(`🖨️ Simples ${printer_id} — ${itensFiltrados.length} item(ns)`);
+        continue;
+      }
 
       // ── PRESENCIAL ──────────────────────────────────
       const categoriasList = String(categorias || "")
