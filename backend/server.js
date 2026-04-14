@@ -1623,7 +1623,6 @@ app.get("/api/v1/cardapio/:restaurant_id", async (req, res) => {
     .from("cardapio")
     .select("id, nome, preco, categoria, ativo, descricao, foto_url, ordem")
     .eq("restaurant_id", restaurant_id)
-    .order("categoria")
     .order("ordem");
 
   if (!isAdmin) {
@@ -1636,8 +1635,31 @@ app.get("/api/v1/cardapio/:restaurant_id", async (req, res) => {
 
   const { data, error } = await query;
   if (error) return sendError(res, 500, "Erro ao buscar cardápio");
-  return res.json(data);
-});
+
+  // Busca ordem das categorias salva pelo admin
+  const { data: config } = await supabase
+    .from("restaurante_config")
+    .select("categorias_ordem")
+    .eq("restaurant_id", restaurant_id)
+    .single();
+
+  const ordemCategorias = config?.categorias_ordem;
+
+  if (!ordemCategorias || ordemCategorias.length === 0) {
+    return res.json(data);
+  }
+
+  // Ordena os itens respeitando a ordem das categorias definida pelo admin
+  const ordered = [...data].sort((a, b) => {
+    const ia = ordemCategorias.indexOf(a.categoria);
+    const ib = ordemCategorias.indexOf(b.categoria);
+    const posA = ia === -1 ? 9999 : ia;
+    const posB = ib === -1 ? 9999 : ib;
+    if (posA !== posB) return posA - posB;
+    return (a.ordem ?? 0) - (b.ordem ?? 0); // dentro da categoria, mantém ordem dos itens
+  });
+
+  return res.json(ordered);
 
 // GET - Lista só as categorias (sem produtos)
 app.get("/api/v1/cardapio/:restaurant_id/categorias", async (req, res) => {
