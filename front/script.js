@@ -4434,57 +4434,230 @@ async function salvarFiscal() {
 }
 
 // ===== FECHAMENTO DE CAIXA =====
-async function showResumoDia() {
+// ===== MÓDULO DE CAIXA - FLUXON =====
+// Substitua as funções showResumoDia() e exportarFechamentoPDF() por este arquivo completo.
+
+// ---------- ESTADO LOCAL DO TURNO ----------
+let _caixaState = {
+  aberto: false,
+  operador: "",
+  turno: "",
+  horaAbertura: null,
+  fundoInicial: 0,
+  obs: ""
+};
+
+function _salvarCaixaState() {
+  localStorage.setItem("fluxon_caixa", JSON.stringify(_caixaState));
+}
+
+function _carregarCaixaState() {
+  try {
+    const s = localStorage.getItem("fluxon_caixa");
+    if (s) _caixaState = JSON.parse(s);
+  } catch (e) {}
+}
+
+_carregarCaixaState();
+
+// ---------- UTILITÁRIOS ----------
+function _fmtCurrency(v) {
+  return (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function _fmtDuracao(inicio) {
+  const diff = Math.floor((Date.now() - new Date(inicio).getTime()) / 1000);
+  const h = Math.floor(diff / 3600);
+  const m = Math.floor((diff % 3600) / 60);
+  return h > 0 ? `${h}h ${m}min` : `${m}min`;
+}
+
+function _cardStyle(r, g, b) {
+  return `background:rgba(${r},${g},${b},0.12); border:1px solid rgba(${r},${g},${b},0.35); border-radius:14px; padding:16px; text-align:center;`;
+}
+
+function _labelStyle(r, g, b) {
+  return `font-size:10px; font-weight:700; color:rgba(${r},${g},${b},0.8); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;`;
+}
+
+function _sectionStyle() {
+  return `background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:14px; padding:16px; margin-bottom:0;`;
+}
+
+function _sectionTitle(icon, label) {
+  return `<div style="font-size:11px; font-weight:700; color:rgba(252,228,228,0.5); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">${icon} ${label}</div>`;
+}
+
+// ---------- TELA 1: ABERTURA DE CAIXA ----------
+function showAberturaCaixa() {
+  const existing = document.getElementById("caixa-modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "caixa-modal";
+  modal.className = "modal-backdrop open";
+  modal.innerHTML = `
+    <div class="modal confirm-modal" style="max-width:480px;">
+      <div class="modal-header">
+        <div>
+          <h3 style="margin:0;">Abrir Caixa</h3>
+          <p style="color:var(--muted); font-size:12px; margin:4px 0 0 0;">
+            ${new Date().toLocaleDateString("pt-BR", { weekday:"long", day:"2-digit", month:"long", year:"numeric" })}
+          </p>
+        </div>
+        <button class="icon-button" onclick="document.getElementById('caixa-modal').remove()">×</button>
+      </div>
+      <div class="modal-body" style="gap:14px;">
+
+        <div style="${_sectionStyle()}">
+          ${_sectionTitle("👤", "Operador")}
+          <input id="cx-operador" type="text" placeholder="Nome do caixeiro..."
+            style="width:100%; background:rgba(255,255,255,0.06); border:1px solid rgba(91,28,28,0.85); border-radius:10px; padding:10px 14px; color:rgba(252,228,228,0.95); font-size:14px; outline:none;" />
+        </div>
+
+        <div style="${_sectionStyle()}">
+          ${_sectionTitle("🕐", "Turno")}
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;" id="cx-turno-btns">
+            ${["Manhã","Tarde","Noite"].map(t => `
+              <button onclick="_selecionarTurno('${t}')" id="cx-turno-${t}"
+                style="padding:10px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(255,255,255,0.04); color:rgba(252,228,228,0.7); font-size:13px; font-weight:700; cursor:pointer; transition:all .15s;">
+                ${t}
+              </button>`).join("")}
+          </div>
+          <input id="cx-turno-custom" type="text" placeholder="Ou digite um turno personalizado..."
+            style="width:100%; margin-top:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(91,28,28,0.85); border-radius:10px; padding:10px 14px; color:rgba(252,228,228,0.95); font-size:13px; outline:none;" />
+        </div>
+
+        <div style="${_sectionStyle()}">
+          ${_sectionTitle("💵", "Fundo de Caixa Inicial")}
+          <div style="position:relative;">
+            <span style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:rgba(252,228,228,0.4); font-size:13px;">R$</span>
+            <input id="cx-fundo" type="number" min="0" step="0.01" placeholder="0,00"
+              style="width:100%; background:rgba(255,255,255,0.06); border:1px solid rgba(91,28,28,0.85); border-radius:10px; padding:10px 14px 10px 36px; color:rgba(252,228,228,0.95); font-size:14px; outline:none;" />
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-actions" style="justify-content:space-between;">
+        <button class="ghost-button" onclick="document.getElementById('caixa-modal').remove()">Cancelar</button>
+        <button class="ghost-button" onclick="_confirmarAbertura()" style="border-color:rgba(34,197,94,0.5); color:rgba(34,197,94,1);">Abrir Caixa</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+}
+
+let _turnoSelecionado = "";
+function _selecionarTurno(t) {
+  _turnoSelecionado = t;
+  document.getElementById("cx-turno-custom").value = "";
+  ["Manhã","Tarde","Noite"].forEach(x => {
+    const btn = document.getElementById(`cx-turno-${x}`);
+    if (btn) {
+      btn.style.background = x === t ? "rgba(251,191,36,0.18)" : "rgba(255,255,255,0.04)";
+      btn.style.borderColor = x === t ? "rgba(251,191,36,0.6)" : "rgba(91,28,28,0.85)";
+      btn.style.color = x === t ? "rgba(251,191,36,1)" : "rgba(252,228,228,0.7)";
+    }
+  });
+}
+
+function _confirmarAbertura() {
+  const operador = document.getElementById("cx-operador").value.trim();
+  const turnoCustom = document.getElementById("cx-turno-custom").value.trim();
+  const turno = turnoCustom || _turnoSelecionado;
+  const fundo = parseFloat(document.getElementById("cx-fundo").value) || 0;
+
+  if (!operador) { alert("Informe o nome do operador."); return; }
+  if (!turno) { alert("Selecione ou informe o turno."); return; }
+
+  _caixaState = { aberto: true, operador, turno, horaAbertura: new Date().toISOString(), fundoInicial: fundo, obs: "" };
+  _salvarCaixaState();
+  _turnoSelecionado = "";
+  document.getElementById("caixa-modal").remove();
+  showCaixa();
+}
+
+// ---------- TELA 2: CAIXA ABERTO (hub principal) ----------
+async function showCaixa() {
+  _carregarCaixaState();
+
+  if (!_caixaState.aberto) {
+    showAberturaCaixa();
+    return;
+  }
+
   const rid = getRestaurantId();
   if (!rid) return;
+
   let d;
   try {
     const resp = await fetch(`${API_BASE}/api/v1/metrics/${rid}/resumo-dia`);
     d = await resp.json();
     if (!resp.ok) throw new Error();
   } catch(e) {
-    console.error("Erro resumo dia:", e);
+    console.error("Erro ao carregar caixa:", e);
     return;
   }
+
   const hoje = new Date(d.data);
-  const existing = document.getElementById("resumo-dia-modal");
+  const existing = document.getElementById("caixa-modal");
   if (existing) existing.remove();
+
   const modal = document.createElement("div");
-  modal.id = "resumo-dia-modal";
+  modal.id = "caixa-modal";
   modal.className = "modal-backdrop open";
   modal.innerHTML = `
-    <div class="modal confirm-modal" style="max-width:600px; max-height:90vh; overflow-y:auto;">
+    <div class="modal confirm-modal" style="max-width:600px; max-height:92vh; overflow-y:auto;">
       <div class="modal-header">
         <div>
-          <h3 style="margin:0;">🧾 Fechamento de Caixa</h3>
+          <h3 style="margin:0;">Caixa</h3>
           <p style="color:var(--muted); font-size:12px; margin:4px 0 0 0;">
             ${hoje.toLocaleDateString("pt-BR", { weekday:"long", day:"2-digit", month:"long", year:"numeric" })}
           </p>
         </div>
-        <button class="icon-button" onclick="document.getElementById('resumo-dia-modal').remove()">×</button>
+        <button class="icon-button" onclick="document.getElementById('caixa-modal').remove()">×</button>
       </div>
-      <div class="modal-body" style="gap:16px;">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-          <div style="background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.4); border-radius:14px; padding:16px; text-align:center;">
-            <div style="font-size:10px; font-weight:700; color:rgba(34,197,94,0.8); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Pedidos Finalizados</div>
+
+      <div class="modal-body" style="gap:14px;">
+
+        <!-- STATUS DO TURNO -->
+        <div style="${_sectionStyle()} display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div>
+            <div style="font-size:10px; font-weight:700; color:rgba(34,197,94,0.8); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Turno aberto</div>
+            <div style="font-size:15px; font-weight:700; color:rgba(252,228,228,0.95);">${_caixaState.operador}</div>
+            <div style="font-size:12px; color:rgba(252,228,228,0.4); margin-top:2px;">${_caixaState.turno} · ${_fmtDuracao(_caixaState.horaAbertura)} em andamento</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:10px; color:rgba(252,228,228,0.4); margin-bottom:2px;">Fundo inicial</div>
+            <div style="font-size:18px; font-weight:900; color:rgba(251,191,36,1); font-family:'Space Grotesk',sans-serif;">${_fmtCurrency(_caixaState.fundoInicial)}</div>
+          </div>
+        </div>
+
+        <!-- MÉTRICAS -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div style="${_cardStyle(34,197,94)}">
+            <div style="${_labelStyle(34,197,94)}">Pedidos</div>
             <div style="font-size:34px; font-weight:900; color:rgba(34,197,94,1); font-family:'Space Grotesk',sans-serif;">${d.total_pedidos}</div>
           </div>
-          <div style="background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.4); border-radius:14px; padding:16px; text-align:center;">
-            <div style="font-size:10px; font-weight:700; color:rgba(251,191,36,0.8); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Faturamento Total</div>
-            <div style="font-size:26px; font-weight:900; color:rgba(251,191,36,1); font-family:'Space Grotesk',sans-serif;">${formatCurrency(d.faturamento)}</div>
+          <div style="${_cardStyle(251,191,36)}">
+            <div style="${_labelStyle(251,191,36)}">Faturamento</div>
+            <div style="font-size:26px; font-weight:900; color:rgba(251,191,36,1); font-family:'Space Grotesk',sans-serif;">${_fmtCurrency(d.faturamento)}</div>
           </div>
-          <div style="background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.4); border-radius:14px; padding:16px; text-align:center;">
-            <div style="font-size:10px; font-weight:700; color:rgba(59,130,246,0.8); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Ticket Médio</div>
-            <div style="font-size:26px; font-weight:900; color:rgba(59,130,246,1); font-family:'Space Grotesk',sans-serif;">${formatCurrency(d.ticket_medio)}</div>
+          <div style="${_cardStyle(59,130,246)}">
+            <div style="${_labelStyle(59,130,246)}">Ticket Médio</div>
+            <div style="font-size:26px; font-weight:900; color:rgba(59,130,246,1); font-family:'Space Grotesk',sans-serif;">${_fmtCurrency(d.ticket_medio)}</div>
           </div>
-          <div style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.4); border-radius:14px; padding:16px; text-align:center;">
-            <div style="font-size:10px; font-weight:700; color:rgba(239,68,68,0.8); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Cancelados</div>
+          <div style="${_cardStyle(239,68,68)}">
+            <div style="${_labelStyle(239,68,68)}">Cancelados</div>
             <div style="font-size:34px; font-weight:900; color:rgba(239,68,68,1); font-family:'Space Grotesk',sans-serif;">${d.cancelados}</div>
           </div>
         </div>
-        <div style="background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:14px; padding:16px;">
-          <div style="font-size:11px; font-weight:700; color:rgba(252,228,228,0.5); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">🚚 Tipo de Pedido</div>
-          <div style="display:flex; gap:12px;">
+
+        <!-- TIPO DE PEDIDO -->
+        <div style="${_sectionStyle()}">
+          ${_sectionTitle("🚚", "Tipo de Pedido")}
+          <div style="display:flex; gap:10px;">
             <div style="flex:1; text-align:center; padding:10px; background:rgba(251,191,36,0.1); border-radius:10px; border:1px solid rgba(251,191,36,0.3);">
               <div style="font-size:10px; color:rgba(251,191,36,0.8); font-weight:700; margin-bottom:4px;">DELIVERY</div>
               <div style="font-size:24px; font-weight:900; color:rgba(251,191,36,1);">${d.delivery}</div>
@@ -4495,28 +4668,32 @@ async function showResumoDia() {
             </div>
           </div>
         </div>
-        <div style="background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:14px; padding:16px;">
-          <div style="font-size:11px; font-weight:700; color:rgba(252,228,228,0.5); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">💳 Por Forma de Pagamento</div>
+
+        <!-- PAGAMENTOS -->
+        <div style="${_sectionStyle()}">
+          ${_sectionTitle("💳", "Por Forma de Pagamento")}
           ${Object.keys(d.por_pagamento).length === 0
-            ? `<p style="color:var(--muted); font-size:13px;">Nenhum pedido finalizado hoje.</p>`
+            ? `<p style="color:var(--muted); font-size:13px;">Nenhum pedido finalizado ainda.</p>`
             : Object.entries(d.por_pagamento).map(([metodo, info]) => `
               <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(91,28,28,0.4);">
                 <div>
                   <span style="font-weight:700; font-size:14px; color:rgba(252,228,228,0.95); text-transform:capitalize;">${metodo}</span>
                   <span style="color:var(--muted); font-size:12px; margin-left:8px;">${info.qtd} pedido(s)</span>
                 </div>
-                <span style="font-weight:800; font-size:15px; color:rgba(251,191,36,1);">${formatCurrency(info.valor)}</span>
+                <span style="font-weight:800; font-size:15px; color:rgba(251,191,36,1);">${_fmtCurrency(info.valor)}</span>
               </div>
             `).join("") + `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; margin-top:4px;">
-              <span style="font-weight:900; font-size:14px; color:rgba(252,228,228,0.95);">TOTAL</span>
-              <span style="font-weight:900; font-size:16px; color:rgba(34,197,94,1);">${formatCurrency(d.faturamento)}</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0 0;">
+              <span style="font-weight:900; font-size:14px; color:rgba(252,228,228,0.95);">Total</span>
+              <span style="font-weight:900; font-size:16px; color:rgba(34,197,94,1);">${_fmtCurrency(d.faturamento)}</span>
             </div>`
           }
         </div>
-        ${d.top_itens.length > 0 ? `
-        <div style="background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:14px; padding:16px;">
-          <div style="font-size:11px; font-weight:700; color:rgba(252,228,228,0.5); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">🏆 Itens Mais Vendidos</div>
+
+        <!-- TOP ITENS -->
+        ${d.top_itens && d.top_itens.length > 0 ? `
+        <div style="${_sectionStyle()}">
+          ${_sectionTitle("🏆", "Itens Mais Vendidos")}
           ${d.top_itens.map(({ nome, qty }, i) => `
             <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid rgba(91,28,28,0.3);">
               <div style="display:flex; align-items:center; gap:10px;">
@@ -4527,10 +4704,12 @@ async function showResumoDia() {
             </div>
           `).join("")}
         </div>` : ""}
+
       </div>
-      <div class="modal-actions" style="justify-content:space-between;">
-        <button class="ghost-button" onclick="exportarFechamentoPDF()">📄 Exportar PDF</button>
-        <button class="ghost-button" onclick="document.getElementById('resumo-dia-modal').remove()">Fechar</button>
+
+      <div class="modal-actions" style="justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <button class="ghost-button" onclick="document.getElementById('caixa-modal').remove()">Minimizar</button>
+        <button class="ghost-button" onclick="_showFechamentoCaixa()" style="border-color:rgba(239,68,68,0.5); color:rgba(239,68,68,1);">Fechar Caixa</button>
       </div>
     </div>
   `;
@@ -4538,60 +4717,254 @@ async function showResumoDia() {
   modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
 }
 
-async function exportarFechamentoPDF() {
+// ---------- TELA 3: FECHAMENTO (conferência + obs) ----------
+async function _showFechamentoCaixa() {
   const rid = getRestaurantId();
   if (!rid) return;
+
   let d;
   try {
     const resp = await fetch(`${API_BASE}/api/v1/metrics/${rid}/resumo-dia`);
     d = await resp.json();
     if (!resp.ok) throw new Error();
-  } catch(e) {
-    console.error("Erro ao exportar PDF:", e);
+  } catch(e) { return; }
+
+  const dinheiroEntradas = (() => {
+    const pagDinheiro = d.por_pagamento["dinheiro"] || d.por_pagamento["Dinheiro"] || null;
+    return pagDinheiro ? pagDinheiro.valor : 0;
+  })();
+  const dinheiroEsperado = _caixaState.fundoInicial + dinheiroEntradas;
+
+  const existing = document.getElementById("caixa-modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "caixa-modal";
+  modal.className = "modal-backdrop open";
+  modal.innerHTML = `
+    <div class="modal confirm-modal" style="max-width:520px; max-height:92vh; overflow-y:auto;">
+      <div class="modal-header">
+        <div>
+          <h3 style="margin:0;">Fechar Caixa</h3>
+          <p style="color:var(--muted); font-size:12px; margin:4px 0 0 0;">
+            ${_caixaState.operador} · Turno ${_caixaState.turno} · ${_fmtDuracao(_caixaState.horaAbertura)}
+          </p>
+        </div>
+        <button class="icon-button" onclick="showCaixa()">←</button>
+      </div>
+      <div class="modal-body" style="gap:14px;">
+
+        <!-- RESUMO RÁPIDO -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div style="${_cardStyle(34,197,94)}">
+            <div style="${_labelStyle(34,197,94)}">Faturamento</div>
+            <div style="font-size:22px; font-weight:900; color:rgba(34,197,94,1); font-family:'Space Grotesk',sans-serif;">${_fmtCurrency(d.faturamento)}</div>
+          </div>
+          <div style="${_cardStyle(251,191,36)}">
+            <div style="${_labelStyle(251,191,36)}">Pedidos</div>
+            <div style="font-size:34px; font-weight:900; color:rgba(251,191,36,1); font-family:'Space Grotesk',sans-serif;">${d.total_pedidos}</div>
+          </div>
+        </div>
+
+        <!-- CONFERÊNCIA DE CAIXA -->
+        <div style="${_sectionStyle()}">
+          ${_sectionTitle("🔍", "Conferência de Caixa")}
+          <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(91,28,28,0.4);">
+            <span style="font-size:13px; color:rgba(252,228,228,0.6);">Fundo inicial</span>
+            <span style="font-size:13px; font-weight:700; color:rgba(252,228,228,0.9);">${_fmtCurrency(_caixaState.fundoInicial)}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(91,28,28,0.4);">
+            <span style="font-size:13px; color:rgba(252,228,228,0.6);">Entradas em dinheiro</span>
+            <span style="font-size:13px; font-weight:700; color:rgba(252,228,228,0.9);">${_fmtCurrency(dinheiroEntradas)}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(91,28,28,0.4);">
+            <span style="font-size:13px; color:rgba(252,228,228,0.6);">Esperado na gaveta</span>
+            <span style="font-size:14px; font-weight:900; color:rgba(251,191,36,1);">${_fmtCurrency(dinheiroEsperado)}</span>
+          </div>
+          <div style="margin-top:12px;">
+            <div style="font-size:11px; color:rgba(252,228,228,0.5); margin-bottom:6px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Dinheiro contado na gaveta</div>
+            <div style="position:relative;">
+              <span style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:rgba(252,228,228,0.4); font-size:13px;">R$</span>
+              <input id="cx-contado" type="number" min="0" step="0.01" placeholder="0,00"
+                oninput="_atualizarDiferenca(${dinheiroEsperado})"
+                style="width:100%; background:rgba(255,255,255,0.06); border:1px solid rgba(91,28,28,0.85); border-radius:10px; padding:10px 14px 10px 36px; color:rgba(252,228,228,0.95); font-size:14px; outline:none;" />
+            </div>
+          </div>
+          <div id="cx-diferenca" style="margin-top:10px; padding:10px 14px; border-radius:10px; background:rgba(255,255,255,0.04); font-size:13px; color:rgba(252,228,228,0.5); text-align:center;">
+            Informe o valor contado para ver a diferença
+          </div>
+        </div>
+
+        <!-- OBSERVAÇÕES -->
+        <div style="${_sectionStyle()}">
+          ${_sectionTitle("📝", "Observações do Caixeiro")}
+          <textarea id="cx-obs" rows="3" placeholder="Ex: falta de troco às 14h, sistema lento no pico, cliente reclamou do pedido #42..."
+            style="width:100%; background:rgba(255,255,255,0.06); border:1px solid rgba(91,28,28,0.85); border-radius:10px; padding:10px 14px; color:rgba(252,228,228,0.95); font-size:13px; outline:none; resize:none; line-height:1.5;">${_caixaState.obs || ""}</textarea>
+        </div>
+
+      </div>
+      <div class="modal-actions" style="justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <button class="ghost-button" onclick="exportarFechamentoPDF()">📄 Exportar PDF</button>
+        <button class="ghost-button" onclick="_confirmarFechamento()" style="border-color:rgba(239,68,68,0.5); color:rgba(239,68,68,1);">Confirmar Fechamento</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+}
+
+function _atualizarDiferenca(esperado) {
+  const contado = parseFloat(document.getElementById("cx-contado").value) || 0;
+  const diff = contado - esperado;
+  const el = document.getElementById("cx-diferenca");
+  if (!el) return;
+  if (contado === 0) {
+    el.style.background = "rgba(255,255,255,0.04)";
+    el.style.color = "rgba(252,228,228,0.5)";
+    el.innerHTML = "Informe o valor contado para ver a diferença";
     return;
   }
+  if (Math.abs(diff) < 0.01) {
+    el.style.background = "rgba(34,197,94,0.12)";
+    el.style.color = "rgba(34,197,94,1)";
+    el.innerHTML = "Caixa conferido — sem diferença";
+  } else if (diff > 0) {
+    el.style.background = "rgba(59,130,246,0.12)";
+    el.style.color = "rgba(59,130,246,1)";
+    el.innerHTML = `Sobra de <strong>${_fmtCurrency(diff)}</strong>`;
+  } else {
+    el.style.background = "rgba(239,68,68,0.12)";
+    el.style.color = "rgba(239,68,68,1)";
+    el.innerHTML = `Falta de <strong>${_fmtCurrency(Math.abs(diff))}</strong>`;
+  }
+}
+
+async function _confirmarFechamento() {
+  const obs = (document.getElementById("cx-obs")?.value || "").trim();
+  const contado = parseFloat(document.getElementById("cx-contado")?.value) || 0;
+
+  _caixaState.obs = obs;
+  _caixaState.contado = contado;
+  _salvarCaixaState();
+
+  await exportarFechamentoPDF();
+
+  _caixaState = { aberto: false, operador: "", turno: "", horaAbertura: null, fundoInicial: 0, obs: "" };
+  _salvarCaixaState();
+
+  const modal = document.getElementById("caixa-modal");
+  if (modal) modal.remove();
+}
+
+// ---------- EXPORTAR PDF + WHATSAPP ----------
+async function exportarFechamentoPDF() {
+  const rid = getRestaurantId();
+  if (!rid) return;
+
+  let d;
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/metrics/${rid}/resumo-dia`);
+    d = await resp.json();
+    if (!resp.ok) throw new Error();
+  } catch(e) { console.error("Erro ao exportar PDF:", e); return; }
+
   const hoje = new Date(d.data);
   const dataStr = hoje.toLocaleDateString("pt-BR", { weekday:"long", day:"2-digit", month:"long", year:"numeric" });
-  const nomeRestaurante = localStorage.getItem("restaurant_name") || "Restaurante";
+  const nomeRestaurante = d.restaurant_name || localStorage.getItem("restaurant_name") || "Restaurante";
+  const ownerPhone = d.owner_phone || null;
+
+  const dinheiroEntradas = (() => {
+    const p = d.por_pagamento["dinheiro"] || d.por_pagamento["Dinheiro"] || null;
+    return p ? p.valor : 0;
+  })();
+  const esperado = _caixaState.fundoInicial + dinheiroEntradas;
+  const contado = _caixaState.contado || 0;
+  const diff = contado - esperado;
+  const diffStr = Math.abs(diff) < 0.01
+    ? "Caixa conferido — sem diferença"
+    : diff > 0
+      ? `Sobra: R$ ${diff.toFixed(2).replace(".", ",")}`
+      : `Falta: R$ ${Math.abs(diff).toFixed(2).replace(".", ",")}`;
+  const diffColor = Math.abs(diff) < 0.01 ? "#16a34a" : diff > 0 ? "#2563eb" : "#dc2626";
+
+  const horaAbertura = _caixaState.horaAbertura
+    ? new Date(_caixaState.horaAbertura).toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" })
+    : "—";
+  const horaFechamento = new Date().toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" });
+  const duracao = _caixaState.horaAbertura ? _fmtDuracao(_caixaState.horaAbertura) : "—";
+
   const html = `
     <html><head><title>Fechamento de Caixa - ${dataStr}</title>
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: 'Arial', sans-serif; color: #111; padding: 32px; background: #fff; }
-      h1 { font-size: 24px; font-weight: 900; margin-bottom: 4px; }
-      .sub { color: #666; font-size: 14px; margin-bottom: 28px; }
-      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
-      .card { border: 1px solid #ddd; border-radius: 10px; padding: 14px; text-align: center; }
-      .card .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 6px; }
-      .card .value { font-size: 26px; font-weight: 900; }
+      body { font-family: Arial, sans-serif; color: #111; padding: 32px; background: #fff; font-size: 14px; }
+      .header { border-bottom: 2px solid #111; padding-bottom: 16px; margin-bottom: 24px; }
+      .header h1 { font-size: 22px; font-weight: 900; }
+      .header .sub { color: #666; font-size: 13px; margin-top: 4px; }
+      .turno-info { display: flex; gap: 24px; background: #f9f9f9; border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; flex-wrap: wrap; }
+      .turno-info div { flex: 1; min-width: 120px; }
+      .turno-info .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 3px; }
+      .turno-info .val { font-size: 15px; font-weight: 700; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+      .card { border: 1px solid #e5e5e5; border-radius: 10px; padding: 14px; text-align: center; }
+      .card .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 6px; }
+      .card .val { font-size: 24px; font-weight: 900; }
+      h2 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #444; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 6px; }
       table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-      th { text-align: left; padding: 10px 14px; background: #f5f5f5; font-size: 12px; text-transform: uppercase; border-bottom: 2px solid #ddd; }
-      td { padding: 10px 14px; border-bottom: 1px solid #eee; font-size: 14px; }
+      th { text-align: left; padding: 8px 12px; background: #f5f5f5; font-size: 11px; text-transform: uppercase; border-bottom: 2px solid #ddd; }
+      td { padding: 9px 12px; border-bottom: 1px solid #eee; }
       .total-row td { font-weight: 900; background: #f9f9f9; }
-      h2 { font-size: 16px; margin-bottom: 12px; color: #333; }
-      .footer { margin-top: 32px; text-align: center; font-size: 11px; color: #aaa; }
+      .conferencia { background: #f9f9f9; border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; }
+      .conf-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; }
+      .conf-row.resultado { font-weight: 900; margin-top: 8px; padding-top: 10px; border-top: 1px solid #ddd; }
+      .obs-box { background: #fffbeb; border: 1px solid #fbbf24; border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; }
+      .obs-box .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #92400e; margin-bottom: 6px; font-weight: 700; }
+      .obs-box p { font-size: 13px; color: #78350f; line-height: 1.6; }
+      .footer { margin-top: 32px; text-align: center; font-size: 11px; color: #aaa; border-top: 1px solid #eee; padding-top: 16px; }
       @media print { @page { margin: 15mm; } }
     </style></head>
     <body>
-      <h1>🧾 Fechamento de Caixa</h1>
-      <div class="sub">${nomeRestaurante} · ${dataStr}</div>
-      <div class="grid">
-        <div class="card"><div class="label">Pedidos</div><div class="value">${d.total_pedidos}</div></div>
-        <div class="card"><div class="label">Faturamento</div><div class="value">${formatCurrency(d.faturamento)}</div></div>
-        <div class="card"><div class="label">Ticket Médio</div><div class="value">${formatCurrency(d.ticket_medio)}</div></div>
-        <div class="card"><div class="label">Cancelados</div><div class="value">${d.cancelados}</div></div>
+      <div class="header">
+        <h1>Fechamento de Caixa</h1>
+        <div class="sub">${nomeRestaurante} · ${dataStr}</div>
       </div>
+
+      <div class="turno-info">
+        <div><div class="lbl">Operador</div><div class="val">${_caixaState.operador || "—"}</div></div>
+        <div><div class="lbl">Turno</div><div class="val">${_caixaState.turno || "—"}</div></div>
+        <div><div class="lbl">Abertura</div><div class="val">${horaAbertura}</div></div>
+        <div><div class="lbl">Fechamento</div><div class="val">${horaFechamento}</div></div>
+        <div><div class="lbl">Duração</div><div class="val">${duracao}</div></div>
+      </div>
+
+      <div class="grid">
+        <div class="card"><div class="lbl">Pedidos Finalizados</div><div class="val">${d.total_pedidos}</div></div>
+        <div class="card"><div class="lbl">Faturamento Total</div><div class="val" style="font-size:20px;">${_fmtCurrency(d.faturamento)}</div></div>
+        <div class="card"><div class="lbl">Ticket Médio</div><div class="val" style="font-size:20px;">${_fmtCurrency(d.ticket_medio)}</div></div>
+        <div class="card"><div class="lbl">Cancelados</div><div class="val" style="color:#dc2626;">${d.cancelados}</div></div>
+      </div>
+
       <h2>Por Forma de Pagamento</h2>
       <table>
         <thead><tr><th>Método</th><th>Pedidos</th><th>Valor</th></tr></thead>
         <tbody>
           ${Object.entries(d.por_pagamento).map(([m, i]) => `
-            <tr><td style="text-transform:capitalize">${m}</td><td>${i.qtd}</td><td>${formatCurrency(i.valor)}</td></tr>
+            <tr><td style="text-transform:capitalize">${m}</td><td>${i.qtd}</td><td>${_fmtCurrency(i.valor)}</td></tr>
           `).join("")}
-          <tr class="total-row"><td>TOTAL</td><td>${d.total_pedidos}</td><td>${formatCurrency(d.faturamento)}</td></tr>
+          <tr class="total-row"><td>Total</td><td>${d.total_pedidos}</td><td>${_fmtCurrency(d.faturamento)}</td></tr>
         </tbody>
       </table>
-      ${d.top_itens.length > 0 ? `
+
+      <h2>Conferência de Caixa</h2>
+      <div class="conferencia">
+        <div class="conf-row"><span>Fundo inicial</span><span>${_fmtCurrency(_caixaState.fundoInicial)}</span></div>
+        <div class="conf-row"><span>Entradas em dinheiro</span><span>${_fmtCurrency(dinheiroEntradas)}</span></div>
+        <div class="conf-row"><span>Esperado na gaveta</span><span><strong>${_fmtCurrency(esperado)}</strong></span></div>
+        <div class="conf-row"><span>Dinheiro contado</span><span><strong>${_fmtCurrency(contado)}</strong></span></div>
+        <div class="conf-row resultado"><span>Resultado</span><span style="color:${diffColor};">${diffStr}</span></div>
+      </div>
+
+      ${d.top_itens && d.top_itens.length > 0 ? `
       <h2>Top Itens do Dia</h2>
       <table>
         <thead><tr><th>#</th><th>Item</th><th>Qtd</th></tr></thead>
@@ -4599,14 +4972,41 @@ async function exportarFechamentoPDF() {
           ${d.top_itens.map(({ nome, qty }, i) => `<tr><td>${i+1}</td><td>${nome}</td><td>${qty}x</td></tr>`).join("")}
         </tbody>
       </table>` : ""}
-      <div class="footer">Gerado pelo FluxON · ${new Date().toLocaleString("pt-BR")}</div>
+
+      ${_caixaState.obs ? `
+      <div class="obs-box">
+        <div class="lbl">Observações do Caixeiro</div>
+        <p>${_caixaState.obs.replace(/\n/g, "<br>")}</p>
+      </div>` : ""}
+
+      <div class="footer">
+        Gerado pelo FluxON · ${new Date().toLocaleString("pt-BR")}
+      </div>
       <script>window.onload = function(){ window.print(); }<\/script>
     </body></html>
   `;
-  const win = window.open('', '_blank', 'width=800,height=700');
+
+  const win = window.open("", "_blank", "width=800,height=700");
   win.document.write(html);
   win.document.close();
+
+  if (ownerPhone) {
+    const msg = encodeURIComponent(
+      `Olá! Segue o fechamento de caixa do dia ${dataStr}.\n` +
+      `Operador: ${_caixaState.operador || "—"} · Turno: ${_caixaState.turno || "—"}\n` +
+      `Faturamento: ${_fmtCurrency(d.faturamento)} · Pedidos: ${d.total_pedidos}\n` +
+      `Conferência: ${diffStr}`
+    );
+    setTimeout(() => {
+      window.open(`https://wa.me/${ownerPhone}?text=${msg}`, "_blank");
+    }, 1500);
+  }
 }
+
+// ---------- PONTO DE ENTRADA PÚBLICO ----------
+// Chame showCaixa() onde antes você chamava showResumoDia()
+// Se o caixa estiver fechado, abre a tela de abertura automaticamente.
+// Se estiver aberto, mostra o painel completo.
 
 function gerarQrCodes() {
   const qtd = parseInt(document.getElementById("input-mesas").value) || 10;
