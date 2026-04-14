@@ -909,7 +909,29 @@
     <p id="settings-webhook-status" style="margin-top:4px; font-size:13px; min-height:18px;"></p>
   </div>
 </div>
-
+<!-- 📤 WEBHOOK FECHAMENTO DE CAIXA -->
+<div style="background:rgba(46,8,8,0.5); border:1px solid rgba(91,28,28,0.85); border-radius:16px; overflow:hidden;">
+  <button onclick="toggleAccordion('webhook-fechamento')" style="width:100%; display:flex; align-items:center; justify-content:space-between; padding:20px 24px; background:transparent; border:none; cursor:pointer;">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <span style="font-size:20px;">📤</span>
+      <span style="color:rgba(252,228,228,1); font-size:16px; font-weight:800;">Fechamento de Caixa (Webhook)</span>
+    </div>
+    <span id="arrow-webhook-fechamento" style="color:rgba(252,228,228,0.5); font-size:18px; transition:transform 0.2s;">▼</span>
+  </button>
+  <div id="accordion-webhook-fechamento" style="display:none; padding:0 24px 24px 24px; flex-direction:column; gap:12px;">
+    <p style="color:rgba(252,228,228,0.45); font-size:13px; margin:0 0 8px 0;">
+      Ao fechar o caixa, o PDF completo será enviado automaticamente para essa URL.
+    </p>
+    <label style="display:flex; flex-direction:column; gap:6px;">
+      <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">URL do Webhook</span>
+      <input type="text" id="settings-webhook-fechamento" placeholder="https://seu-n8n.com/webhook/fechamento"
+        style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+    </label>
+    <button class="primary-button" id="btn-salvar-webhook-fechamento" style="margin-top:4px; width:100%;">Salvar Webhook</button>
+    <p id="settings-webhook-fechamento-status" style="margin-top:4px; font-size:13px; min-height:18px;"></p>
+  </div>
+</div>
+      
     </div>
 </div>
       
