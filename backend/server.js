@@ -1615,15 +1615,20 @@ app.get("/api/v1/pedidos-cliente", async (req, res) => {
 // GET - Lista cardápio do restaurante (com filtro opcional por categoria)
 app.get("/api/v1/cardapio/:restaurant_id", async (req, res) => {
   const { restaurant_id } = req.params;
-  const { categoria } = req.query;
+  const { categoria, admin } = req.query;
+
+  const isAdmin = admin === "true";
 
   let query = supabase
     .from("cardapio")
-    .select("id, nome, preco, categoria")
+    .select("id, nome, preco, categoria, ativo, descricao, foto_url, ordem")
     .eq("restaurant_id", restaurant_id)
-    .eq("ativo", true)
     .order("categoria")
     .order("ordem");
+
+  if (!isAdmin) {
+    query = query.eq("ativo", true);
+  }
 
   if (categoria) {
     query = query.ilike("categoria", `%${categoria.trim()}%`);
