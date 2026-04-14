@@ -662,7 +662,36 @@ document.getElementById("btn-salvar-webhook")?.addEventListener("click", async (
     if (status) status.textContent = "❌ Erro de conexão.";
   }
 });
-  
+
+// Webhook fechamento de caixa
+try {
+  const whFechResp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/webhook-fechamento`);
+  const whFechData = await whFechResp.json();
+  if (whFechData.webhook_url)
+    document.getElementById("settings-webhook-fechamento").value = whFechData.webhook_url;
+} catch (e) {
+  console.error("Erro ao carregar webhook fechamento:", e);
+}
+
+// ===== SALVAR WEBHOOK FECHAMENTO DE CAIXA =====
+document.getElementById("btn-salvar-webhook-fechamento")?.addEventListener("click", async () => {
+  const rid = getRestaurantId();
+  const url = document.getElementById("settings-webhook-fechamento")?.value?.trim();
+  const status = document.getElementById("settings-webhook-fechamento-status");
+  if (!url) { if (status) status.textContent = "❌ Informe a URL do webhook."; return; }
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/webhook-fechamento`, {
+      method: "POST",
+      headers: buildHeaders(),
+      body: JSON.stringify({ webhook_url: url })
+    });
+    const data = await resp.json();
+    if (status) status.textContent = data.success ? "✅ Webhook salvo!" : "❌ Erro ao salvar.";
+  } catch (e) {
+    if (status) status.textContent = "❌ Erro de conexão.";
+  }
+});
+
 // ===== CORE LOGIC =====
 async function fetchOrders() {
   const rid = getRestaurantId();
