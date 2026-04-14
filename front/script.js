@@ -591,6 +591,15 @@ async function loadSettingsData() {
   } catch (e) {
     console.error("Erro ao carregar maquininha:", e);
   }
+  // Webhook fechamento de caixa
+try {
+  const whFechResp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/webhook-fechamento`);
+  const whFechData = await whFechResp.json();
+  if (whFechData.webhook_url)
+    document.getElementById("settings-webhook-fechamento").value = whFechData.webhook_url;
+} catch (e) {
+  console.error("Erro ao carregar webhook fechamento:", e);
+}
 }
 
 function setupPeriodButtons() {
@@ -663,15 +672,6 @@ document.getElementById("btn-salvar-webhook")?.addEventListener("click", async (
   }
 });
 
-// Webhook fechamento de caixa
-try {
-  const whFechResp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/webhook-fechamento`);
-  const whFechData = await whFechResp.json();
-  if (whFechData.webhook_url)
-    document.getElementById("settings-webhook-fechamento").value = whFechData.webhook_url;
-} catch (e) {
-  console.error("Erro ao carregar webhook fechamento:", e);
-}
 
 // ===== SALVAR WEBHOOK FECHAMENTO DE CAIXA =====
 document.getElementById("btn-salvar-webhook-fechamento")?.addEventListener("click", async () => {
