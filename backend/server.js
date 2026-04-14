@@ -2244,8 +2244,33 @@ txt('Feito com FlowON'); lf();
 async function printByCategory(order, apiKey, impressoras) {
   try {
     const itens = Array.isArray(order.itens) ? order.itens : [];
-
     const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
+
+    // 🔥 NOVO: busca categorias dos itens no cardápio
+    let itensComCategoria = itens;
+    if (order.restaurant_id && itens.length > 0) {
+      const nomes = itens.map(it => String(it.name || it.nome || "").trim()).filter(Boolean);
+      if (nomes.length > 0) {
+        const { data: cardapioItens } = await supabase
+          .from("cardapio")
+          .select("nome, categoria")
+          .eq("restaurant_id", order.restaurant_id)
+          .in("nome", nomes);
+
+        const mapaCategoria = {};
+        (cardapioItens || []).forEach(c => {
+          mapaCategoria[c.nome.toLowerCase().trim()] = c.categoria;
+        });
+
+        itensComCategoria = itens.map(it => {
+          const nomeKey = String(it.name || it.nome || "").toLowerCase().trim();
+          return {
+            ...it,
+            categoria: it.categoria || it.category || mapaCategoria[nomeKey] || ""
+          };
+        });
+      }
+    }
 
     for (const impressora of impressoras) {
       const { printer_id, categorias } = impressora;
@@ -2253,25 +2278,23 @@ async function printByCategory(order, apiKey, impressoras) {
 
       const isTodos = String(categorias || "").toLowerCase().trim() === "todos";
 
-      // Delivery — imprime tudo só na primeira impressora que NÃO for "todos"
       if (isDelivery) {
         if (!isTodos) {
-          await printOrder(order, apiKey, printer_id);
+          await printOrder({ ...order, itens: itensComCategoria }, apiKey, printer_id);
           console.log(`🖨️ Delivery — impressora ${printer_id} — nota completa`);
-          break; // só imprime uma vez
+          break;
         }
         continue;
       }
 
-      // Presencial — filtra por categoria
       const categoriasList = String(categorias || "")
         .split(",")
         .map(c => c.trim().toLowerCase())
         .filter(Boolean);
 
       const itensFiltrados = isTodos
-        ? order.itens
-        : (order.itens || []).filter(it => {
+        ? itensComCategoria
+        : itensComCategoria.filter(it => {
             const cat = String(it.categoria || it.category || "").toLowerCase().trim();
             const nome = String(it.name || it.nome || "").toLowerCase().trim();
             return categoriasList.some(c => cat.includes(c) || nome.includes(c));
@@ -2279,8 +2302,7 @@ async function printByCategory(order, apiKey, impressoras) {
 
       if (itensFiltrados.length === 0) continue;
 
-      const orderParaImprimir = { ...order, itens: itensFiltrados };
-      await printOrder(orderParaImprimir, apiKey, printer_id);
+      await printOrder({ ...order, itens: itensFiltrados }, apiKey, printer_id);
       console.log(`🖨️ Impressora ${printer_id} — ${itensFiltrados.length} item(ns)`);
     }
 
