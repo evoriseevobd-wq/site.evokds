@@ -3178,6 +3178,32 @@ return res.json({ success: true });
   }
 });
 
+// ===== WEBHOOK FECHAMENTO DE CAIXA =====
+app.get("/api/v1/restaurante/:restaurant_id/webhook-fechamento", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const dados = await getIntegracao(restaurant_id, "webhook_fechamento");
+    return res.json({ success: true, webhook_url: dados?.webhook_url || "" });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
+app.post("/api/v1/restaurante/:restaurant_id/webhook-fechamento", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { webhook_url } = req.body;
+    await supabase.from("integracoes").upsert({
+      restaurant_id, tipo: "webhook_fechamento",
+      dados: { webhook_url: webhook_url || null }, ativo: true,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "restaurant_id,tipo" });
+    return res.json({ success: true });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
 // ===== HEALTH CHECK =====
 app.get("/health", (req, res) => {
   res.json({
