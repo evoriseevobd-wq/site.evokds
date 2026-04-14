@@ -4900,7 +4900,6 @@ async function exportarFechamentoPDF() {
   const hoje = new Date(d.data);
   const dataStr = hoje.toLocaleDateString("pt-BR", { weekday:"long", day:"2-digit", month:"long", year:"numeric" });
   const nomeRestaurante = d.restaurant_name || localStorage.getItem("restaurant_name") || "Restaurante";
-  const ownerPhone = d.owner_phone || null;
 
   const dinheiroEntradas = (() => {
     const p = d.por_pagamento["dinheiro"] || d.por_pagamento["Dinheiro"] || null;
