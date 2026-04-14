@@ -1543,22 +1543,33 @@ app.get("/api/v1/metrics/:restaurant_id/resumo-dia", async (req, res) => {
     const { restaurant_id } = req.params;
     const exists = await restaurantExists(restaurant_id);
     if (!exists) return sendError(res, 404, "Restaurante não encontrado");
+
+    const { data: restaurant } = await supabase
+      .from("restaurants")
+      .select("owner_phone, name")
+      .eq("id", restaurant_id)
+      .single();
+
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     const amanha = new Date(hoje);
     amanha.setDate(amanha.getDate() + 1);
+
     const { data: orders, error } = await supabase
       .from("orders").select("*")
       .eq("restaurant_id", restaurant_id)
       .gte("created_at", hoje.toISOString())
       .lt("created_at", amanha.toISOString());
+
     if (error) return sendError(res, 500, "Erro ao buscar pedidos");
+
     const finalizados = (orders || []).filter(o => o.status === "finished");
     const cancelados = (orders || []).filter(o => o.status === "canceled" || o.status === "cancelled");
     const faturamento = finalizados.reduce((s, o) => s + (parseFloat(o.total_price) || 0), 0);
     const ticketMedio = finalizados.length > 0 ? faturamento / finalizados.length : 0;
     const delivery = finalizados.filter(o => String(o.service_type || "").toLowerCase() === "delivery").length;
     const local = finalizados.filter(o => String(o.service_type || "").toLowerCase() !== "delivery").length;
+
     const porPagamento = {};
     finalizados.forEach(o => {
       const m = o.payment_method || "Não informado";
@@ -1566,6 +1577,7 @@ app.get("/api/v1/metrics/:restaurant_id/resumo-dia", async (req, res) => {
       porPagamento[m].qtd++;
       porPagamento[m].valor += parseFloat(o.total_price) || 0;
     });
+
     const topItens = {};
     finalizados.forEach(o => {
       (o.itens || []).forEach(it => {
@@ -1573,9 +1585,11 @@ app.get("/api/v1/metrics/:restaurant_id/resumo-dia", async (req, res) => {
         topItens[nome] = (topItens[nome] || 0) + (it.qty || it.quantidade || 1);
       });
     });
+
     const topSorted = Object.entries(topItens)
       .sort((a, b) => b[1] - a[1]).slice(0, 5)
       .map(([nome, qty]) => ({ nome, qty }));
+
     return res.json({
       data: hoje.toISOString(),
       total_pedidos: finalizados.length,
@@ -1585,7 +1599,9 @@ app.get("/api/v1/metrics/:restaurant_id/resumo-dia", async (req, res) => {
       delivery,
       local,
       por_pagamento: porPagamento,
-      top_itens: topSorted
+      top_itens: topSorted,
+      owner_phone: restaurant?.owner_phone || null,
+      restaurant_name: restaurant?.name || null
     });
   } catch (err) {
     return sendError(res, 500, `Erro interno: ${err.message}`);
