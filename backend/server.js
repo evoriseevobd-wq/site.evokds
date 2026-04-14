@@ -979,6 +979,22 @@ app.post("/auth/google", async (req, res) => {
   }
 });
 
+// GET - Busca pedido por ID
+app.get("/api/v1/pedidos/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("id", id)
+      .single();
+    if (error || !data) return sendError(res, 404, "Pedido não encontrado");
+    return res.json(data);
+  } catch (err) {
+    return sendError(res, 500, "Erro interno");
+  }
+});
+
 /* ========================================
    📈 ROTA DE TIMELINE (dados diários) - 🔥 CORRIGIDA
 ======================================== */
