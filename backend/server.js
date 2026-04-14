@@ -2288,7 +2288,6 @@ async function printByCategory(order, apiKey, impressoras) {
     const itens = Array.isArray(order.itens) ? order.itens : [];
     const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
 
-    // 🔥 NOVO: busca categorias dos itens no cardápio
     let itensComCategoria = itens;
     if (order.restaurant_id && itens.length > 0) {
       const nomes = itens.map(it => String(it.name || it.nome || "").trim()).filter(Boolean);
@@ -2298,12 +2297,10 @@ async function printByCategory(order, apiKey, impressoras) {
           .select("nome, categoria")
           .eq("restaurant_id", order.restaurant_id)
           .in("nome", nomes);
-
         const mapaCategoria = {};
         (cardapioItens || []).forEach(c => {
           mapaCategoria[c.nome.toLowerCase().trim()] = c.categoria;
         });
-
         itensComCategoria = itens.map(it => {
           const nomeKey = String(it.name || it.nome || "").toLowerCase().trim();
           return {
@@ -2314,36 +2311,58 @@ async function printByCategory(order, apiKey, impressoras) {
       }
     }
 
+    // Categorias cobertas por impressoras específicas (não-caixa, não-todos)
+    const categoriasDeOutras = impressoras
+      .filter(p => !p.is_caixa && String(p.categorias || "").toLowerCase().trim() !== "todos")
+      .flatMap(p =>
+        String(p.categorias || "").split(",").map(c => c.trim().toLowerCase()).filter(Boolean)
+      );
+
     for (const impressora of impressoras) {
-      const { printer_id, categorias } = impressora;
+      const { printer_id, categorias, is_caixa } = impressora;
       if (!printer_id) continue;
 
       const isTodos = String(categorias || "").toLowerCase().trim() === "todos";
 
-      if (isDelivery) {
-        if (!isTodos) {
-          await printOrder({ ...order, itens: itensComCategoria }, apiKey, printer_id);
-          console.log(`🖨️ Delivery — impressora ${printer_id} — nota completa`);
-          break;
-        }
+      // ── CAIXA: sempre imprime tudo ──────────────────
+      if (is_caixa) {
+        await printOrder({ ...order, itens: itensComCategoria }, apiKey, printer_id);
+        console.log(`🖨️ Caixa ${printer_id} — pedido completo`);
         continue;
       }
 
+      // ── DELIVERY ────────────────────────────────────
+     // ── DELIVERY ────────────────────────────────────
+if (isDelivery) {
+  if (is_caixa) {
+    await printOrder({ ...order, itens: itensComCategoria }, apiKey, printer_id);
+    console.log(`🖨️ Delivery — caixa ${printer_id} — pedido completo`);
+    continue;
+  }
+  // Imprime inteiro só na primeira impressora não-caixa (cozinha) e para
+  await printOrder({ ...order, itens: itensComCategoria }, apiKey, printer_id);
+  console.log(`🖨️ Delivery — cozinha ${printer_id} — pedido completo`);
+  break;
+}
+
+      // ── PRESENCIAL ──────────────────────────────────
       const categoriasList = String(categorias || "")
-        .split(",")
-        .map(c => c.trim().toLowerCase())
-        .filter(Boolean);
+        .split(",").map(c => c.trim().toLowerCase()).filter(Boolean);
 
       const itensFiltrados = isTodos
-        ? itensComCategoria
+        ? itensComCategoria.filter(it => {
+            const cat  = String(it.categoria || it.category || "").toLowerCase().trim();
+            const nome = String(it.name || it.nome || "").toLowerCase().trim();
+            // "todos" = só o que nenhuma outra impressora específica reivindica
+            return !categoriasDeOutras.some(c => cat.includes(c) || nome.includes(c));
+          })
         : itensComCategoria.filter(it => {
-            const cat = String(it.categoria || it.category || "").toLowerCase().trim();
+            const cat  = String(it.categoria || it.category || "").toLowerCase().trim();
             const nome = String(it.name || it.nome || "").toLowerCase().trim();
             return categoriasList.some(c => cat.includes(c) || nome.includes(c));
           });
 
       if (itensFiltrados.length === 0) continue;
-
       await printOrder({ ...order, itens: itensFiltrados }, apiKey, printer_id);
       console.log(`🖨️ Impressora ${printer_id} — ${itensFiltrados.length} item(ns)`);
     }
