@@ -1601,7 +1601,8 @@ app.get("/api/v1/metrics/:restaurant_id/resumo-dia", async (req, res) => {
       por_pagamento: porPagamento,
       top_itens: topSorted,
       owner_phone: restaurant?.owner_phone || null,
-      restaurant_name: restaurant?.name || null
+      restaurant_name: restaurant?.name || null,
+      webhook_fechamento: (await getIntegracao(restaurant_id, "webhook_fechamento"))?.webhook_url || null,
     });
   } catch (err) {
     return sendError(res, 500, `Erro interno: ${err.message}`);
