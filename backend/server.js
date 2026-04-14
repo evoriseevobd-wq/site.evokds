@@ -1699,14 +1699,15 @@ app.get("/api/v1/cardapio/:restaurant_id/categorias", async (req, res) => {
 app.get("/api/v1/cardapio/:restaurant_id/busca", async (req, res) => {
   const { restaurant_id } = req.params;
   const { q = "" } = req.query;
-  if (!q || q.trim().length < 1) return res.json([]);
+if (!q || q.trim().length < 1) return res.json([]);
+const qNorm = q.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
   const { data, error } = await supabase
     .from("cardapio")
     .select("id, nome, preco, categoria")
     .eq("restaurant_id", restaurant_id)
     .eq("ativo", true)
-    .ilike("nome", `%${q.trim()}%`)
+    .ilike("nome", `%${qNorm}%`)
 .order("nome")
 .limit(50);
 
