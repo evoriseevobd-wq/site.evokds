@@ -3374,7 +3374,7 @@ async function fetchCardapio() {
     const data = await resp.json();
     console.log("✅ Cardápio recebido:", data);
     cardapioItems = Array.isArray(data) ? data : [];
-    renderCardapio();
+    await renderCardapio();
   } catch (e) {
     console.error("❌ Erro ao buscar cardápio:", e);
     const lista = document.getElementById("lista-cardapio-view");
