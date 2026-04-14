@@ -1565,26 +1565,49 @@ app.get("/api/v1/pedidos-cliente", async (req, res) => {
   }
 });
 
-// GET - Lista cardápio do restaurante
+// GET - Lista cardápio do restaurante (com filtro opcional por categoria)
 app.get("/api/v1/cardapio/:restaurant_id", async (req, res) => {
   const { restaurant_id } = req.params;
-  const { data, error } = await supabase
+  const { categoria } = req.query;
+
+  let query = supabase
     .from("cardapio")
-    .select("*")
+    .select("id, nome, preco, categoria")
     .eq("restaurant_id", restaurant_id)
-    .order("categoria").order("ordem");
+    .eq("ativo", true)
+    .order("categoria")
+    .order("ordem");
+
+  if (categoria) {
+    query = query.ilike("categoria", `%${categoria.trim()}%`);
+  }
+
+  const { data, error } = await query;
   if (error) return sendError(res, 500, "Erro ao buscar cardápio");
   return res.json(data);
 });
 
-// GET - Busca itens do cardápio por nome (autocomplete)
+// GET - Lista só as categorias (sem produtos)
+app.get("/api/v1/cardapio/:restaurant_id/categorias", async (req, res) => {
+  const { restaurant_id } = req.params;
+
+  const { data, error } = await supabase
+    .from("cardapio")
+    .select("categoria")
+    .eq("restaurant_id", restaurant_id)
+    .eq("ativo", true);
+
+  if (error) return sendError(res, 500, "Erro ao buscar categorias");
+
+  const categorias = [...new Set(data.map(i => i.categoria))].sort();
+  return res.json(categorias);
+});
+
+// GET - Busca itens por nome (autocomplete)
 app.get("/api/v1/cardapio/:restaurant_id/busca", async (req, res) => {
   const { restaurant_id } = req.params;
   const { q = "" } = req.query;
-
-  if (!q || q.trim().length < 1) {
-    return res.json([]);
-  }
+  if (!q || q.trim().length < 1) return res.json([]);
 
   const { data, error } = await supabase
     .from("cardapio")
@@ -1604,51 +1627,48 @@ app.patch("/api/v1/cardapio/:restaurant_id/ordem-categorias", async (req, res) =
   const { restaurant_id } = req.params;
   const { ordem } = req.body;
   if (!Array.isArray(ordem)) return sendError(res, 400, "ordem deve ser um array");
-  
+
   const { error } = await supabase
     .from("restaurante_config")
     .upsert({ restaurant_id, categorias_ordem: ordem }, { onConflict: "restaurant_id" });
-  
+
   if (error) return sendError(res, 500, "Erro ao salvar ordem");
   return res.json({ success: true });
 });
 
-// POST - Cria item no cardápio
+// POST - Cria item
 app.post("/api/v1/cardapio", async (req, res) => {
   const { restaurant_id, nome, descricao, preco, categoria, foto_url, ordem } = req.body;
   if (!restaurant_id || !nome || !preco) return sendError(res, 400, "Campos obrigatórios: restaurant_id, nome, preco");
+
   const { data, error } = await supabase
     .from("cardapio")
     .insert([{ restaurant_id, nome, descricao, preco, categoria: categoria || "Geral", foto_url, ordem: ordem || 0 }])
     .select().single();
+
   if (error) return sendError(res, 500, "Erro ao criar item");
   return res.status(201).json(data);
 });
 
-// PATCH - Edita item do cardápio
+// PATCH - Edita item
 app.patch("/api/v1/cardapio/:id", async (req, res) => {
   const { id } = req.params;
-  const fields = req.body;
   const { data, error } = await supabase
     .from("cardapio")
-    .update(fields)
+    .update(req.body)
     .eq("id", id)
     .select().single();
+
   if (error) return sendError(res, 500, "Erro ao atualizar item");
   return res.json(data);
 });
 
-// DELETE - Remove item do cardápio
+// DELETE - Remove item
 app.delete("/api/v1/cardapio/:id", async (req, res) => {
   const { id } = req.params;
   const { error } = await supabase.from("cardapio").delete().eq("id", id);
   if (error) return sendError(res, 500, "Erro ao deletar item");
   return res.json({ success: true });
-});
-
-const upload = multer({ 
-  storage: multer.memoryStorage(), 
-  limits: { fileSize: 5 * 1024 * 1024 } 
 });
 
 app.post("/api/v1/upload-image", upload.single("file"), async (req, res) => {
