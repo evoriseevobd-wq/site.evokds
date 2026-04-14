@@ -3386,15 +3386,6 @@ async function fetchCardapio() {
 let categoriasOrdem = [];
 
 async function renderCardapio() {
-  
-  // 🔥 BUSCA ORDEM SALVA ANTES DE RENDERIZAR
-  try {
-    const resp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/config`);
-    const config = await resp.json();
-    if (Array.isArray(config?.categorias_ordem) && config.categorias_ordem.length > 0) {
-      categoriasOrdem = config.categorias_ordem;
-    }
-  } catch(e) {}
   const lista = document.getElementById("lista-cardapio-view") || document.getElementById("lista-cardapio");
   if (!lista) {
     console.error("❌ Elemento da lista do cardápio não encontrado no HTML.");
