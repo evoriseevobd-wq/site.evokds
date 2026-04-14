@@ -2429,8 +2429,10 @@ app.post("/api/v1/restaurante/:restaurant_id/impressora/teste", async (req, res)
   try {
     const { restaurant_id } = req.params;
     const data = await getIntegracao(restaurant_id, "printnode");
-if (!data?.printnode_api_key || !data?.printnode_printer_id)
+   if (!data?.api_key || !Array.isArray(data?.impressoras) || data.impressoras.length === 0)
   return sendError(res, 400, "Impressora não configurada");
+
+const primeiraImpressora = data.impressoras[0];
 
     const testOrder = {
       order_number: "TESTE",
@@ -2441,7 +2443,7 @@ if (!data?.printnode_api_key || !data?.printnode_printer_id)
       notes: "Impressão de teste"
     };
 
-    const success = await printOrder(testOrder, data.printnode_api_key, data.printnode_printer_id);
+    const success = await printOrder(testOrder, data.api_key, primeiraImpressora.printer_id);
     return res.json({ success, message: success ? "Teste enviado!" : "Falha ao imprimir" });
   } catch (err) {
     return sendError(res, 500, "Erro interno");
@@ -2481,7 +2483,7 @@ app.post("/api/v1/restaurante/:restaurant_id/imprimir-pedido", async (req, res) 
       return sendError(res, 404, "Pedido não encontrado");
 
     // Usa a função printOrder que já gera o cupom corretamente
-    const success = await printOrder(order, config.api_key, printerId);
+    const success = await printByCategory(order, config.api_key, config.impressoras);
 
     if (!success) return sendError(res, 500, "Erro ao enviar para impressora");
 
