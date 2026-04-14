@@ -5035,7 +5035,7 @@ if (d.webhook_fechamento) {
     body: JSON.stringify({ pdf: pdfBase64 })
   });
 }
-
+}
 // ---------- PONTO DE ENTRADA PÚBLICO ----------
 // Chame showCaixa() onde antes você chamava showResumoDia()
 // Se o caixa estiver fechado, abre a tela de abertura automaticamente.
