@@ -3385,12 +3385,22 @@ async function fetchCardapio() {
 // Ordem das categorias salva localmente
 let categoriasOrdem = [];
 
-function renderCardapio() {
+async function renderCardapio() {
+  
+  // 🔥 BUSCA ORDEM SALVA ANTES DE RENDERIZAR
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/config`);
+    const config = await resp.json();
+    if (Array.isArray(config?.categorias_ordem) && config.categorias_ordem.length > 0) {
+      categoriasOrdem = config.categorias_ordem;
+    }
+  } catch(e) {}
   const lista = document.getElementById("lista-cardapio-view") || document.getElementById("lista-cardapio");
   if (!lista) {
     console.error("❌ Elemento da lista do cardápio não encontrado no HTML.");
     return;
   }
+ 
 
   if (cardapioItems.length === 0) {
     lista.innerHTML = `<p style="color:rgba(252,228,228,0.5); text-align:center; padding:40px 0;">Nenhum item cadastrado. Clique em "+ Novo Item" para começar.</p>`;
