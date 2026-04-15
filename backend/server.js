@@ -2430,16 +2430,17 @@ app.post("/api/v1/restaurante/:restaurant_id/impressora/teste", async (req, res)
   try {
     const { restaurant_id } = req.params;
     const data = await getIntegracao(restaurant_id, "printnode");
-   if (!data?.api_key || !Array.isArray(data?.impressoras) || data.impressoras.length === 0)
-  return sendError(res, 400, "Impressora não configurada");
+    if (!data?.api_key || !Array.isArray(data?.impressoras) || data.impressoras.length === 0)
+      return sendError(res, 400, "Impressora não configurada");
 
-const primeiraImpressora = data.impressoras[0];
+    const primeiraImpressora = data.impressoras[0];
 
     const testOrder = {
+      restaurant_id,
       order_number: "TESTE",
       client_name: "Teste FluxON",
       service_type: "local",
-      itens: [{ quantity: 1, name: "Item Teste", price: 10.00 }],
+      itens: [{ qty: 1, name: "Item Teste", price: 10.00 }],
       total_price: 10.00,
       notes: "Impressão de teste"
     };
@@ -3366,6 +3367,17 @@ app.post("/internal/processar-webhooks", async (req, res) => {
   } catch (err) {
     return sendError(res, 500, err.message);
   }
+});
+
+app.get("/api/v1/cardapio/:restaurant_id/item/:id", async (req, res) => {
+  const { id } = req.params;
+  const { data, error } = await supabase
+    .from("cardapio")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (error || !data) return sendError(res, 404, "Item não encontrado");
+  return res.json(data);
 });
 
 // ===== HEALTH CHECK =====
