@@ -4160,7 +4160,7 @@ async function salvarItem(id = null) {
     if (id) {
       await fetch(`${API_BASE}/api/v1/cardapio/${id}`, {
         method: "PATCH", headers: buildHeaders(),
-        body: JSON.stringify({ nome, descricao, preco, categoria, foto_url })
+        body: JSON.stringify({ nome, descricao, preco, categoria, foto_url, opcoes })
       });
     } else {
       await fetch(`${API_BASE}/api/v1/cardapio`, {
