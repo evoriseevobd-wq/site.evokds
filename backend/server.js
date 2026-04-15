@@ -2374,10 +2374,10 @@ async function printByCategory(order, apiKey, impressoras) {
 
       // ── CAIXA: sempre imprime tudo ──────────────────
       if (is_caixa) {
-        await printOrder({ ...order, itens: itensComCategoria }, apiKey, printer_id);
-        console.log(`🖨️ Caixa ${printer_id} — pedido completo`);
-        continue;
-      }
+  await printOrder({ ...order, itens: itensComCategoria, _forcar_simples: false }, apiKey, printer_id);
+  console.log(`🖨️ Caixa ${printer_id} — pedido completo`);
+  continue;
+}
 
       // ── DELIVERY: inteiro só na primeira impressora ─
       if (isDelivery) {
