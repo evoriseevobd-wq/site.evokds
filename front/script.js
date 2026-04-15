@@ -3782,7 +3782,8 @@ function openItemModal(item = null) {
   `;
 
   document.body.appendChild(modal);
-  document.getElementById("item-preco").addEventListener("input", function() { formatMoneyInput(this); });
+  _opcoesTemp = item?.opcoes ? [...item.opcoes] : [];
+renderOpcoesModal();
 
   [0,1,2].forEach(i => {
     document.getElementById(`file-${i}`).addEventListener("change", async function() {
@@ -4148,6 +4149,7 @@ async function salvarItem(id = null) {
     .map(i => document.getElementById(`foto-url-${i}`)?.value?.trim() || "")
     .filter(url => url !== "");
 
+  const opcoes = _opcoesTemp.length > 0 ? _opcoesTemp : null;
   const foto_url = fotos.length === 0 ? null :
                    fotos.length === 1 ? fotos[0] :
                    JSON.stringify(fotos);
