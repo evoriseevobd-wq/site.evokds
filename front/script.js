@@ -2453,7 +2453,7 @@ function adicionarItem(item) {
     totalField.value = soma > 0 ? soma.toFixed(2).replace('.', ',') : '';
   }
 }
-  }
+  
 
   let autocompleteTimer = null;
   searchInput?.addEventListener("input", () => {
