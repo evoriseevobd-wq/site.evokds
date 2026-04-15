@@ -2150,6 +2150,24 @@ if (tipoSimples) {
 
   lf(); lf();
   b(GS, 0x56, 0x41, 0x06); // corte
+
+  const rawBuffer = Buffer.from(bytes);
+  const response = await fetch("https://api.printnode.com/printjobs", {
+    method: "POST",
+    headers: {
+      "Authorization": "Basic " + Buffer.from(`${apiKey}:`).toString("base64"),
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      printerId: parseInt(printerId),
+      title: `Pedido #${order.order_number}`,
+      contentType: "raw_base64",
+      content: rawBuffer.toString("base64"),
+      source: "FluxON"
+    })
+  });
+  const result = await response.json();
+  console.log(`🖨️ Simples #${order.order_number} impresso:`, result);
   return true;
 }
     
