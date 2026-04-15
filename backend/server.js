@@ -2361,42 +2361,16 @@ async function printByCategory(order, apiKey, impressoras) {
         continue;
       }
 
-    // ── DELIVERY / RETIRADA ─────────────────────────
+      // ── DELIVERY: inteiro só na primeira impressora ─
       if (isDelivery) {
-        if (is_caixa) {
-          await printOrder({ ...order, itens: itensComCategoria }, apiKey, printer_id);
-          console.log(`🖨️ Delivery — caixa ${printer_id} — pedido completo`);
-          continue;
-        }
         await printOrder({ ...order, itens: itensComCategoria }, apiKey, printer_id);
-        console.log(`🖨️ Delivery — cozinha ${printer_id} — pedido completo`);
+        console.log(`🖨️ Delivery — ${printer_id} — pedido completo`);
         break;
       }
 
       // ── BALCÃO / AUTOATENDIMENTO ────────────────────
-      if (isModoSimples) {
-        const categoriasList = String(categorias || "")
-          .split(",").map(c => c.trim().toLowerCase()).filter(Boolean);
-
-        const itensFiltrados = isTodos
-          ? itensComCategoria.filter(it => {
-              const cat  = String(it.categoria || it.category || "").toLowerCase().trim();
-              const nome = String(it.name || it.nome || "").toLowerCase().trim();
-              return !categoriasDeOutras.some(c => cat.includes(c) || nome.includes(c));
-            })
-          : itensComCategoria.filter(it => {
-              const cat  = String(it.categoria || it.category || "").toLowerCase().trim();
-              const nome = String(it.name || it.nome || "").toLowerCase().trim();
-              return categoriasList.some(c => cat.includes(c) || nome.includes(c));
-            });
-
-        if (itensFiltrados.length === 0) continue;
-        await printOrder({ ...order, itens: itensFiltrados, _forcar_simples: true }, apiKey, printer_id);
-        console.log(`🖨️ Simples ${printer_id} — ${itensFiltrados.length} item(ns)`);
-        continue;
-      }
-
-      // ── PRESENCIAL ──────────────────────────────────
+      // ── PRESENCIAL normal ───────────────────────────
+      // (mesmo filtro, só muda o _forcar_simples)
       const categoriasList = String(categorias || "")
         .split(",").map(c => c.trim().toLowerCase()).filter(Boolean);
 
@@ -2404,7 +2378,6 @@ async function printByCategory(order, apiKey, impressoras) {
         ? itensComCategoria.filter(it => {
             const cat  = String(it.categoria || it.category || "").toLowerCase().trim();
             const nome = String(it.name || it.nome || "").toLowerCase().trim();
-            // "todos" = só o que nenhuma outra impressora específica reivindica
             return !categoriasDeOutras.some(c => cat.includes(c) || nome.includes(c));
           })
         : itensComCategoria.filter(it => {
@@ -2414,7 +2387,12 @@ async function printByCategory(order, apiKey, impressoras) {
           });
 
       if (itensFiltrados.length === 0) continue;
-      await printOrder({ ...order, itens: itensFiltrados }, apiKey, printer_id);
+
+      await printOrder(
+        { ...order, itens: itensFiltrados, _forcar_simples: isModoSimples },
+        apiKey,
+        printer_id
+      );
       console.log(`🖨️ Impressora ${printer_id} — ${itensFiltrados.length} item(ns)`);
     }
 
