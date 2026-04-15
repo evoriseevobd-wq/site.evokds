@@ -3740,6 +3740,10 @@ function openItemModal(item = null) {
             style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
         </label>
 
+<label style="color:rgba(252,228,228,0.8); font-size:13px;">Opções (tamanhos/variações)
+  <div id="opcoes-container" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;"></div>
+  <button onclick="adicionarOpcao()" style="margin-top:8px; width:100%; padding:8px; border-radius:8px; border:2px dashed rgba(249,115,115,0.4); background:transparent; color:rgba(249,115,115,0.8); font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;">+ Adicionar Opção</button>
+</label>
         <label style="color:rgba(252,228,228,0.8); font-size:13px;">Fotos do Item (até 3)
           <div style="display:flex; gap:10px; margin-top:8px;">
             ${[0,1,2].map(i => {
