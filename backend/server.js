@@ -2242,7 +2242,7 @@ async function printOrder(order, apiKey, printerId, is_caixa = false) {
         b(ESC, 0x45, 0x01);
         txt(`Pediu no ${nomeOrigem}? Na proxima,`); lf();
         txt('peca direto no nosso WhatsApp'); lf();
-        txt('e ganhe 15% de desconto!'); lf();
+        txt('e ganhe 10% de desconto!'); lf();
         b(ESC, 0x45, 0x00);
         lf();
         txt('Envie este cupom:'); lf();
@@ -2439,7 +2439,9 @@ app.post("/api/v1/restaurante/:restaurant_id/imprimir-pedido", async (req, res) 
       return sendError(res, 404, "Pedido não encontrado");
 
     // Usa a função printOrder que já gera o cupom corretamente
-    const success = await printByCategory(order, config.api_key, config.impressoras);
+    const impressorasCaixa = config.impressoras.filter(i => i.is_caixa);
+const impressorasAlvo = impressorasCaixa.length > 0 ? impressorasCaixa : config.impressoras;
+const success = await printByCategory(order, config.api_key, impressorasAlvo);
 
     if (!success) return sendError(res, 500, "Erro ao enviar para impressora");
 
