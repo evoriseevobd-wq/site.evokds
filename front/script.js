@@ -2307,34 +2307,6 @@ function renderItensSelecionados() {
   atualizarHiddenItems();
 }
 
-let _opcoesTemp = [];
-
-window.adicionarOpcao = function() {
-  _opcoesTemp.push({ nome: "", preco: 0 });
-  renderOpcoesModal();
-};
-
-window.removerOpcao = function(index) {
-  _opcoesTemp.splice(index, 1);
-  renderOpcoesModal();
-};
-
-function renderOpcoesModal() {
-  const container = document.getElementById("opcoes-container");
-  if (!container) return;
-  container.innerHTML = _opcoesTemp.map((op, i) => `
-    <div style="display:flex; gap:8px; align-items:center;">
-      <input placeholder="Nome (ex: Grande)" value="${op.nome}" id="op-nome-${i}"
-        oninput="_opcoesTemp[${i}].nome = this.value"
-        style="flex:2; padding:8px 12px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:13px; outline:none;" />
-      <input placeholder="Preço" value="${op.preco}" id="op-preco-${i}" type="number"
-        oninput="_opcoesTemp[${i}].preco = parseFloat(this.value) || 0"
-        style="flex:1; padding:8px 12px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:13px; outline:none;" />
-      <button onclick="removerOpcao(${i})" style="background:none; border:none; color:rgba(239,68,68,0.8); font-size:18px; cursor:pointer;">×</button>
-    </div>
-  `).join('');
-}
-  
  window.removerItemPedido = function(index) {
   itensPedido.splice(index, 1);
   renderItensSelecionados();
@@ -2375,85 +2347,28 @@ window.alterarQtd = function(index, delta) {
     totalField.value = soma > 0 ? soma.toFixed(2).replace('.', ',') : '';
   }
 };
-
-  function abrirModalOpcoes(item) {
-  const existing = document.getElementById("opcoes-modal");
-  if (existing) existing.remove();
-
-  const modal = document.createElement("div");
-  modal.id = "opcoes-modal";
-  modal.className = "modal-backdrop open";
-
-  modal.innerHTML = `
-    <div class="modal confirm-modal" style="max-width:400px;">
-      <div class="modal-header">
-        <h3>${escapeHtml(item.nome)}</h3>
-        <button class="icon-button" onclick="document.getElementById('opcoes-modal').remove()">×</button>
-      </div>
-      <div class="modal-body" style="gap:10px;">
-        <p style="color:rgba(252,228,228,0.6); font-size:13px;">Escolha uma opção:</p>
-        ${item.opcoes.map(op => `
-          <button onclick="selecionarOpcao('${escapeHtml(item.nome)}', '${escapeHtml(op.nome)}', ${op.preco})"
-            style="width:100%; padding:14px; border-radius:12px; border:1px solid rgba(91,28,28,0.85);
-            background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); cursor:pointer;
-            display:flex; justify-content:space-between; align-items:center;
-            font-family:inherit; font-size:14px; font-weight:700;
-            transition:all 0.15s;"
-            onmouseover="this.style.background='rgba(91,28,28,0.7)'"
-            onmouseout="this.style.background='rgba(46,8,8,0.45)'">
-            <span>${escapeHtml(op.nome)}</span>
-            <span style="color:rgba(251,191,36,1);">R$ ${parseFloat(op.preco).toFixed(2).replace('.', ',')}</span>
-          </button>
-        `).join('')}
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(modal);
-  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
-}
-
-window.selecionarOpcao = function(nomeBase, nomeOpcao, preco) {
-  const nomeCompleto = `${nomeBase} - ${nomeOpcao}`;
-  const existente = itensPedido.find(i => i.name === nomeCompleto);
-  if (existente) {
-    existente.qty++;
-  } else {
-    itensPedido.push({ name: nomeCompleto, qty: 1, price: preco, quantidade: 1 });
-  }
-  renderItensSelecionados();
-  document.getElementById("opcoes-modal")?.remove();
-  const searchInput = document.getElementById("new-items-search");
-  if (searchInput) searchInput.value = '';
-  document.getElementById("autocomplete-dropdown").style.display = 'none';
-  const totalField = document.getElementById("new-total-price");
-  if (totalField) {
-    const soma = itensPedido.reduce((acc, i) => acc + (i.price * i.qty), 0);
-    totalField.value = soma > 0 ? soma.toFixed(2).replace('.', ',') : '';
-  }
-};
   
-function adicionarItem(item) {
-  if (item.opcoes && item.opcoes.length > 0) {
-    abrirModalOpcoes(item);
-    return;
-  }
-  const existente = itensPedido.find(i => i.name === item.nome);
-  if (existente) {
-    existente.qty++;
-  } else {
-    itensPedido.push({ name: item.nome, qty: 1, price: parseFloat(item.preco || 0), quantidade: 1 });
-  }
-  renderItensSelecionados();
-  searchInput.value = '';
-  dropdown.style.display = 'none';
-  const totalField = document.getElementById("new-total-price");
-  if (totalField) {
-    const soma = itensPedido.reduce((acc, i) => acc + (i.price * i.qty), 0);
-    totalField.value = soma > 0 ? soma.toFixed(2).replace('.', ',') : '';
+  
+  function adicionarItem(item) {
+    const existente = itensPedido.find(i => i.name === item.nome);
+    if (existente) {
+      existente.qty++;
+    } else {
+      itensPedido.push({ name: item.nome, qty: 1, price: parseFloat(item.preco || 0), quantidade: 1 });
+    }
+    renderItensSelecionados();
+    searchInput.value = '';
+    dropdown.style.display = 'none';
+
+// Recalcula o total sempre
+const totalField = document.getElementById("new-total-price");
+if (totalField) {
+  const soma = itensPedido.reduce((acc, i) => acc + (i.price * i.qty), 0);
+  if (soma > 0) {
+    totalField.value = soma.toFixed(2).replace('.', ',');
   }
 }
-  
+  }
 
   let autocompleteTimer = null;
   searchInput?.addEventListener("input", () => {
@@ -2465,8 +2380,7 @@ function adicionarItem(item) {
       const rid = getRestaurantId();
       if (!rid) return;
       try {
-        const qNorm = q.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-      const resp = await fetch(`${API_BASE}/api/v1/cardapio/${rid}/busca?q=${encodeURIComponent(qNorm)}`);
+        const resp = await fetch(`${API_BASE}/api/v1/cardapio/${rid}/busca?q=${encodeURIComponent(q)}`);
         const itens = await resp.json();
 
         if (!itens.length) { dropdown.style.display = 'none'; return; }
@@ -3740,10 +3654,6 @@ function openItemModal(item = null) {
             style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
         </label>
 
-<label style="color:rgba(252,228,228,0.8); font-size:13px;">Opções (tamanhos/variações)
-  <div id="opcoes-container" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;"></div>
-  <button onclick="adicionarOpcao()" style="margin-top:8px; width:100%; padding:8px; border-radius:8px; border:2px dashed rgba(249,115,115,0.4); background:transparent; color:rgba(249,115,115,0.8); font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;">+ Adicionar Opção</button>
-</label>
         <label style="color:rgba(252,228,228,0.8); font-size:13px;">Fotos do Item (até 3)
           <div style="display:flex; gap:10px; margin-top:8px;">
             ${[0,1,2].map(i => {
@@ -3786,8 +3696,7 @@ function openItemModal(item = null) {
   `;
 
   document.body.appendChild(modal);
-  _opcoesTemp = item?.opcoes ? [...item.opcoes] : [];
-renderOpcoesModal();
+  document.getElementById("item-preco").addEventListener("input", function() { formatMoneyInput(this); });
 
   [0,1,2].forEach(i => {
     document.getElementById(`file-${i}`).addEventListener("change", async function() {
@@ -4153,7 +4062,6 @@ async function salvarItem(id = null) {
     .map(i => document.getElementById(`foto-url-${i}`)?.value?.trim() || "")
     .filter(url => url !== "");
 
-  const opcoes = _opcoesTemp.length > 0 ? _opcoesTemp : null;
   const foto_url = fotos.length === 0 ? null :
                    fotos.length === 1 ? fotos[0] :
                    JSON.stringify(fotos);
@@ -4164,7 +4072,7 @@ async function salvarItem(id = null) {
     if (id) {
       await fetch(`${API_BASE}/api/v1/cardapio/${id}`, {
         method: "PATCH", headers: buildHeaders(),
-        body: JSON.stringify({ nome, descricao, preco, categoria, foto_url, opcoes })
+        body: JSON.stringify({ nome, descricao, preco, categoria, foto_url })
       });
     } else {
       await fetch(`${API_BASE}/api/v1/cardapio`, {
