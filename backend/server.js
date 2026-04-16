@@ -2621,7 +2621,7 @@ app.get("/api/v1/fidelidade/cliente/:token", async (req, res) => {
 
     const { data: resgates } = await supabase
       .from("orders")
-      .select("id, order_number, itens, created_at, status")
+      .select("id, order_number, itens, created_at, status, service_type, address, notes")
       .eq("restaurant_id", cliente.restaurant_id)
       .eq("client_phone", phoneNormalizado)
       .eq("origin", "fidelidade")
