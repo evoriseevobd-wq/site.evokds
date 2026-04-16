@@ -2380,7 +2380,8 @@ if (totalField) {
       const rid = getRestaurantId();
       if (!rid) return;
       try {
-        const resp = await fetch(`${API_BASE}/api/v1/cardapio/${rid}/busca?q=${encodeURIComponent(q)}`);
+        const qNorm = q.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const resp = await fetch(`${API_BASE}/api/v1/cardapio/${rid}/busca?q=${encodeURIComponent(qNorm)}`);
         const itens = await resp.json();
 
         if (!itens.length) { dropdown.style.display = 'none'; return; }
