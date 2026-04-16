@@ -3467,9 +3467,9 @@ async function renderCardapio() {
                 <h4 style="color:rgba(252,228,228,0.6); font-size:12px; text-transform:uppercase; letter-spacing:2px; margin:0;">${escapeHtml(cat)}</h4>
                 <span style="color:rgba(252,228,228,0.3); font-size:11px;">(${itens.length})</span>
               </div>
-              <span id="arrow-cat-${escapeHtml(cat)}" style="color:rgba(252,228,228,0.4); font-size:14px; transition:transform 0.2s;">▼</span>
+              <span id="arrow-cat-${escapeHtml(cat)}" style="color:rgba(252,228,228,0.4); font-size:14px; transition:transform 0.2s; transform:rotate(-90deg);">▼</span>
             </div>
-            <div id="itens-cat-${escapeHtml(cat)}" class="sortable-list" data-categoria="${escapeHtml(cat)}">
+            <div id="itens-cat-${escapeHtml(cat)}" class="sortable-list" data-categoria="${escapeHtml(cat)}" style="display:none;">
               ${itens.map(item => `
                 <div class="sortable-item" data-id="${item.id}" draggable="true"
                   onclick="openItemDetailModal(${JSON.stringify(item).replace(/"/g, '&quot;')})"
