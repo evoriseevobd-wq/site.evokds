@@ -3454,7 +3454,7 @@ async function renderCardapio() {
     <div id="categorias-container">
       ${categoriasOrdem.map((cat, catIndex) => {
         const itens = categoriasMap[cat];
-        const collapsed = false;
+        const collapsed = true;
         return `
           <div class="categoria-bloco" data-cat="${escapeHtml(cat)}" draggable="true" style="margin-bottom:24px;">
             <div onclick="toggleCategoria('${escapeHtml(cat)}')" style="
