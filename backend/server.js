@@ -729,7 +729,7 @@ app.patch("/orders/:id/status", async (req, res) => {
   restaurant_id: data.restaurant_id,
   order_id: id,
   tipo: "satisfacao",
-  dispara_em: new Date(Date.now() + 1.5 * 60 * 60 * 1000).toISOString()
+  dispara_em: new Date(Date.now() + 5 * 60 * 1000).toISOString()
 }]);
 console.log(`✅ Webhook satisfação agendado na fila — Pedido ${id}`);
     }
