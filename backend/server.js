@@ -745,7 +745,7 @@ app.post("/api/v1/pedidos", async (req, res) => {
     const {
       restaurant_id, client_name, client_phone, items, itens, notes,
       service_type, address, payment_method, total_price, origin,
-      status, order_id
+      status, order_id, table_number
     } = req.body || {};
 
     const normalizedItems = Array.isArray(items) ? items : Array.isArray(itens) ? itens : [];
@@ -782,6 +782,7 @@ app.post("/api/v1/pedidos", async (req, res) => {
       client_phone: phone,
       itens: normalizedItems,
       notes: notes || "",
+      table_number: table_number || null,
       status: finalStatus,
       total_price: total_price || 0,
       service_type: service_type || "local",
@@ -823,8 +824,9 @@ app.post("/api/v1/pedidos", async (req, res) => {
       payment_method: payment_method || null,
       total_price: total_price || 0,
       origin: finalOrigin,
-      created_at: now,
-      update_at: now
+        table_number: table_number || null,
+        created_at: now,
+        update_at: now
     }])
     .select()
     .single();
