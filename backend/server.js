@@ -1638,7 +1638,7 @@ app.get("/api/v1/cardapio/:restaurant_id", async (req, res) => {
 
   let query = supabase
     .from("cardapio")
-    .select("id, nome, preco, categoria, ativo, descricao, foto_url, ordem")
+    .select("id, nome, preco, categoria, ativo, descricao, foto_url, ordem, opcoes")
     .eq("restaurant_id", restaurant_id)
     .order("ordem");
 
