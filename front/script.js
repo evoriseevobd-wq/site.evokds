@@ -3633,11 +3633,11 @@ function openItemModal(item = null) {
   modal.className = "modal-backdrop open";
 
   modal.innerHTML = `
-    <div class="modal confirm-modal">
+   <div class="modal confirm-modal" style="width:560px; max-width:95vw;">
       <div class="modal-header">
         <h3>${item ? "✏️ Editar Item" : "➕ Novo Item"}</h3>
       </div>
-      <div class="modal-body" style="display:flex; flex-direction:column; gap:12px; max-height:70vh; overflow-y:auto;">
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:12px; max-height:75vh; overflow-y:auto; padding-right:4px;">
         <label style="color:rgba(252,228,228,0.8); font-size:13px;">Nome *
           <input id="item-nome" value="${item ? escapeHtml(item.nome) : ""}" placeholder="Ex: X-Burguer"
             style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
