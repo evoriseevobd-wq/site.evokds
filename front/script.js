@@ -3688,6 +3688,14 @@ function openItemModal(item = null) {
             }).join('')}
           </div>
         </label>
+      <div style="margin-top:4px;">
+          <div style="color:rgba(252,228,228,0.8); font-size:13px; margin-bottom:8px;">Variações <span style="color:rgba(252,228,228,0.3); font-size:11px;">(opcional)</span></div>
+          <div id="variacoes-lista" style="display:flex; flex-direction:column; gap:8px; margin-bottom:8px;"></div>
+          <button type="button" onclick="adicionarVariacao()" style="
+            padding:7px 14px; border-radius:8px; border:1px dashed rgba(249,115,115,0.4);
+            background:transparent; color:rgba(249,115,115,0.8); font-size:12px; cursor:pointer;
+          ">+ Adicionar variação</button>
+        </div>
       </div>
       <div class="modal-actions">
         <button class="ghost-button" id="item-cancel">Cancelar</button>
@@ -3707,7 +3715,32 @@ function openItemModal(item = null) {
 
   document.getElementById("item-cancel").addEventListener("click", () => modal.remove());
   document.getElementById("item-save").addEventListener("click", () => salvarItem(item?.id));
-  modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
+ modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
+
+  const variacoes = item?.opcoes ? (Array.isArray(item.opcoes) ? item.opcoes : JSON.parse(item.opcoes)) : [];
+  variacoes.forEach(v => adicionarVariacao(v.nome || v.name, v.preco));
+}
+
+function adicionarVariacao(nome = "", preco = "") {
+  const lista = document.getElementById("variacoes-lista");
+  if (!lista) return;
+  const row = document.createElement("div");
+  row.style.cssText = "display:flex; gap:8px; align-items:center;";
+  row.innerHTML = `
+    <input placeholder="Ex: Grande, Com leite..." value="${escapeHtml(String(nome))}"
+      style="flex:2; padding:8px 12px; border-radius:8px; border:1px solid rgba(91,28,28,0.85);
+      background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:13px; outline:none;"
+      class="variacao-nome" />
+    <input placeholder="0,00" value="${preco}" inputmode="decimal"
+      style="flex:1; padding:8px 12px; border-radius:8px; border:1px solid rgba(91,28,28,0.85);
+      background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:13px; outline:none;"
+      class="variacao-preco" />
+    <button type="button" onclick="this.parentElement.remove()" style="
+      width:28px; height:28px; border-radius:50%; border:none;
+      background:rgba(239,68,68,0.2); color:rgba(239,68,68,0.8);
+      font-size:16px; cursor:pointer; flex-shrink:0; line-height:1;">×</button>
+  `;
+  lista.appendChild(row);
 }
 
 function getFotoUrl(item, index) {
@@ -4067,18 +4100,26 @@ async function salvarItem(id = null) {
                    fotos.length === 1 ? fotos[0] :
                    JSON.stringify(fotos);
 
+  // Coleta variações
+  const opcoes = [];
+  document.querySelectorAll("#variacoes-lista > div").forEach(row => {
+    const nomeV = row.querySelector(".variacao-nome")?.value.trim();
+    const precoV = parseFloat(row.querySelector(".variacao-preco")?.value.replace(/\./g,"").replace(",",".")) || 0;
+    if (nomeV && precoV) opcoes.push({ nome: nomeV, preco: precoV });
+  });
+
   if (!nome || !preco) { alert("Nome e preço são obrigatórios."); return; }
 
   try {
     if (id) {
       await fetch(`${API_BASE}/api/v1/cardapio/${id}`, {
         method: "PATCH", headers: buildHeaders(),
-        body: JSON.stringify({ nome, descricao, preco, categoria, foto_url })
+        body: JSON.stringify({ nome, descricao, preco, categoria, foto_url, opcoes: opcoes.length > 0 ? opcoes : null })
       });
     } else {
       await fetch(`${API_BASE}/api/v1/cardapio`, {
         method: "POST", headers: buildHeaders(),
-        body: JSON.stringify({ restaurant_id: rid, nome, descricao, preco, categoria, foto_url })
+        body: JSON.stringify({ restaurant_id: rid, nome, descricao, preco, categoria, foto_url, opcoes: opcoes.length > 0 ? opcoes : null })
       });
     }
     document.getElementById("item-modal")?.remove();
