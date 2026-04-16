@@ -2015,7 +2015,7 @@ function gerarCupom(origin) {
   return `${prefixo}-${codigo}`;
 }
 
-async function printOrder(order, apiKey, printerId) {
+async function printOrder(order, apiKey, printerId, is_caixa = false) {
   try {
     const isDelivery = String(order.service_type || '').toLowerCase() === 'delivery';
     const itens = Array.isArray(order.itens) ? order.itens : [];
@@ -2043,31 +2043,30 @@ async function printOrder(order, apiKey, printerId) {
       : totalRecalculado;
 
     const horario = new Date(order.created_at || Date.now())
-      .toLocaleTimeString('pt-BR', { 
-        hour: '2-digit', 
+      .toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
         minute: '2-digit',
         timeZone: 'America/Sao_Paulo'
       });
 
-    // ── Busca dados do restaurante ─────────────────
     const { data: restData } = await supabase
-  .from("restaurants")
-  .select("name, tracking_url")
-  .eq("id", order.restaurant_id)
-  .single();
+      .from("restaurants")
+      .select("name, tracking_url")
+      .eq("id", order.restaurant_id)
+      .single();
 
-const { data: restConfig } = await supabase
-  .from("restaurante_config")
-  .select("nome_exibicao, subtitulo, telefone, instagram")
-  .eq("restaurant_id", order.restaurant_id)
-  .single();
+    const { data: restConfig } = await supabase
+      .from("restaurante_config")
+      .select("nome_exibicao, subtitulo, telefone, instagram")
+      .eq("restaurant_id", order.restaurant_id)
+      .single();
+
+    const nomeRestaurante = restConfig?.nome_exibicao || restData?.name || 'Restaurante';
 
     const ESC = 0x1B;
     const GS  = 0x1D;
     const bytes = [];
-
     const b = (...args) => args.forEach(v => bytes.push(v));
-
     const txt = (str) => {
       const map = {
         'á':'a','à':'a','â':'a','ã':'a','ä':'a',
@@ -2086,224 +2085,182 @@ const { data: restConfig } = await supabase
       String(str || '').replace(/[^\x20-\x7E]/g, c => map[c] || '?')
         .split('').forEach(c => bytes.push(c.charCodeAt(0)));
     };
-
-    const lf     = () => b(0x0A);
+    const lf       = () => b(0x0A);
     const lineEq   = (n = 48) => { txt('='.repeat(n)); lf(); };
     const lineDash = (n = 48) => { txt('-'.repeat(n)); lf(); };
 
-// ── MODO SIMPLIFICADO (autoatendimento / balcão) ───
-const tipoSimples = order._forcar_simples === true ||
-  ["autoatendimento", "balcao", "balcão"].includes(
-    String(order.service_type || "").toLowerCase().trim()
-  ) ||
-  ["autoatendimento", "balcao"].includes(
-    String(order.origin || "").toLowerCase().trim()
-  );
+    // ══════════════════════════════════════
+    // 🧾 LAYOUT EQUIPE (cozinha/bebidas)
+    // ══════════════════════════════════════
+    if (!is_caixa) {
+      b(ESC, 0x40); // reset
 
-if (tipoSimples) {
-  b(ESC, 0x40); // reset
-
-  // Nome do restaurante
-  b(ESC, 0x61, 0x01);
-  b(GS, 0x21, 0x11);
-  b(ESC, 0x45, 0x01);
-  txt(restConfig?.nome_exibicao || restData?.name || "Restaurante"); lf();
-  b(GS, 0x21, 0x00);
-  b(ESC, 0x45, 0x00);
-  lf();
-
-  // Cliente e telefone
-  b(ESC, 0x61, 0x00);
-  lineDash();
-  if (order.client_name)  { txt(`Cliente  : ${order.client_name}`);  lf(); }
-  if (order.client_phone) { txt(`Telefone : ${order.client_phone}`); lf(); }
-
-  // Mesa em destaque
-  if (order.table_number) {
-    lineDash();
-    b(ESC, 0x61, 0x01);
-    b(GS, 0x21, 0x11);
-    b(ESC, 0x45, 0x01);
-    txt(`MESA ${order.table_number}`); lf();
-    b(GS, 0x21, 0x00);
-    b(ESC, 0x45, 0x00);
-    b(ESC, 0x61, 0x00);
-  }
-
-  // Itens com valor
-  lineDash();
-  b(ESC, 0x45, 0x01); txt("Itens:"); b(ESC, 0x45, 0x00); lf();
-  lineDash();
-
-  for (const it of itensComPreco) {
-    const nomeTxt = `${it.qty}x ${it.nome}`;
-    const valorTxt = `R$${(it.preco * it.qty).toFixed(2)}`;
-    const espacos = 48 - nomeTxt.length - valorTxt.length;
-    txt(nomeTxt + ' '.repeat(Math.max(1, espacos)) + valorTxt); lf();
-  }
-
-  // Observações
-  lineDash();
-  if (order.notes) {
-    b(ESC, 0x45, 0x01); txt("Obs:"); b(ESC, 0x45, 0x00); lf();
-    txt(order.notes); lf();
-    lf();
-  }
-
-  lf(); lf();
-  b(GS, 0x56, 0x41, 0x06); // corte
-
-  const rawBuffer = Buffer.from(bytes);
-  const response = await fetch("https://api.printnode.com/printjobs", {
-    method: "POST",
-    headers: {
-      "Authorization": "Basic " + Buffer.from(`${apiKey}:`).toString("base64"),
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      printerId: parseInt(printerId),
-      title: `Pedido #${order.order_number}`,
-      contentType: "raw_base64",
-      content: rawBuffer.toString("base64"),
-      source: "FluxON"
-    })
-  });
-  const result = await response.json();
-  console.log(`🖨️ Simples #${order.order_number} impresso:`, result);
-  return true;
-}
-    
-// ── FIM MODO SIMPLIFICADO ─────────────────────────
-    
-    // ── Reset ──────────────────────────────────────
-    b(ESC, 0x40);
-
-    // ── CABEÇALHO ──────────────────────────────────
-    b(ESC, 0x61, 0x01); // centralizar
-
-    b(GS, 0x21, 0x11);
-    b(ESC, 0x45, 0x01);
-    txt(restConfig?.nome_exibicao || restData?.name || 'Restaurante'); lf();
-    b(GS, 0x21, 0x00);
-    b(ESC, 0x45, 0x00);
-
-   if (restConfig?.subtitulo) { txt(`- ${restConfig.subtitulo} -`); lf(); }
-    lf();
-if (restConfig?.telefone) { txt(restConfig.telefone); lf(); }
-    lf();
-
-    // ── DIVISOR GROSSO ─────────────────────────────
-    b(ESC, 0x61, 0x00); // esquerda
-    lineEq();
-
-    // ── DADOS DO PEDIDO ────────────────────────────
-    b(ESC, 0x45, 0x01);
-    const tipoLabel = isDelivery ? '[DELIVERY]' : '[RETIRADA]';
-    const pedidoStr = `Pedido #${order.order_number || ''}`;
-    const espacoPedido = 48 - pedidoStr.length - tipoLabel.length;
-    txt(pedidoStr + ' '.repeat(Math.max(1, espacoPedido)) + tipoLabel); lf();
-    b(ESC, 0x45, 0x00);
-
-    txt(`Cliente : ${order.client_name || ''}`); lf();
-txt(`Horario : ${horario}`); lf();
-if (isDelivery && order.address) { txt(`Endereco: ${order.address}`); lf(); }
-if (order.payment_method)        { txt(`Pagament: ${order.payment_method}`); lf(); }
-if (order.client_phone)          { txt(`Telefone: ${order.client_phone}`); lf(); }
-
-    
-    // ── DIVISOR FINO ───────────────────────────────
-    lineDash();
-
-    // ── CABEÇALHO DOS ITENS ────────────────────────
-    b(ESC, 0x45, 0x01);
-    txt('ITEM                              QTD    VALOR'); lf();
-    b(ESC, 0x45, 0x00);
-
-    lineDash();
-
-    // ── ITENS ──────────────────────────────────────
-    for (const it of itensComPreco) {
-      const nome  = it.nome.substring(0, 32).padEnd(32);
-      const qty   = String(it.qty).padStart(5);
-      const valor = `R$${(it.preco * it.qty).toFixed(2)}`.padStart(9);
-      txt(`${nome}${qty} ${valor}`); lf();
-    }
-
-    lineDash();
-
-    // ── OBSERVAÇÕES ────────────────────────────────
-    if (order.notes) {
-      lf();
-      b(ESC, 0x45, 0x01); txt('Obs:'); lf(); b(ESC, 0x45, 0x00);
-      txt(order.notes); lf();
-      lf();
-    }
-
-    // ── TOTAL ──────────────────────────────────────
-    lineEq();
-    b(ESC, 0x45, 0x01);
-    b(GS, 0x21, 0x01);
-    const totalLabel = 'TOTAL:';
-    const totalValor = `R$ ${totalFinal.toFixed(2)}`;
-    const espacoTotal = 48 - totalLabel.length - totalValor.length;
-    txt(totalLabel + ' '.repeat(Math.max(1, espacoTotal)) + totalValor); lf();
-    b(GS, 0x21, 0x00);
-    b(ESC, 0x45, 0x00);
-    lineEq();
-
-    // ── RODAPÉ ─────────────────────────────────────
-    lf();
-    b(ESC, 0x61, 0x01); // centralizar
-    txt('Obrigado pela preferencia!'); lf();
-    txt('Volte sempre :)'); lf();
-    lf();
-    txt('* * * * * * * * * * * * * * * * * * * *'); lf();
-    lf();
-    if (restConfig?.instagram) {
-  txt('Siga-nos no Instagram:'); lf();
-  b(ESC, 0x45, 0x01);
-  txt(`${restConfig.instagram}`); lf();
-  b(ESC, 0x45, 0x00);
-  lf();
-}
-txt('Feito com FlowON'); lf();
-    lf();
-
-    // Rodapé especial iFood/AiqFome
-    const origem = String(order.origin || "").toLowerCase();
-    if (origem === "ifood" || origem === "aiqfome") {
-      const nomeOrigem = origem === "ifood" ? "iFood" : "AiqFome";
-      const cupom = gerarCupom(origem);
-      const whatsapp = restConfig?.telefone
-        ? String(restConfig.telefone).replace(/\D/g, "")
-        : null;
-
-      b(ESC, 0x61, 0x01); // centralizar
-      txt('* * * * * * * * * * * * * * * * * * * *'); lf();
-      lf();
+      // Nome do restaurante centralizado
+      b(ESC, 0x61, 0x01);
       b(ESC, 0x45, 0x01);
-      txt(`Pediu no ${nomeOrigem}? Na proxima,`); lf();
-      txt('peca direto no nosso WhatsApp'); lf();
-      txt('e ganhe 15% de desconto!'); lf();
+      txt(nomeRestaurante); lf();
       b(ESC, 0x45, 0x00);
+      b(ESC, 0x61, 0x00);
+
+      lineDash();
+
+      // Cliente e telefone
+      if (order.client_name)  { txt(`Cliente  : ${order.client_name}`);  lf(); }
+      if (order.client_phone) { txt(`Telefone : ${order.client_phone}`); lf(); }
+
+      lineDash();
+
+      // Mesa em destaque centralizada e maior
+      if (order.table_number) {
+        b(ESC, 0x61, 0x01);
+        b(GS, 0x21, 0x33);
+        txt(`MESA ${order.table_number}`); lf();
+        b(GS, 0x21, 0x00);
+        b(ESC, 0x61, 0x00);
+      }
+
+      lineDash();
+
+      // Itens
+      b(ESC, 0x45, 0x01); txt("Itens:"); b(ESC, 0x45, 0x00); lf();
+      lineDash();
+
+      for (const it of itensComPreco) {
+        const nomeTxt = `${it.qty}x ${it.nome}`;
+        const valorTxt = `R$${(it.preco * it.qty).toFixed(2)}`;
+        const espacos = 48 - nomeTxt.length - valorTxt.length;
+        txt(nomeTxt + ' '.repeat(Math.max(1, espacos)) + valorTxt); lf();
+      }
+
+      lineDash();
+
+      // Obs sempre aparece
+      b(ESC, 0x45, 0x01); txt("Obs:"); b(ESC, 0x45, 0x00);
+      if (order.notes) { txt(` ${order.notes}`); }
       lf();
-      txt('Envie este cupom:'); lf();
-      b(GS, 0x21, 0x01);
+
+      lf();
+      b(GS, 0x56, 0x41, 0x06); // corte
+
+    // ══════════════════════════════════════
+    // 🧾 LAYOUT CAIXA (cupom completo)
+    // ══════════════════════════════════════
+    } else {
+      b(ESC, 0x40);
+
+      b(ESC, 0x61, 0x01);
+      b(GS, 0x21, 0x11);
       b(ESC, 0x45, 0x01);
-      txt(cupom); lf();
+      txt(nomeRestaurante); lf();
       b(GS, 0x21, 0x00);
       b(ESC, 0x45, 0x00);
+
+      if (restConfig?.subtitulo) { txt(`- ${restConfig.subtitulo} -`); lf(); }
       lf();
-      if (whatsapp) { txt(`wa.me/55${whatsapp}`); lf(); }
+      if (restConfig?.telefone) { txt(restConfig.telefone); lf(); }
+      lf();
+
+      b(ESC, 0x61, 0x00);
+      lineEq();
+
+      b(ESC, 0x45, 0x01);
+      const tipoLabel = isDelivery ? '[DELIVERY]' : order.table_number ? `[LOCAL - MESA ${order.table_number}]` : '[LOCAL]';
+      const pedidoStr = `Pedido #${order.order_number || ''}`;
+      const espacoPedido = 48 - pedidoStr.length - tipoLabel.length;
+      txt(pedidoStr + ' '.repeat(Math.max(1, espacoPedido)) + tipoLabel); lf();
+      b(ESC, 0x45, 0x00);
+
+      txt(`Cliente : ${order.client_name || ''}`); lf();
+      txt(`Horario : ${horario}`); lf();
+      if (isDelivery && order.address) { txt(`Endereco: ${order.address}`); lf(); }
+      if (order.payment_method)        { txt(`Pagament: ${order.payment_method}`); lf(); }
+      if (order.client_phone)          { txt(`Telefone: ${order.client_phone}`); lf(); }
+
+      lineDash();
+
+      b(ESC, 0x45, 0x01);
+      txt('ITEM                              QTD    VALOR'); lf();
+      b(ESC, 0x45, 0x00);
+
+      lineDash();
+
+      for (const it of itensComPreco) {
+        const nome  = it.nome.substring(0, 32).padEnd(32);
+        const qty   = String(it.qty).padStart(5);
+        const valor = `R$${(it.preco * it.qty).toFixed(2)}`.padStart(9);
+        txt(`${nome}${qty} ${valor}`); lf();
+      }
+
+      lineDash();
+
+      if (order.notes) {
+        lf();
+        b(ESC, 0x45, 0x01); txt('Obs:'); lf(); b(ESC, 0x45, 0x00);
+        txt(order.notes); lf();
+        lf();
+      }
+
+      lineEq();
+      b(ESC, 0x45, 0x01);
+      b(GS, 0x21, 0x01);
+      const totalLabel = 'TOTAL:';
+      const totalValor = `R$ ${totalFinal.toFixed(2)}`;
+      const espacoTotal = 48 - totalLabel.length - totalValor.length;
+      txt(totalLabel + ' '.repeat(Math.max(1, espacoTotal)) + totalValor); lf();
+      b(GS, 0x21, 0x00);
+      b(ESC, 0x45, 0x00);
+      lineEq();
+
+      lf();
+      b(ESC, 0x61, 0x01);
+      txt('Obrigado pela preferencia!'); lf();
+      txt('Volte sempre :)'); lf();
+      lf();
       txt('* * * * * * * * * * * * * * * * * * * *'); lf();
       lf();
+      if (restConfig?.instagram) {
+        txt('Siga-nos no Instagram:'); lf();
+        b(ESC, 0x45, 0x01);
+        txt(`${restConfig.instagram}`); lf();
+        b(ESC, 0x45, 0x00);
+        lf();
+      }
+      txt('Feito com FlowON'); lf();
+      lf();
+
+      const origem = String(order.origin || "").toLowerCase();
+      if (origem === "ifood" || origem === "aiqfome") {
+        const nomeOrigem = origem === "ifood" ? "iFood" : "AiqFome";
+        const cupom = gerarCupom(origem);
+        const whatsapp = restConfig?.telefone
+          ? String(restConfig.telefone).replace(/\D/g, "")
+          : null;
+
+        b(ESC, 0x61, 0x01);
+        txt('* * * * * * * * * * * * * * * * * * * *'); lf();
+        lf();
+        b(ESC, 0x45, 0x01);
+        txt(`Pediu no ${nomeOrigem}? Na proxima,`); lf();
+        txt('peca direto no nosso WhatsApp'); lf();
+        txt('e ganhe 15% de desconto!'); lf();
+        b(ESC, 0x45, 0x00);
+        lf();
+        txt('Envie este cupom:'); lf();
+        b(GS, 0x21, 0x01);
+        b(ESC, 0x45, 0x01);
+        txt(cupom); lf();
+        b(GS, 0x21, 0x00);
+        b(ESC, 0x45, 0x00);
+        lf();
+        if (whatsapp) { txt(`wa.me/55${whatsapp}`); lf(); }
+        txt('* * * * * * * * * * * * * * * * * * * *'); lf();
+        lf();
+      }
+
+      b(GS, 0x56, 0x41, 0x06);
     }
 
-    // ── CORTE ──────────────────────────────────────
-    b(GS, 0x56, 0x41, 0x06);
-
     const rawBuffer = Buffer.from(bytes);
-
     const response = await fetch("https://api.printnode.com/printjobs", {
       method: "POST",
       headers: {
@@ -2320,8 +2277,14 @@ txt('Feito com FlowON'); lf();
     });
 
     const result = await response.json();
-    console.log(`🖨️ Pedido #${order.order_number} impresso:`, result);
+    if (!response.ok || result.error) {
+      console.error(`❌ PrintNode erro:`, result);
+      return false;
+    }
+
+    console.log(`🖨️ Pedido #${order.order_number} impresso na ${printerId}:`, result);
     return true;
+
   } catch (err) {
     console.error("⚠️ Erro ao imprimir:", err.message);
     return false;
@@ -2332,11 +2295,6 @@ async function printByCategory(order, apiKey, impressoras) {
   try {
     const itens = Array.isArray(order.itens) ? order.itens : [];
     const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
-    const isModoSimples = ["autoatendimento", "balcao", "balcão"].includes(
-      String(order.service_type || "").toLowerCase().trim()
-    ) || ["autoatendimento", "balcao"].includes(
-      String(order.origin || "").toLowerCase().trim()
-    );
 
     let itensComCategoria = itens;
     if (order.restaurant_id && itens.length > 0) {
@@ -2361,7 +2319,6 @@ async function printByCategory(order, apiKey, impressoras) {
       }
     }
 
-    // Categorias cobertas por impressoras específicas (não-caixa, não-todos)
     const categoriasDeOutras = impressoras
       .filter(p => !p.is_caixa && String(p.categorias || "").toLowerCase().trim() !== "todos")
       .flatMap(p =>
@@ -2374,23 +2331,21 @@ async function printByCategory(order, apiKey, impressoras) {
 
       const isTodos = String(categorias || "").toLowerCase().trim() === "todos";
 
-      // ── CAIXA: sempre imprime tudo ──────────────────
+      // CAIXA: imprime tudo, layout completo
       if (is_caixa) {
-  await printOrder({ ...order, itens: itensComCategoria, _forcar_simples: false }, apiKey, printer_id);
-  console.log(`🖨️ Caixa ${printer_id} — pedido completo`);
-  continue;
-}
+        await printOrder({ ...order, itens: itensComCategoria }, apiKey, printer_id, true);
+        console.log(`🖨️ Caixa ${printer_id} — cupom completo`);
+        continue;
+      }
 
-      // ── DELIVERY: inteiro só na primeira impressora ─
+      // DELIVERY: imprime tudo na primeira impressora não-caixa
       if (isDelivery) {
-        await printOrder({ ...order, itens: itensComCategoria }, apiKey, printer_id);
+        await printOrder({ ...order, itens: itensComCategoria }, apiKey, printer_id, false);
         console.log(`🖨️ Delivery — ${printer_id} — pedido completo`);
         break;
       }
 
-      // ── BALCÃO / AUTOATENDIMENTO ────────────────────
-      // ── PRESENCIAL normal ───────────────────────────
-      // (mesmo filtro, só muda o _forcar_simples)
+      // FILTRO POR CATEGORIA
       const categoriasList = String(categorias || "")
         .split(",").map(c => c.trim().toLowerCase()).filter(Boolean);
 
@@ -2408,11 +2363,7 @@ async function printByCategory(order, apiKey, impressoras) {
 
       if (itensFiltrados.length === 0) continue;
 
-      await printOrder(
-        { ...order, itens: itensFiltrados, _forcar_simples: isModoSimples },
-        apiKey,
-        printer_id
-      );
+      await printOrder({ ...order, itens: itensFiltrados }, apiKey, printer_id, false);
       console.log(`🖨️ Impressora ${printer_id} — ${itensFiltrados.length} item(ns)`);
     }
 
@@ -2431,20 +2382,25 @@ app.post("/api/v1/restaurante/:restaurant_id/impressora/teste", async (req, res)
     if (!data?.api_key || !Array.isArray(data?.impressoras) || data.impressoras.length === 0)
       return sendError(res, 400, "Impressora não configurada");
 
-    const primeiraImpressora = data.impressoras[0];
-
     const testOrder = {
       restaurant_id,
       order_number: "TESTE",
       client_name: "Teste FluxON",
       service_type: "local",
+      table_number: "1",
       itens: [{ qty: 1, name: "Item Teste", price: 10.00 }],
       total_price: 10.00,
-      notes: "Impressão de teste"
+      notes: "Impressao de teste"
     };
 
-    const success = await printOrder(testOrder, data.api_key, primeiraImpressora.printer_id);
-    return res.json({ success, message: success ? "Teste enviado!" : "Falha ao imprimir" });
+    const resultados = [];
+    for (const impressora of data.impressoras) {
+      if (!impressora.printer_id) continue;
+      const success = await printOrder(testOrder, data.api_key, impressora.printer_id, impressora.is_caixa || false);
+      resultados.push({ printer_id: impressora.printer_id, is_caixa: impressora.is_caixa || false, success });
+    }
+
+    return res.json({ success: true, resultados });
   } catch (err) {
     return sendError(res, 500, "Erro interno");
   }
