@@ -1927,7 +1927,7 @@ async function saveNewOrder() {
       payment_method: isDelivery ? payment_method : null,
       total_price,
       origin: "balcao",
-      ...(editOrderId ? { order_id: editOrderId } : {})
+...(editOrderId ? { order_id: editOrderId, preserve_status: true } : {})
     };
 
     const resp = await fetch(`${API_BASE}/api/v1/pedidos`, {
