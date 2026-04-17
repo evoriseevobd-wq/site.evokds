@@ -692,7 +692,7 @@ app.patch("/orders/:id/status", async (req, res) => {
         if (orderCompleto) {
           const config = await getIntegracao(orderCompleto.restaurant_id, "printnode");
           if (config?.api_key && Array.isArray(config?.impressoras) && config.impressoras.length > 0) {
-            const impressorasSemCaixa = config.impressoras.filter(i => !i.is_caixa && !i.caixa);
+            const impressorasSemCaixa = config.impressoras.filter(i => !i.is_caixa && !i.caixa && i.printer_id);
             await printByCategory(orderCompleto, config.api_key, impressorasSemCaixa);
             console.log(`🖨️ Impressão preparo — Pedido #${orderCompleto.order_number}`);
           }
