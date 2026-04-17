@@ -684,31 +684,26 @@ app.patch("/orders/:id/status", async (req, res) => {
     
     if (error || !data) return sendError(res, 500, "Erro ao atualizar pedido");
     emitOrderUpdate(data.restaurant_id, data);
+if (status === "preparing") {
+  try {
+    const { data: orderCompleto } = await supabase
+      .from("orders").select("*").eq("id", id).single();
 
-    if (status === "preparing") {
-      try {
-        const { data: orderCompleto } = await supabase
-          .from("orders").select("*").eq("id", id).single();
-
-        if (orderCompleto && !ordersEmImpressao.has(id)) {
-  ordersEmImpressao.add(id);
-  setTimeout(() => ordersEmImpressao.delete(id), 30000); // limpa após 30s
-
-  const config = await getIntegracao(orderCompleto.restaurant_id, "printnode");
-  if (config?.api_key && Array.isArray(config?.impressoras) && config.impressoras.length > 0) {
-    const impressorasSemCaixa = config.impressoras.filter(i => !i.is_caixa && !i.caixa && i.printer_id);
-    if (impressorasSemCaixa.length > 0) {
-      await printByCategory(orderCompleto, config.api_key, impressorasSemCaixa);
-      console.log(`🖨️ Impressão preparo — Pedido #${orderCompleto.order_number}`);
-    } else {
-      console.warn(`⚠️ Nenhuma impressora de preparo configurada para ${orderCompleto.restaurant_id}`);
-    }
-  }
-}
-      } catch (printErr) {
-        console.error("⚠️ Erro na impressão ao preparar:", printErr.message);
+    if (orderCompleto && !orderCompleto.preparing_at) {
+      const config = await getIntegracao(orderCompleto.restaurant_id, "printnode");
+      if (config?.api_key && Array.isArray(config?.impressoras) && config.impressoras.length > 0) {
+        const impressorasSemCaixa = config.impressoras.filter(i => !i.is_caixa && !i.caixa && i.printer_id);
+        if (impressorasSemCaixa.length > 0) {
+          await printByCategory(orderCompleto, config.api_key, impressorasSemCaixa);
+          console.log(`🖨️ Impressão preparo — Pedido #${orderCompleto.order_number}`);
+        }
       }
     }
+  } catch (printErr) {
+    console.error("⚠️ Erro na impressão ao preparar:", printErr.message);
+  }
+}
+
 
     if (status === "finished" || status === "delivered") {
       try {
