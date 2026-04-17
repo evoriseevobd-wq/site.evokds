@@ -1136,42 +1136,177 @@ function showPaymentModal(orderId) {
   const o = orders.find((x) => x.id === orderId);
   if (!o) return;
 
+  const totalPedido = parseFloat(o.total_price || 0);
+  let pagamentos = [{ metodo: "", valor: totalPedido }];
+
   const modal = document.createElement("div");
   modal.id = "payment-modal";
   modal.className = "modal-backdrop open";
 
-  const valorFormatado = formatCurrency(o.total_price || 0);
-  modal.innerHTML = `
-    <div class="modal confirm-modal">
-      <div class="modal-header">
-        <h3>💳 Forma de Pagamento</h3>
-      </div>
-      <div class="modal-body">
-        <div style="background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px; padding:12px 14px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
-          <span style="color:rgba(252,228,228,0.7); font-weight:700;">Valor Total</span>
-          <span style="color:rgba(252,228,228,1); font-size:18px; font-weight:900;">${valorFormatado}</span>
+  function renderModal() {
+    const restante = totalPedido - pagamentos.slice(0, -1).reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
+    const ultimoValor = pagamentos[pagamentos.length - 1].valor;
+
+    modal.innerHTML = `
+      <div class="modal confirm-modal">
+        <div class="modal-header">
+          <h3>💳 Forma de Pagamento</h3>
         </div>
-        <p style="color:rgba(252,228,228,0.8); margin-bottom:12px;">Como o cliente vai pagar?</p>
-        <select id="payment-select" style="width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; font-family:inherit; outline:none;">
-          <option value="">Selecione...</option>
-          <option value="pix">PIX</option>
-          <option value="credito">Cartão de crédito</option>
-          <option value="debito">Cartão de débito</option>
-          <option value="dinheiro">Dinheiro</option>
-        </select>
-        <div id="payment-status-msg" style="margin-top:14px; text-align:center; font-size:14px; font-weight:700; color:rgba(252,228,228,0.7); display:none;"></div>
+        <div class="modal-body">
+          <div style="background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px; padding:12px 14px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="color:rgba(252,228,228,0.7); font-weight:700;">Valor Total</span>
+            <span style="color:rgba(252,228,228,1); font-size:18px; font-weight:900;">${formatCurrency(totalPedido)}</span>
+          </div>
+
+          <div id="pagamentos-lista">
+            ${pagamentos.map((p, idx) => {
+              const isUltimo = idx === pagamentos.length - 1;
+              const valorRestante = totalPedido - pagamentos.slice(0, idx).reduce((s, x) => s + (parseFloat(x.valor) || 0), 0);
+              return `
+                <div style="margin-bottom:12px; background:rgba(46,8,8,0.3); border:1px solid rgba(91,28,28,0.6); border-radius:12px; padding:12px 14px;">
+                  <div style="font-size:11px; font-weight:700; color:rgba(252,228,228,0.5); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px;">
+                    Pagamento ${idx + 1}${pagamentos.length > 1 && isUltimo ? ` — Restante: ${formatCurrency(valorRestante)}` : ''}
+                  </div>
+                  <select id="metodo-${idx}" style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; font-family:inherit; outline:none; margin-bottom:8px;">
+                    <option value="">Selecione...</option>
+                    <option value="pix" ${p.metodo === 'pix' ? 'selected' : ''}>PIX</option>
+                    <option value="credito" ${p.metodo === 'credito' ? 'selected' : ''}>Cartão de crédito</option>
+                    <option value="debito" ${p.metodo === 'debito' ? 'selected' : ''}>Cartão de débito</option>
+                    <option value="dinheiro" ${p.metodo === 'dinheiro' ? 'selected' : ''}>Dinheiro</option>
+                  </select>
+                  ${!isUltimo ? `
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="color:rgba(252,228,228,0.5); font-size:13px;">R$</span>
+                    <input type="number" id="valor-${idx}" value="${p.valor}" min="0.01" max="${valorRestante}" step="0.01"
+                      style="flex:1; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; font-family:inherit; outline:none;"
+                      onchange="atualizarValorSplit(${idx}, this.value)"
+                    />
+                    ${pagamentos.length > 1 ? `
+                    <button onclick="removerPagamento(${idx})" style="padding:8px 12px; border-radius:8px; border:1px solid rgba(239,68,68,0.4); background:transparent; color:rgba(239,68,68,0.8); cursor:pointer; font-size:13px;">✕</button>
+                    ` : ''}
+                  </div>
+                  ` : `
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="color:rgba(252,228,228,0.5); font-size:13px; flex:1;">Valor: <strong style="color:rgba(252,228,228,0.9);">${formatCurrency(valorRestante)}</strong></span>
+                    ${pagamentos.length > 1 ? `
+                    <button onclick="removerPagamento(${idx})" style="padding:8px 12px; border-radius:8px; border:1px solid rgba(239,68,68,0.4); background:transparent; color:rgba(239,68,68,0.8); cursor:pointer; font-size:13px;">✕</button>
+                    ` : ''}
+                  </div>
+                  `}
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <button onclick="adicionarPagamento()" style="width:100%; padding:10px; border-radius:10px; border:1px dashed rgba(252,228,228,0.2); background:transparent; color:rgba(252,228,228,0.5); font-size:13px; font-weight:600; cursor:pointer; margin-bottom:4px; font-family:inherit;">
+            + Adicionar outro método
+          </button>
+
+          <div id="payment-status-msg" style="margin-top:14px; text-align:center; font-size:14px; font-weight:700; color:rgba(252,228,228,0.7); display:none;"></div>
+        </div>
+        <div class="modal-actions">
+          <button class="ghost-button" id="payment-cancel">Cancelar</button>
+          <button class="primary-button" id="payment-confirm">Finalizar Pedido</button>
+        </div>
       </div>
-      <div class="modal-actions">
-        <button class="ghost-button" id="payment-cancel">Cancelar</button>
-        <button class="primary-button" id="payment-confirm">Finalizar Pedido</button>
-      </div>
-    </div>
-  `;
+    `;
+
+    // Eventos
+    document.getElementById("payment-cancel").addEventListener("click", () => {
+      if (pollingInterval) clearInterval(pollingInterval);
+      modal.remove();
+    });
+
+    document.getElementById("payment-confirm").addEventListener("click", async () => {
+      // Valida
+      for (let i = 0; i < pagamentos.length; i++) {
+        const metodo = document.getElementById(`metodo-${i}`)?.value;
+        if (!metodo) {
+          alert(`Selecione o método do Pagamento ${i + 1}`);
+          return;
+        }
+        pagamentos[i].metodo = metodo;
+      }
+
+      // Monta string do payment_method
+      const valorRestanteUltimo = totalPedido - pagamentos.slice(0, -1).reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
+      pagamentos[pagamentos.length - 1].valor = valorRestanteUltimo;
+
+      const paymentStr = pagamentos.length === 1
+        ? pagamentos[0].metodo
+        : pagamentos.map(p => `${p.metodo} R$${parseFloat(p.valor).toFixed(2)}`).join(' + ');
+
+      const confirmBtn = document.getElementById("payment-confirm");
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = "Finalizando...";
+
+      try {
+        await fetch(`${API_BASE}/api/v1/pedidos/${orderId}/payment`, {
+          method: "PATCH",
+          headers: buildHeaders(),
+          body: JSON.stringify({ payment_method: paymentStr })
+        });
+
+        await fetch(`${API_URL}/${orderId}/status`, {
+          method: "PATCH",
+          headers: buildHeaders(),
+          body: JSON.stringify({ status: "finished" })
+        });
+
+        const idx = orders.findIndex(x => x.id === orderId);
+        if (idx !== -1) orders[idx]._frontStatus = "finalizado";
+        modal.remove();
+        await fetchOrders();
+        renderBoard();
+      } catch (err) {
+        console.error("Erro ao finalizar:", err);
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = "Finalizar Pedido";
+      }
+    });
+
+    // Sync selects após render
+    pagamentos.forEach((p, idx) => {
+      const sel = document.getElementById(`metodo-${idx}`);
+      if (sel) sel.addEventListener("change", () => { pagamentos[idx].metodo = sel.value; });
+    });
+  }
+
+  // Funções de controle do split
+  window.adicionarPagamento = () => {
+    const valorAtual = totalPedido - pagamentos.reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
+    // Pega o valor do último input antes de adicionar
+    const ultimoIdx = pagamentos.length - 1;
+    const ultimoInput = document.getElementById(`valor-${ultimoIdx}`);
+    // O último vira fixo com metade do restante
+    const restante = totalPedido - pagamentos.slice(0, -1).reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
+    pagamentos[ultimoIdx].valor = parseFloat((restante / 2).toFixed(2));
+    pagamentos.push({ metodo: "", valor: restante - pagamentos[ultimoIdx].valor });
+    renderModal();
+  };
+
+  window.removerPagamento = (idx) => {
+    pagamentos.splice(idx, 1);
+    // Recalcula o último
+    const restante = totalPedido - pagamentos.slice(0, -1).reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
+    pagamentos[pagamentos.length - 1].valor = restante;
+    renderModal();
+  };
+
+  window.atualizarValorSplit = (idx, valor) => {
+    pagamentos[idx].valor = parseFloat(valor) || 0;
+    // Atualiza o valor do último automaticamente
+    const restante = totalPedido - pagamentos.slice(0, -1).reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
+    pagamentos[pagamentos.length - 1].valor = restante;
+    renderModal();
+  };
 
   document.body.appendChild(modal);
 
   const rid = getRestaurantId();
   let pollingInterval = null;
+
+  renderModal();
 
   // ===== FUNÇÃO QUE INICIA O POLLING =====
   function iniciarPolling(metodo) {
@@ -1218,7 +1353,6 @@ function showPaymentModal(orderId) {
           statusMsg.style.color = "rgba(239,68,68,0.9)";
           statusMsg.textContent = "❌ Pagamento cancelado ou recusado na maquininha.";
 
-          // Reverte o status do pedido para o estado anterior (pronto/preparo)
           await fetch(`${API_URL}/${orderId}/status`, {
             method: "PATCH",
             headers: buildHeaders(),
@@ -1244,9 +1378,7 @@ function showPaymentModal(orderId) {
     confirmBtn.disabled = false;
     confirmBtn.textContent = "🔄 Tentar novamente";
     cancelBtn.disabled = false;
-
-    // Troca o handler do botão para tentar de novo
-    confirmBtn.replaceWith(confirmBtn.cloneNode(true)); // remove listeners antigos
+    confirmBtn.replaceWith(confirmBtn.cloneNode(true));
     const novoBtn = document.getElementById("payment-confirm");
     novoBtn.addEventListener("click", () => enviarParaMaquininha(metodo));
   }
@@ -1294,6 +1426,7 @@ function showPaymentModal(orderId) {
       cancelBtn.disabled = false;
     }
   }
+}
 
   // ===== HANDLER DO BOTÃO CONFIRMAR =====
   document.getElementById("payment-cancel").addEventListener("click", () => {
