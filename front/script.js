@@ -1943,16 +1943,24 @@ async function saveNewOrder() {
     }
 
     if (editOrderId) {
-      const idx = orders.findIndex(o => o.id === editOrderId);
-      if (idx !== -1) orders[idx] = { ...orders[idx], ...data.order, _frontStatus: toFrontStatus(data.order.status) };
-    } else {
-      orders.push({ ...data.order, _frontStatus: toFrontStatus(data.order.status) });
-    }
-    editingOrderId = null;
+  const idx = orders.findIndex(o => o.id === editOrderId);
+  if (idx !== -1) {
+    const statusAtual = orders[idx]._frontStatus;
+    orders[idx] = { 
+      ...orders[idx], 
+      ...data.order, 
+      _frontStatus: statusAtual,
+      status: toBackStatus(statusAtual)
+    };
+  }
+} else {
+  orders.push({ ...data.order, _frontStatus: toFrontStatus(data.order.status) });
+}
+editingOrderId = null;
 
-    closeCreateModal();
-    saveCreateBtn.dataset.editOrderId = "";
-    renderBoard();
+closeCreateModal();
+saveCreateBtn.dataset.editOrderId = "";
+renderBoard();
 
   } catch (e) {
     console.error("Erro em saveNewOrder:", e);
