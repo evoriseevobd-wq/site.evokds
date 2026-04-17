@@ -815,10 +815,7 @@ function buildOrderCard(order) {
   card.dataset.id = order.id;
 
   const itemsCount = Array.isArray(order.itens) ? order.itens.length : 0;
-  const mesaMatch = order.origin === "autoatendimento" 
-  ? String(order.notes || "").match(/mesa\s*(\d+)/i)
-  : null;
-const mesaLabel = mesaMatch ? `· Mesa ${mesaMatch[1]}` : "";
+  const mesaLabel = order.table_number ? `· Mesa ${order.table_number}` : "";
   const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
   const paymentText = isDelivery && order.payment_method ? order.payment_method : "";
 
