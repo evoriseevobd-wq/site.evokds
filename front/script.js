@@ -1434,17 +1434,18 @@ async function imprimirPedido(orderId) {
     }
 
     // Sucesso — avança para preparo e fecha modal
-    updateOrderStatus(orderId, 'preparo');
-    closeOrderModal();
-
-  } catch (e) {
-    console.error('Erro PrintNode:', e);
-
-
-    // Avança mesmo assim
-    updateOrderStatus(orderId, 'preparo');
-    closeOrderModal();
-  }
+const idx = orders.findIndex(o => o.id === orderId);
+if (idx !== -1) orders[idx]._imprimindo = false;
+updateOrderStatus(orderId, 'preparo');
+closeOrderModal();
+} catch (e) {
+console.error('Erro PrintNode:', e);
+// Avança mesmo assim
+const idx = orders.findIndex(o => o.id === orderId);
+if (idx !== -1) orders[idx]._imprimindo = false;
+updateOrderStatus(orderId, 'preparo');
+closeOrderModal();
+}
 }
 
 async function imprimirResumo(orderId) {
@@ -1744,10 +1745,12 @@ const elapsed = Date.now() - new Date(rawDate).getTime();
       el.textContent = "⏰ 0:00";
       el.style.color = "rgba(239,68,68,1)";
       const order = orders.find(o => o.id === orderId);
-if (order && order._frontStatus === "recebido") {
+if (order && order._frontStatus === "recebido" && !order._imprimindo) {
+  order._imprimindo = true;
   tocarBip();
   imprimirPedido(orderId);
 }
+      
       return;
     }
 
@@ -1913,19 +1916,24 @@ async function saveNewOrder() {
   if (isDelivery && !payment_method) { alert("Forma de pagamento é obrigatória para delivery."); isSavingOrder = false; if (saveCreateBtn) { saveCreateBtn.disabled = false; saveCreateBtn.textContent = "Salvar"; } return; }
 
   try {
-    const body = {
-      restaurant_id: rid,
-      client_name: client,
-      client_phone,
-      itens,
-      notes: String(newNotes?.value || ""),
-      service_type,
-      address: isDelivery ? address : null,
-      payment_method: isDelivery ? payment_method : null,
-      total_price,
-      origin: "balcao",
-...(editOrderId ? { order_id: editOrderId, preserve_status: true } : {})
-    };
+   const orderAtual = editOrderId ? orders.find(o => o.id === editOrderId) : null;
+
+const body = {
+  restaurant_id: rid,
+  client_name: client,
+  client_phone,
+  itens,
+  notes: String(newNotes?.value || ""),
+  service_type,
+  address: isDelivery ? address : null,
+  payment_method: isDelivery ? payment_method : null,
+  total_price,
+  origin: "balcao",
+  ...(editOrderId ? { 
+    order_id: editOrderId,
+    status: toBackStatus(orderAtual?._frontStatus || "recebido")
+  } : {})
+};
 
     const resp = await fetch(`${API_BASE}/api/v1/pedidos`, {
       method: "POST",
