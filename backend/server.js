@@ -710,16 +710,6 @@ app.patch("/orders/:id/status", async (req, res) => {
         if (orderCompleto) {
           const isDelivery = String(orderCompleto.service_type || "").toLowerCase() === "delivery";
 
-          if (!isDelivery) {
-            const config = await getIntegracao(orderCompleto.restaurant_id, "printnode");
-            if (config?.api_key && Array.isArray(config?.impressoras) && config.impressoras.length > 0) {
-              const impressoraCaixa = config.impressoras.filter(i => i.is_caixa || i.caixa);
-              if (impressoraCaixa.length > 0) {
-                await printByCategory(orderCompleto, config.api_key, impressoraCaixa);
-                console.log(`🖨️ Impressão caixa — Pedido #${orderCompleto.order_number}`);
-              }
-            }
-          }
         }
       } catch (printErr) {
         console.error("⚠️ Erro na impressão ao finalizar:", printErr.message);
