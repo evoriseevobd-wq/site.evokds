@@ -1144,8 +1144,8 @@ function showPaymentModal(orderId) {
   modal.className = "modal-backdrop open";
 
   function calcRestante() {
-    return totalPedido - pagamentos.slice(0, -1).reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
-  }
+  return totalPedido - pagamentos.reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
+}
 
   function renderModal() {
     modal.innerHTML = `
@@ -1194,7 +1194,7 @@ function showPaymentModal(orderId) {
         </div>
         <div class="modal-actions" style="flex-shrink:0;">
           <button class="ghost-button" id="payment-cancel">Cancelar</button>
-          <button class="primary-button" id="payment-confirm" ${calcRestante() !== 0 ? 'disabled' : ''}>Finalizar Pedido</button>
+          <button class="primary-button" id="payment-confirm" ${Math.abs(calcRestante()) > 0.009 ? 'disabled' : ''}>Finalizar Pedido</button>
         </div>
       </div>
     `;
