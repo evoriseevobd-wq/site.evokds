@@ -690,7 +690,7 @@ app.patch("/orders/:id/status", async (req, res) => {
         const { data: orderCompleto } = await supabase
           .from("orders").select("*").eq("id", id).single();
 
-        if (orderCompleto && !orderCompleto.preparing_at) {
+        if (orderCompleto && !ordersEmImpressao.has(id)) {
   ordersEmImpressao.add(id);
   setTimeout(() => ordersEmImpressao.delete(id), 30000); // limpa após 30s
 
