@@ -879,37 +879,60 @@ function toggleCardSelection(orderId, checked) {
     selectedOrderIds.delete(orderId);
   }
   updateSelectionBar();
-}
-
 function updateSelectionBar() {
-  // Remove todas as mini-barras antigas
   document.querySelectorAll(".col-action-bar").forEach(b => b.remove());
+  document.getElementById("selection-bottom-bar")?.remove();
+  
   if (selectedOrderIds.size === 0) return;
 
-  const porColuna = {};
-  selectedOrderIds.forEach(id => {
-    const o = orders.find(x => x.id === id);
-    if (!o) return;
-    const col = o._frontStatus;
-    if (!porColuna[col]) porColuna[col] = [];
-    porColuna[col].push(id);
-  });
+  // Calcula total dos pedidos selecionados
+  const pedidosSelecionados = [...selectedOrderIds].map(id => orders.find(x => x.id === id)).filter(Boolean);
+  const totalGeral = pedidosSelecionados.reduce((s, o) => s + parseFloat(o.total_price || 0), 0);
+  const temNaoLocal = pedidosSelecionados.some(o => String(o.service_type || "").toLowerCase() === "delivery");
 
-  Object.entries(porColuna).forEach(([status, ids]) => {
-    const colBody = columns[status];
-    if (!colBody) return;
-    const header = colBody.closest(".column")?.querySelector(".column-header");
-    if (!header) return;
-    const bar = document.createElement("div");
-    bar.className = "col-action-bar";
-    bar.innerHTML = `
-      <span>${ids.length} sel.</span>
-      <button onclick="advanceSelectedOrders()">Mover →</button>
-    `;
-    header.appendChild(bar);
-  });
+  // Barra no rodapé
+  const bar = document.createElement("div");
+  bar.id = "selection-bottom-bar";
+  bar.style.cssText = `
+    position:fixed; bottom:0; left:0; right:0; z-index:999;
+    background:rgba(20,3,3,0.97); border-top:1px solid rgba(91,28,28,0.85);
+    padding:14px 24px; display:flex; align-items:center; justify-content:space-between;
+    gap:12px; flex-wrap:wrap;
+    box-shadow:0 -4px 24px rgba(0,0,0,0.4);
+  `;
+  bar.innerHTML = `
+    <div style="display:flex; align-items:center; gap:12px;">
+      <span style="color:rgba(252,228,228,0.6); font-size:13px; font-weight:700;">
+        ${selectedOrderIds.size} pedido(s) selecionado(s)
+      </span>
+      <span style="color:rgba(251,191,36,1); font-size:16px; font-weight:900;">
+        ${formatCurrency(totalGeral)}
+      </span>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button onclick="clearSelection()" style="
+        padding:10px 16px; border-radius:10px; border:1px solid rgba(91,28,28,0.85);
+        background:transparent; color:rgba(252,228,228,0.6); font-size:13px;
+        font-weight:700; cursor:pointer; font-family:inherit;">
+        Cancelar
+      </button>
+      <button onclick="imprimirResumosSelecionados()" style="
+        padding:10px 16px; border-radius:10px; border:1px solid rgba(249,115,115,0.5);
+        background:transparent; color:rgba(249,115,115,0.9); font-size:13px;
+        font-weight:700; cursor:pointer; font-family:inherit;">
+        🖨️ Imprimir resumos
+      </button>
+      ${!temNaoLocal ? `
+      <button onclick="cobrarJuntos()" style="
+        padding:10px 20px; border-radius:10px; border:none;
+        background:rgba(34,197,94,0.9); color:#fff; font-size:13px;
+        font-weight:700; cursor:pointer; font-family:inherit;">
+        💳 Cobrar juntos ${formatCurrency(totalGeral)}
+      </button>` : ""}
+    </div>
+  `;
+  document.body.appendChild(bar);
 }
-
 function clearSelection() {
   selectedOrderIds.clear();
   document.querySelectorAll(".card-checkbox").forEach(cb => cb.checked = false);
@@ -1068,7 +1091,7 @@ modalNextBtn.classList.toggle("hidden", s === "finalizado" || s === "cancelado")
 
 const editBtn = document.getElementById("modal-edit-btn");
 if (editBtn) {
-  editBtn.classList.toggle("hidden", order._frontStatus !== "recebido");
+  editBtn.classList.toggle("hidden", order._frontStatus !== "recebido" && order._frontStatus !== "pronto");
 }
   
   openBackdrop(modalBackdrop);
@@ -1463,6 +1486,195 @@ async function imprimirResumo(orderId) {
   }
 }
 
+async function imprimirResumosSelecionados() {
+  const ids = [...selectedOrderIds];
+  const rid = getRestaurantId();
+  
+  try {
+    const respConfig = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/impressora`);
+    const config = await respConfig.json();
+    const impressoraCaixa = (config.impressoras || []).find(imp => imp.caixa || imp.is_caixa);
+    
+    if (!impressoraCaixa) {
+      alert("Nenhuma impressora do caixa configurada.");
+      return;
+    }
+
+    for (const orderId of ids) {
+      await fetch(`${API_BASE}/api/v1/restaurante/${rid}/imprimir-pedido`, {
+        method: 'POST',
+        headers: buildHeaders(),
+        body: JSON.stringify({ 
+          order_id: orderId,
+          printer_id_override: impressoraCaixa.printer_id
+        })
+      });
+    }
+    console.log(`✅ ${ids.length} resumos impressos!`);
+  } catch(e) {
+    console.error('Erro ao imprimir resumos:', e);
+    alert('Erro ao imprimir resumos: ' + e.message);
+  }
+}
+
+  async function cobrarJuntos() {
+  const ids = [...selectedOrderIds];
+  const pedidos = ids.map(id => orders.find(x => x.id === id)).filter(Boolean);
+  const totalGeral = pedidos.reduce((s, o) => s + parseFloat(o.total_price || 0), 0);
+
+  const existing = document.getElementById("payment-modal");
+  if (existing) existing.remove();
+
+  let pagamentos = [{ metodo: "", valor: totalGeral }];
+
+  const modal = document.createElement("div");
+  modal.id = "payment-modal";
+  modal.className = "modal-backdrop open";
+
+  function calcRestante() {
+    return totalGeral - pagamentos.reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
+  }
+
+  function renderModal() {
+    modal.innerHTML = `
+      <div class="modal confirm-modal" style="display:flex; flex-direction:column; max-height:85vh;">
+        <div class="modal-header" style="flex-shrink:0;">
+          <h3>💳 Cobrar Juntos</h3>
+        </div>
+        <div class="modal-body" style="flex:1; overflow-y:auto; padding-bottom:8px;">
+          
+          <div style="margin-bottom:12px;">
+            ${pedidos.map(o => `
+              <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(91,28,28,0.3);">
+                <span style="color:rgba(252,228,228,0.7); font-size:13px;">Pedido #${o.order_number} — ${escapeHtml(o.client_name || "")}</span>
+                <span style="color:rgba(251,191,36,1); font-size:13px; font-weight:700;">${formatCurrency(o.total_price)}</span>
+              </div>
+            `).join("")}
+          </div>
+
+          <div style="background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:12px; padding:12px 14px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="color:rgba(252,228,228,0.7); font-weight:700;">Total Geral</span>
+            <span style="color:rgba(252,228,228,1); font-size:18px; font-weight:900;">${formatCurrency(totalGeral)}</span>
+          </div>
+
+          <div id="pagamentos-lista">
+            ${pagamentos.map((p, idx) => {
+              const isUltimo = idx === pagamentos.length - 1;
+              const valorRestante = totalGeral - pagamentos.slice(0, idx).reduce((s, x) => s + (parseFloat(x.valor) || 0), 0);
+              return `
+                <div style="margin-bottom:10px; padding:10px 0; ${idx > 0 ? 'border-top:1px solid rgba(91,28,28,0.4);' : ''}">
+                  <div style="font-size:11px; font-weight:700; color:rgba(252,228,228,0.4); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px;">
+                    Pagamento ${idx + 1}
+                    ${isUltimo && pagamentos.length > 1 ? `<span style="color:rgba(249,115,115,0.8); margin-left:6px;">Restante: ${formatCurrency(valorRestante)}</span>` : ''}
+                  </div>
+                  <div style="display:flex; gap:8px; align-items:center;">
+                    <select id="metodo-${idx}" style="flex:1; padding:10px 12px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; font-family:inherit; outline:none;">
+                      <option value="">Selecione...</option>
+                      <option value="pix" ${p.metodo === 'pix' ? 'selected' : ''}>PIX</option>
+                      <option value="credito" ${p.metodo === 'credito' ? 'selected' : ''}>Cartão de crédito</option>
+                      <option value="debito" ${p.metodo === 'debito' ? 'selected' : ''}>Cartão de débito</option>
+                      <option value="dinheiro" ${p.metodo === 'dinheiro' ? 'selected' : ''}>Dinheiro</option>
+                    </select>
+                    <input type="number" id="valor-${idx}" value="${parseFloat(p.valor).toFixed(2)}" min="0.01" max="${valorRestante}" step="0.01"
+                      style="width:110px; padding:10px 12px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; font-family:inherit; outline:none;"
+                      onblur="onValorInputJuntos(${idx}, this.value)"
+                    />
+                    ${pagamentos.length > 1 ? `
+                    <button onclick="removerPagamentoJuntos(${idx})" style="padding:8px 10px; border-radius:8px; border:1px solid rgba(239,68,68,0.4); background:transparent; color:rgba(239,68,68,0.8); cursor:pointer; font-size:13px; flex-shrink:0;">✕</button>
+                    ` : ''}
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+          <div id="payment-status-msg" style="margin-top:10px; text-align:center; font-size:14px; font-weight:700; color:rgba(252,228,228,0.7); display:none;"></div>
+        </div>
+        <div class="modal-actions" style="flex-shrink:0;">
+          <button class="ghost-button" id="payment-cancel">Cancelar</button>
+          <button class="primary-button" id="payment-confirm" ${Math.abs(calcRestante()) > 0.009 ? 'disabled' : ''}>Finalizar Todos</button>
+        </div>
+      </div>
+    `;
+
+    document.getElementById("payment-cancel").addEventListener("click", () => modal.remove());
+    document.getElementById("payment-confirm").addEventListener("click", async () => {
+      for (let i = 0; i < pagamentos.length; i++) {
+        const metodo = document.getElementById(`metodo-${i}`)?.value;
+        if (!metodo) { alert(`Selecione o método do Pagamento ${i + 1}`); return; }
+        pagamentos[i].metodo = metodo;
+      }
+      pagamentos[pagamentos.length - 1].valor = calcRestante();
+
+      const paymentStr = pagamentos.length === 1
+        ? pagamentos[0].metodo
+        : pagamentos.map(p => `${p.metodo} R$${parseFloat(p.valor).toFixed(2)}`).join(' + ');
+
+      const confirmBtn = document.getElementById("payment-confirm");
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = "Finalizando...";
+
+      try {
+        for (const o of pedidos) {
+          await fetch(`${API_BASE}/api/v1/pedidos/${o.id}/payment`, {
+            method: "PATCH",
+            headers: buildHeaders(),
+            body: JSON.stringify({ payment_method: paymentStr })
+          });
+          await fetch(`${API_URL}/${o.id}/status`, {
+            method: "PATCH",
+            headers: buildHeaders(),
+            body: JSON.stringify({ status: "finished" })
+          });
+        }
+        modal.remove();
+        clearSelection();
+        await fetchOrders();
+        renderBoard();
+      } catch(err) {
+        console.error("Erro ao finalizar:", err);
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = "Finalizar Todos";
+      }
+    });
+
+    pagamentos.forEach((p, idx) => {
+      const sel = document.getElementById(`metodo-${idx}`);
+      if (sel) sel.addEventListener("change", () => { pagamentos[idx].metodo = sel.value; });
+    });
+  }
+
+  window.onValorInputJuntos = (idx, valor) => {
+    const valorNum = parseFloat(valor) || 0;
+    const maxValor = totalGeral - pagamentos.slice(0, idx).reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
+    pagamentos[idx].valor = Math.min(valorNum, maxValor);
+    const restante = totalGeral - pagamentos.reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
+    if (restante > 0.009) {
+      if (idx === pagamentos.length - 1) {
+        pagamentos.push({ metodo: "", valor: restante });
+        renderModal();
+      } else {
+        pagamentos[pagamentos.length - 1].valor = restante;
+        const ultimoInput = document.getElementById(`valor-${pagamentos.length - 1}`);
+        if (ultimoInput) ultimoInput.value = restante.toFixed(2);
+      }
+    } else {
+      pagamentos = pagamentos.slice(0, idx + 1);
+      pagamentos[idx].valor = maxValor;
+      if (pagamentos.length > 1) renderModal();
+    }
+  };
+
+  window.removerPagamentoJuntos = (idx) => {
+    pagamentos.splice(idx, 1);
+    const restante = totalGeral - pagamentos.slice(0, -1).reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
+    pagamentos[pagamentos.length - 1].valor = restante;
+    renderModal();
+  };
+
+  document.body.appendChild(modal);
+  renderModal();
+}
+  
 function cancelOrder(orderId) {
   updateOrderStatus(orderId, "cancelado");
 }
