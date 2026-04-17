@@ -732,6 +732,51 @@ app.patch("/orders/:id/status", async (req, res) => {
   dispara_em: new Date(Date.now() + 5 * 60 * 1000).toISOString()
 }]);
 console.log(`✅ Webhook satisfação agendado na fila — Pedido ${id}`);
+    // Atualiza caixa aberto
+if (status === "finished") {
+  try {
+    const { data: caixaAberto } = await supabase
+      .from("caixa")
+      .select("*")
+      .eq("restaurant_id", data.restaurant_id)
+      .eq("status", "aberto")
+      .single();
+
+    if (caixaAberto) {
+      const paymentStr = String(data.payment_method || "").toLowerCase();
+      const total = parseFloat(data.total_price || 0);
+
+      // Parse do split de pagamento ex: "pix R$15.00 + dinheiro R$4.00"
+      const updateCaixa = {};
+      
+      if (paymentStr.includes("+")) {
+        const partes = paymentStr.split("+").map(p => p.trim());
+        partes.forEach(parte => {
+          const valorMatch = parte.match(/r?\$?([\d.,]+)/i);
+          const valor = valorMatch ? parseFloat(valorMatch[1].replace(",", ".")) : 0;
+          if (parte.includes("pix"))        { updateCaixa.valor_pix       = (caixaAberto.valor_pix       || 0) + valor; updateCaixa.qtd_pix       = (caixaAberto.qtd_pix       || 0) + 1; }
+          if (parte.includes("credito") || parte.includes("crédito")) { updateCaixa.valor_credito   = (caixaAberto.valor_credito   || 0) + valor; updateCaixa.qtd_credito   = (caixaAberto.qtd_credito   || 0) + 1; }
+          if (parte.includes("debito")  || parte.includes("débito"))  { updateCaixa.valor_debito    = (caixaAberto.valor_debito    || 0) + valor; updateCaixa.qtd_debito    = (caixaAberto.qtd_debito    || 0) + 1; }
+          if (parte.includes("dinheiro"))   { updateCaixa.valor_dinheiro  = (caixaAberto.valor_dinheiro  || 0) + valor; updateCaixa.qtd_dinheiro  = (caixaAberto.qtd_dinheiro  || 0) + 1; }
+          if (parte.includes("maquininha")) { updateCaixa.valor_maquininha= (caixaAberto.valor_maquininha|| 0) + valor; updateCaixa.qtd_maquininha= (caixaAberto.qtd_maquininha|| 0) + 1; }
+        });
+      } else {
+        if (paymentStr.includes("pix"))        { updateCaixa.valor_pix        = (caixaAberto.valor_pix        || 0) + total; updateCaixa.qtd_pix        = (caixaAberto.qtd_pix        || 0) + 1; }
+        if (paymentStr.includes("credito") || paymentStr.includes("crédito")) { updateCaixa.valor_credito    = (caixaAberto.valor_credito    || 0) + total; updateCaixa.qtd_credito    = (caixaAberto.qtd_credito    || 0) + 1; }
+        if (paymentStr.includes("debito")  || paymentStr.includes("débito"))  { updateCaixa.valor_debito     = (caixaAberto.valor_debito     || 0) + total; updateCaixa.qtd_debito     = (caixaAberto.qtd_debito     || 0) + 1; }
+        if (paymentStr.includes("dinheiro"))   { updateCaixa.valor_dinheiro   = (caixaAberto.valor_dinheiro   || 0) + total; updateCaixa.qtd_dinheiro   = (caixaAberto.qtd_dinheiro   || 0) + 1; }
+        if (paymentStr.includes("maquininha")) { updateCaixa.valor_maquininha = (caixaAberto.valor_maquininha || 0) + total; updateCaixa.qtd_maquininha = (caixaAberto.qtd_maquininha || 0) + 1; }
+      }
+
+      if (Object.keys(updateCaixa).length > 0) {
+        await supabase.from("caixa").update(updateCaixa).eq("id", caixaAberto.id);
+        console.log(`💰 Caixa atualizado — Pedido #${data.order_number}`);
+      }
+    }
+  } catch (caixaErr) {
+    console.error("⚠️ Erro ao atualizar caixa:", caixaErr.message);
+  }
+}
     }
 
     return res.json(data);
@@ -3317,6 +3362,111 @@ app.post("/api/v1/restaurante/:restaurant_id/webhook-fechamento", async (req, re
     return res.json({ success: true });
   } catch (err) {
     return sendError(res, 500, "Erro interno");
+  }
+});
+
+// GET - Busca caixa aberto
+app.get("/api/v1/caixa/:restaurant_id/aberto", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { data, error } = await supabase
+      .from("caixa")
+      .select("*")
+      .eq("restaurant_id", restaurant_id)
+      .eq("status", "aberto")
+      .single();
+    if (error || !data) return res.json({ aberto: false });
+    return res.json({ aberto: true, caixa: data });
+  } catch (err) {
+    return sendError(res, 500, err.message);
+  }
+});
+
+// POST - Abre caixa
+app.post("/api/v1/caixa/:restaurant_id/abrir", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { operador, turno, fundo_inicial } = req.body;
+
+    // Verifica se já tem caixa aberto
+    const { data: existing } = await supabase
+      .from("caixa")
+      .select("id")
+      .eq("restaurant_id", restaurant_id)
+      .eq("status", "aberto")
+      .single();
+
+    if (existing) return sendError(res, 400, "Já existe um caixa aberto");
+
+    const { data, error } = await supabase
+      .from("caixa")
+      .insert([{ restaurant_id, operador, turno, fundo_inicial: fundo_inicial || 0 }])
+      .select().single();
+
+    if (error) return sendError(res, 500, "Erro ao abrir caixa");
+    return res.status(201).json({ success: true, caixa: data });
+  } catch (err) {
+    return sendError(res, 500, err.message);
+  }
+});
+
+// POST - Fecha caixa
+app.post("/api/v1/caixa/:restaurant_id/fechar", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { valor_informado } = req.body;
+
+    const { data: caixa, error } = await supabase
+      .from("caixa")
+      .select("*")
+      .eq("restaurant_id", restaurant_id)
+      .eq("status", "aberto")
+      .single();
+
+    if (error || !caixa) return sendError(res, 404, "Nenhum caixa aberto");
+
+    const { error: updateError } = await supabase
+      .from("caixa")
+      .update({ status: "fechado", fechado_at: new Date().toISOString(), valor_informado })
+      .eq("id", caixa.id);
+
+    if (updateError) return sendError(res, 500, "Erro ao fechar caixa");
+
+    // Dispara webhook de fechamento
+    const webhookConfig = await getIntegracao(restaurant_id, "webhook_fechamento");
+    const webhookUrl = webhookConfig?.webhook_url;
+    if (webhookUrl) {
+      const totalMovimentado = caixa.valor_dinheiro + caixa.valor_pix + caixa.valor_credito + caixa.valor_debito + caixa.valor_maquininha;
+      fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          restaurant_id,
+          operador: caixa.operador,
+          turno: caixa.turno,
+          fundo_inicial: caixa.fundo_inicial,
+          valor_dinheiro: caixa.valor_dinheiro,
+          qtd_dinheiro: caixa.qtd_dinheiro,
+          valor_pix: caixa.valor_pix,
+          qtd_pix: caixa.qtd_pix,
+          valor_credito: caixa.valor_credito,
+          qtd_credito: caixa.qtd_credito,
+          valor_debito: caixa.valor_debito,
+          qtd_debito: caixa.qtd_debito,
+          valor_maquininha: caixa.valor_maquininha,
+          qtd_maquininha: caixa.qtd_maquininha,
+          total_movimentado: totalMovimentado,
+          total_esperado_caixa: caixa.fundo_inicial + caixa.valor_dinheiro,
+          valor_informado: valor_informado || null,
+          aberto_em: caixa.created_at,
+          fechado_em: new Date().toISOString()
+        })
+      }).catch(e => console.error("Erro webhook fechamento:", e));
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    return sendError(res, 500, err.message);
   }
 });
 
