@@ -2383,6 +2383,16 @@ async function printOrder(order, apiKey, printerId, is_caixa = false) {
   }
 }
 
+function toBool(value) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    const v = value.trim().toLowerCase();
+    return v === "true" || v === "1" || v === "sim";
+  }
+  return false;
+}
+
 async function printByCategory(order, apiKey, impressoras) {
   try {
     const itens = Array.isArray(order.itens) ? order.itens : [];
@@ -2419,7 +2429,7 @@ async function printByCategory(order, apiKey, impressoras) {
 
     for (const impressora of impressoras) {
       const { printer_id, categorias } = impressora;
-const is_caixa = impressora.is_caixa || impressora.caixa || false;
+const is_caixa = toBool(impressora.is_caixa) || toBool(impressora.caixa);
       if (!printer_id) continue;
 
       const isTodos = String(categorias || "").toLowerCase().trim() === "todos";
