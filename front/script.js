@@ -1164,7 +1164,7 @@ function showPaymentModal(orderId) {
               const isUltimo = idx === pagamentos.length - 1;
               const valorRestante = totalPedido - pagamentos.slice(0, idx).reduce((s, x) => s + (parseFloat(x.valor) || 0), 0);
               return `
-                <div style="margin-bottom:10px; background:rgba(46,8,8,0.3); border:1px solid rgba(91,28,28,0.6); border-radius:12px; padding:12px 14px;">
+               <div style="margin-bottom:10px; padding:10px 0; ${idx > 0 ? 'border-top:1px solid rgba(91,28,28,0.4);' : ''}">
                   <div style="font-size:11px; font-weight:700; color:rgba(252,228,228,0.4); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px;">
                     Pagamento ${idx + 1}
                     ${isUltimo && pagamentos.length > 1 ? `<span style="color:rgba(249,115,115,0.8); margin-left:6px;">Restante: ${formatCurrency(valorRestante)}</span>` : ''}
