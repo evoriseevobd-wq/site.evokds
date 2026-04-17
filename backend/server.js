@@ -810,24 +810,27 @@ app.post("/api/v1/pedidos", async (req, res) => {
     let resultData;
 
    if (order_id) {
-  const { data, error } = await supabase
-    .from("orders")
-    .update({
-      client_name,
-      client_phone: phone,
-      itens: normalizedItems,
-      notes: notes || "",
-      table_number: table_number || null,
-      status: finalStatus,
-      total_price: total_price || 0,
-      service_type: service_type || "local",
-      address: address || null,
-      payment_method: payment_method || null,
-      update_at: now
-    })
-    .eq("id", order_id)
-    .select()
-    .single();
+  const updatePayload = {
+  client_name,
+  client_phone: phone,
+  itens: normalizedItems,
+  notes: notes || "",
+  table_number: table_number || null,
+  total_price: total_price || 0,
+  service_type: service_type || "local",
+  address: address || null,
+  payment_method: payment_method || null,
+  update_at: now
+};
+
+if (status) updatePayload.status = status;
+
+const { data, error } = await supabase
+  .from("orders")
+  .update(updatePayload)
+  .eq("id", order_id)
+  .select()
+  .single();
 
   if (error) {
     console.error("❌ Erro update pedido:", JSON.stringify(error));
