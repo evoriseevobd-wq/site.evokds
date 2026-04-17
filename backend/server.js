@@ -692,7 +692,7 @@ app.patch("/orders/:id/status", async (req, res) => {
         if (orderCompleto) {
           const config = await getIntegracao(orderCompleto.restaurant_id, "printnode");
           if (config?.api_key && Array.isArray(config?.impressoras) && config.impressoras.length > 0) {
-            const impressorasSemCaixa = config.impressoras.filter(i => !i.is_caixa);
+            const impressorasSemCaixa = config.impressoras.filter(i => !i.is_caixa && !i.caixa);
             await printByCategory(orderCompleto, config.api_key, impressorasSemCaixa);
             console.log(`🖨️ Impressão preparo — Pedido #${orderCompleto.order_number}`);
           }
@@ -713,7 +713,7 @@ app.patch("/orders/:id/status", async (req, res) => {
           if (!isDelivery) {
             const config = await getIntegracao(orderCompleto.restaurant_id, "printnode");
             if (config?.api_key && Array.isArray(config?.impressoras) && config.impressoras.length > 0) {
-              const impressoraCaixa = config.impressoras.filter(i => i.is_caixa);
+              const impressoraCaixa = config.impressoras.filter(i => i.is_caixa || i.caixa);
               if (impressoraCaixa.length > 0) {
                 await printByCategory(orderCompleto, config.api_key, impressoraCaixa);
                 console.log(`🖨️ Impressão caixa — Pedido #${orderCompleto.order_number}`);
@@ -2418,7 +2418,8 @@ async function printByCategory(order, apiKey, impressoras) {
       );
 
     for (const impressora of impressoras) {
-      const { printer_id, categorias, is_caixa } = impressora;
+      const { printer_id, categorias } = impressora;
+const is_caixa = impressora.is_caixa || impressora.caixa || false;
       if (!printer_id) continue;
 
       const isTodos = String(categorias || "").toLowerCase().trim() === "todos";
@@ -2531,7 +2532,7 @@ app.post("/api/v1/restaurante/:restaurant_id/imprimir-pedido", async (req, res) 
       return sendError(res, 404, "Pedido não encontrado");
 
     // Usa a função printOrder que já gera o cupom corretamente
-    const impressorasCaixa = config.impressoras.filter(i => i.is_caixa);
+    const impressorasCaixa = config.impressoras.filter(i => i.is_caixa || i.caixa);
 const impressorasAlvo = impressorasCaixa.length > 0 ? impressorasCaixa : config.impressoras;
 const success = await printByCategory(order, config.api_key, impressorasAlvo);
 
