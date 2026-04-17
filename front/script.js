@@ -5150,26 +5150,36 @@ async function exportarFechamentoPDF() {
   `;
 
   // COLOCA isso no lugar:
-const container = document.createElement("div");
-container.style.position = "absolute";
-container.style.left = "-9999px";
-container.innerHTML = html;
-document.body.appendChild(container);
+const win = window.open("", "_blank");
+  if (win) {
+    win.document.write(html);
+    win.document.close();
+  }
 
-const pdfBase64 = await new Promise((resolve) => {
-  html2pdf().from(container).outputPdf("datauristring").then((uri) => {
-    resolve(uri.split(",")[1]);
-    document.body.removeChild(container);
-  });
-});
-
-if (d.webhook_fechamento) {
-  await fetch(d.webhook_fechamento, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pdf: pdfBase64 })
-  });
-}
+  const rid = getRestaurantId();
+  if (d.webhook_fechamento) {
+    try {
+      await fetch(`${API_BASE}/api/v1/caixa/${rid}/webhook-fechamento`, {
+        method: "POST",
+        headers: buildHeaders(),
+        body: JSON.stringify({
+          operador: _caixaState.operador,
+          turno: _caixaState.turno,
+          fundo_inicial: _caixaState.fundoInicial,
+          faturamento: d.faturamento,
+          total_pedidos: d.total_pedidos,
+          por_pagamento: d.por_pagamento,
+          esperado: esperado,
+          contado: contado,
+          diferenca: diffStr,
+          obs: _caixaState.obs || "",
+          top_itens: d.top_itens || []
+        })
+      });
+    } catch(e) {
+      console.error("Erro ao disparar webhook fechamento:", e);
+    }
+  }
 }
 // ---------- PONTO DE ENTRADA PÚBLICO ----------
 // Chame showCaixa() onde antes você chamava showResumoDia()
