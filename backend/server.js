@@ -2516,33 +2516,22 @@ app.post("/api/v1/restaurante/:restaurant_id/imprimir-pedido", async (req, res) 
     const config = await getIntegracao(restaurant_id, "printnode");
     if (!config?.api_key) return sendError(res, 400, "Impressora não configurada");
 
-    // Usa printer_id_override se vier, senão pega o primeiro com "todos"
-    let printerId = printer_id_override;
-    if (!printerId) {
-      const todos = (config.impressoras || []).find(i =>
-        String(i.categorias || "").toLowerCase().trim() === "todos"
-      );
-      printerId = todos?.printer_id || config.impressoras?.[0]?.printer_id;
+    const { data: order, error: orderError } = await supabase
+      .from("orders").select("*").eq("id", order_id).single();
+    if (orderError || !order) return sendError(res, 404, "Pedido não encontrado");
+
+    let success;
+
+    if (printer_id_override) {
+      // Impressão de resumo — vai direto para a impressora especificada no layout caixa
+      success = await printOrder(order, config.api_key, printer_id_override, true);
+    } else {
+      // Impressão normal — filtra por categoria, só impressoras sem caixa
+      const impressorasSemCaixa = config.impressoras.filter(i => !toBool(i.is_caixa) && !toBool(i.caixa));
+      success = await printByCategory(order, config.api_key, impressorasSemCaixa);
     }
 
-    if (!printerId) return sendError(res, 400, "Nenhuma impressora disponível");
-
-    // Busca os dados do pedido
-    const { data: order, error: orderError } = await supabase
-      .from("orders")
-      .select("*")
-      .eq("id", order_id)
-      .single();
-
-    if (orderError || !order)
-      return sendError(res, 404, "Pedido não encontrado");
-
-    // Usa a função printOrder que já gera o cupom corretamente
-    const impressorasSemCaixa = config.impressoras.filter(i => !toBool(i.is_caixa) && !toBool(i.caixa));
-const success = await printByCategory(order, config.api_key, impressorasSemCaixa);
-
     if (!success) return sendError(res, 500, "Erro ao enviar para impressora");
-
     return res.json({ success: true });
 
   } catch (err) {
