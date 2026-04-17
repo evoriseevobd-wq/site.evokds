@@ -2198,8 +2198,9 @@ async function printOrder(order, apiKey, printerId, is_caixa = false) {
       lineDash();
 
       // Cliente e telefone
-      if (order.client_name)  { txt(`Cliente  : ${order.client_name}`);  lf(); }
-      if (order.client_phone) { txt(`Telefone : ${order.client_phone}`); lf(); }
+      txt(`Horario  : ${horario}`); lf();
+if (order.client_name)  { txt(`Cliente  : ${order.client_name}`);  lf(); }
+if (order.client_phone) { txt(`Telefone : ${order.client_phone}`); lf(); }
 
       lineDash();
 
