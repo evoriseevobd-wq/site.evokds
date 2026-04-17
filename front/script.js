@@ -1059,7 +1059,18 @@ if (!printBtn) {
 }
 printBtn.onclick = () => imprimirPedido(activeOrderId);
 printBtn.classList.toggle("hidden", order._frontStatus !== "recebido");
-
+// Botão reimprimir — só aparece em "preparo"
+let reimprimirBtn = document.getElementById("modal-reimprimir-btn");
+if (!reimprimirBtn) {
+  reimprimirBtn = document.createElement("button");
+  reimprimirBtn.id = "modal-reimprimir-btn";
+  reimprimirBtn.className = "ghost-button";
+  reimprimirBtn.innerHTML = "🖨️ Reimprimir";
+  modalNextBtn?.parentElement?.insertBefore(reimprimirBtn, modalNextBtn);
+}
+reimprimirBtn.onclick = () => reimprimirPedido(activeOrderId);
+reimprimirBtn.classList.toggle("hidden", order._frontStatus !== "preparo");
+  
 // Botão imprimir resumo
 let resumoBtn = document.getElementById("modal-resumo-btn");
 if (!resumoBtn) {
@@ -1454,6 +1465,22 @@ async function imprimirResumo(orderId) {
   } catch (e) {
     console.error('Erro ao imprimir resumo:', e);
     alert('Erro ao imprimir resumo: ' + e.message);
+  }
+}
+
+async function reimprimirPedido(orderId) {
+  const rid = getRestaurantId();
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/reimprimir-pedido`, {
+      method: 'POST',
+      headers: buildHeaders(),
+      body: JSON.stringify({ order_id: orderId })
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.success) throw new Error(data.error || 'Erro ao reimprimir');
+    console.log('✅ Reimpresso!');
+  } catch(e) {
+    alert('Erro ao reimprimir: ' + e.message);
   }
 }
 
