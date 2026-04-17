@@ -17,6 +17,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 
 const app = express();
 const httpServer = createServer(app);
+const ordersEmImpressao = new Set();
 const io = new Server(httpServer, {
   cors: {
     origin: "*",
@@ -689,14 +690,21 @@ app.patch("/orders/:id/status", async (req, res) => {
         const { data: orderCompleto } = await supabase
           .from("orders").select("*").eq("id", id).single();
 
-        if (orderCompleto) {
-          const config = await getIntegracao(orderCompleto.restaurant_id, "printnode");
-          if (config?.api_key && Array.isArray(config?.impressoras) && config.impressoras.length > 0) {
-            const impressorasSemCaixa = config.impressoras.filter(i => !i.is_caixa && !i.caixa && i.printer_id);
-            await printByCategory(orderCompleto, config.api_key, impressorasSemCaixa);
-            console.log(`🖨️ Impressão preparo — Pedido #${orderCompleto.order_number}`);
-          }
-        }
+        if (orderCompleto && !ordersEmImpressao.has(id)) {
+  ordersEmImpressao.add(id);
+  setTimeout(() => ordersEmImpressao.delete(id), 30000); // limpa após 30s
+
+  const config = await getIntegracao(orderCompleto.restaurant_id, "printnode");
+  if (config?.api_key && Array.isArray(config?.impressoras) && config.impressoras.length > 0) {
+    const impressorasSemCaixa = config.impressoras.filter(i => !i.is_caixa && !i.caixa && i.printer_id);
+    if (impressorasSemCaixa.length > 0) {
+      await printByCategory(orderCompleto, config.api_key, impressorasSemCaixa);
+      console.log(`🖨️ Impressão preparo — Pedido #${orderCompleto.order_number}`);
+    } else {
+      console.warn(`⚠️ Nenhuma impressora de preparo configurada para ${orderCompleto.restaurant_id}`);
+    }
+  }
+}
       } catch (printErr) {
         console.error("⚠️ Erro na impressão ao preparar:", printErr.message);
       }
