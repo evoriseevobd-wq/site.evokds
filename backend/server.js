@@ -2538,9 +2538,8 @@ app.post("/api/v1/restaurante/:restaurant_id/imprimir-pedido", async (req, res) 
       return sendError(res, 404, "Pedido não encontrado");
 
     // Usa a função printOrder que já gera o cupom corretamente
-    const impressorasCaixa = config.impressoras.filter(i => i.is_caixa || i.caixa);
-const impressorasAlvo = impressorasCaixa.length > 0 ? impressorasCaixa : config.impressoras;
-const success = await printByCategory(order, config.api_key, impressorasAlvo);
+    const impressorasSemCaixa = config.impressoras.filter(i => !toBool(i.is_caixa) && !toBool(i.caixa));
+const success = await printByCategory(order, config.api_key, impressorasSemCaixa);
 
     if (!success) return sendError(res, 500, "Erro ao enviar para impressora");
 
