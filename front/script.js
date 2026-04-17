@@ -1415,37 +1415,8 @@ function showPaymentModal(orderId) {
 }
 
 async function imprimirPedido(orderId) {
-  const order = orders.find(o => o.id === orderId);
-  if (!order) return;
-
-  const rid = getRestaurantId();
-
-  try {
-    const resp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/imprimir-pedido`, {
-      method: 'POST',
-      headers: buildHeaders(),
-      body: JSON.stringify({ order_id: orderId })
-    });
-
-    const data = await resp.json();
-
-    if (!resp.ok || !data.success) {
-      throw new Error(data.error || 'Erro ao imprimir');
-    }
-
-    // Sucesso — avança para preparo e fecha modal
-const idx = orders.findIndex(o => o.id === orderId);
-if (idx !== -1) orders[idx]._imprimindo = false;
-updateOrderStatus(orderId, 'preparo');
-closeOrderModal();
-} catch (e) {
-console.error('Erro PrintNode:', e);
-// Avança mesmo assim
-const idx = orders.findIndex(o => o.id === orderId);
-if (idx !== -1) orders[idx]._imprimindo = false;
-updateOrderStatus(orderId, 'preparo');
-closeOrderModal();
-}
+  updateOrderStatus(orderId, 'preparo');
+  closeOrderModal();
 }
 
 async function imprimirResumo(orderId) {
