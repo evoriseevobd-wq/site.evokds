@@ -1617,13 +1617,38 @@ app.get("/api/v1/metrics/:restaurant_id/resumo-dia", async (req, res) => {
     const delivery = finalizados.filter(o => String(o.service_type || "").toLowerCase() === "delivery").length;
     const local = finalizados.filter(o => String(o.service_type || "").toLowerCase() !== "delivery").length;
 
-    const porPagamento = {};
-    finalizados.forEach(o => {
-      const m = o.payment_method || "Não informado";
-      if (!porPagamento[m]) porPagamento[m] = { qtd: 0, valor: 0 };
-      porPagamento[m].qtd++;
-      porPagamento[m].valor += parseFloat(o.total_price) || 0;
+   const porPagamento = {};
+finalizados.forEach(o => {
+  const paymentStr = String(o.payment_method || "Não informado").toLowerCase();
+  const total = parseFloat(o.total_price) || 0;
+
+  if (paymentStr.includes("+")) {
+    const partes = paymentStr.split("+").map(p => p.trim());
+    partes.forEach(parte => {
+      const valorMatch = parte.match(/r?\$?([\d.,]+)/i);
+      const valor = valorMatch ? parseFloat(valorMatch[1].replace(",", ".")) : 0;
+      let metodo = "outros";
+      if (parte.includes("pix")) metodo = "Pix";
+      else if (parte.includes("credito") || parte.includes("crédito")) metodo = "Crédito";
+      else if (parte.includes("debito") || parte.includes("débito")) metodo = "Débito";
+      else if (parte.includes("dinheiro")) metodo = "Dinheiro";
+      else if (parte.includes("maquininha")) metodo = "Maquininha";
+      if (!porPagamento[metodo]) porPagamento[metodo] = { qtd: 0, valor: 0 };
+      porPagamento[metodo].qtd++;
+      porPagamento[metodo].valor += valor;
     });
+  } else {
+    let metodo = "Outros";
+    if (paymentStr.includes("pix")) metodo = "Pix";
+    else if (paymentStr.includes("credito") || paymentStr.includes("crédito")) metodo = "Crédito";
+    else if (paymentStr.includes("debito") || paymentStr.includes("débito")) metodo = "Débito";
+    else if (paymentStr.includes("dinheiro")) metodo = "Dinheiro";
+    else if (paymentStr.includes("maquininha")) metodo = "Maquininha";
+    if (!porPagamento[metodo]) porPagamento[metodo] = { qtd: 0, valor: 0 };
+    porPagamento[metodo].qtd++;
+    porPagamento[metodo].valor += total;
+  }
+});
 
     const topItens = {};
     finalizados.forEach(o => {
