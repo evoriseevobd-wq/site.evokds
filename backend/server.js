@@ -3495,6 +3495,25 @@ app.post("/api/v1/caixa/:restaurant_id/fechar", async (req, res) => {
   }
 });
 
+app.post("/api/v1/caixa/:restaurant_id/webhook-fechamento", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const webhookConfig = await getIntegracao(restaurant_id, "webhook_fechamento");
+    const webhookUrl = webhookConfig?.webhook_url;
+    if (!webhookUrl) return res.json({ success: true, disparado: false });
+
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req.body)
+    });
+
+    return res.json({ success: true, disparado: true });
+  } catch (err) {
+    return sendError(res, 500, err.message);
+  }
+});
+
 app.post("/internal/processar-webhooks", async (req, res) => {
   try {
     const duasHorasAtras = new Date(Date.now() - 5 * 60 * 1000).toISOString();
