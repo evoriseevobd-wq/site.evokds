@@ -1254,38 +1254,34 @@ function showPaymentModal(orderId) {
   }
 
   window.onValorInput = (idx, valor) => {
-    const valorNum = parseFloat(valor) || 0;
-    const maxValor = totalPedido - pagamentos.slice(0, idx).reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
+  const valorNum = parseFloat(valor) || 0;
+  const maxValor = totalPedido - pagamentos.slice(0, idx).reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
 
-    // Limita ao máximo disponível
-    pagamentos[idx].valor = Math.min(valorNum, maxValor);
+  pagamentos[idx].valor = Math.min(valorNum, maxValor);
 
-    const restante = totalPedido - pagamentos.slice(0, idx + 1).reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
+  const restante = totalPedido - pagamentos.reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
 
-    if (restante > 0.009) {
-      // Tem restante — adiciona novo campo se for o penúltimo
-      if (idx === pagamentos.length - 2) {
-        // Já tem campo aberto, só atualiza
-        pagamentos[pagamentos.length - 1].valor = restante;
-      } else if (idx === pagamentos.length - 1) {
-        // Era o último, abre novo
-        pagamentos.push({ metodo: "", valor: restante });
-      }
+  if (restante > 0.009) {
+    if (idx === pagamentos.length - 1) {
+      // Era o último, abre novo campo
+      pagamentos.push({ metodo: "", valor: restante });
+      renderModal();
+      // Foca no select do novo campo
+      const novoSelect = document.getElementById(`metodo-${pagamentos.length - 1}`);
+      if (novoSelect) novoSelect.focus();
     } else {
-      // Zerou — remove campos extras após esse
-      pagamentos = pagamentos.slice(0, idx + 1);
-      pagamentos[idx].valor = maxValor;
+      // Atualiza o último silenciosamente
+      pagamentos[pagamentos.length - 1].valor = restante;
+      const ultimoInput = document.getElementById(`valor-${pagamentos.length - 1}`);
+      if (ultimoInput) ultimoInput.value = restante.toFixed(2);
     }
-
-    renderModal();
-
-    // Foca no input atual após re-render
-    const input = document.getElementById(`valor-${idx}`);
-    if (input) {
-      input.focus();
-      input.setSelectionRange(input.value.length, input.value.length);
-    }
-  };
+  } else {
+    // Zerou — remove campos extras
+    pagamentos = pagamentos.slice(0, idx + 1);
+    pagamentos[idx].valor = maxValor;
+    if (pagamentos.length > 1) renderModal();
+  }
+};
 
   window.removerPagamento = (idx) => {
     pagamentos.splice(idx, 1);
