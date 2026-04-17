@@ -1745,10 +1745,9 @@ const elapsed = Date.now() - new Date(rawDate).getTime();
       el.textContent = "⏰ 0:00";
       el.style.color = "rgba(239,68,68,1)";
       const order = orders.find(o => o.id === orderId);
-if (order && order._frontStatus === "recebido" && !order._imprimindo) {
-  order._imprimindo = true;
+if (order && order._frontStatus === "recebido") {
   tocarBip();
-  imprimirPedido(orderId);
+  updateOrderStatus(orderId, 'preparo');
 }
       
       return;
