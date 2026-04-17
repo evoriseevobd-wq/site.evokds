@@ -4702,7 +4702,7 @@ function _selecionarTurno(t) {
   });
 }
 
-function _confirmarAbertura() {
+async function _confirmarAbertura() {
   const operador = document.getElementById("cx-operador").value.trim();
   const turnoCustom = document.getElementById("cx-turno-custom").value.trim();
   const turno = turnoCustom || _turnoSelecionado;
@@ -4711,11 +4711,24 @@ function _confirmarAbertura() {
   if (!operador) { alert("Informe o nome do operador."); return; }
   if (!turno) { alert("Selecione ou informe o turno."); return; }
 
-  _caixaState = { aberto: true, operador, turno, horaAbertura: new Date().toISOString(), fundoInicial: fundo, obs: "" };
-  _salvarCaixaState();
-  _turnoSelecionado = "";
-  document.getElementById("caixa-modal").remove();
-  showCaixa();
+  const rid = getRestaurantId();
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/caixa/${rid}/abrir`, {
+      method: "POST",
+      headers: buildHeaders(),
+      body: JSON.stringify({ operador, turno, fundo_inicial: fundo })
+    });
+    const data = await resp.json();
+    if (!resp.ok) { alert(data.error || "Erro ao abrir caixa"); return; }
+
+    _caixaState = { aberto: true, operador, turno, horaAbertura: new Date().toISOString(), fundoInicial: fundo, obs: "", caixa_id: data.caixa.id };
+    _salvarCaixaState();
+    _turnoSelecionado = "";
+    document.getElementById("caixa-modal").remove();
+    showCaixa();
+  } catch(e) {
+    alert("Erro ao abrir caixa: " + e.message);
+  }
 }
 
 // ---------- TELA 2: CAIXA ABERTO (hub principal) ----------
@@ -4982,16 +4995,27 @@ function _atualizarDiferenca(esperado) {
 async function _confirmarFechamento() {
   const obs = (document.getElementById("cx-obs")?.value || "").trim();
   const contado = parseFloat(document.getElementById("cx-contado")?.value) || 0;
-
   _caixaState.obs = obs;
   _caixaState.contado = contado;
   _salvarCaixaState();
 
-  await exportarFechamentoPDF();
+  const rid = getRestaurantId();
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/caixa/${rid}/fechar`, {
+      method: "POST",
+      headers: buildHeaders(),
+      body: JSON.stringify({ valor_informado: contado, obs })
+    });
+    const data = await resp.json();
+    if (!resp.ok) { alert(data.error || "Erro ao fechar caixa"); return; }
+  } catch(e) {
+    alert("Erro ao fechar caixa: " + e.message);
+    return;
+  }
 
+  await exportarFechamentoPDF();
   _caixaState = { aberto: false, operador: "", turno: "", horaAbertura: null, fundoInicial: 0, obs: "" };
   _salvarCaixaState();
-
   const modal = document.getElementById("caixa-modal");
   if (modal) modal.remove();
 }
