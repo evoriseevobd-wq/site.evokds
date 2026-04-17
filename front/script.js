@@ -1179,7 +1179,7 @@ function showPaymentModal(orderId) {
                     </select>
                     <input type="number" id="valor-${idx}" value="${parseFloat(valorRestante).toFixed(2)}" min="0.01" max="${valorRestante}" step="0.01"
   style="width:110px; padding:10px 12px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; font-family:inherit; outline:none;"
-  oninput="onValorInput(${idx}, this.value)"
+  onblur="onValorInput(${idx}, this.value)"
 />
                     ${pagamentos.length > 1
                       ? `<button onclick="removerPagamento(${idx})" style="padding:8px 10px; border-radius:8px; border:1px solid rgba(239,68,68,0.4); background:transparent; color:rgba(239,68,68,0.8); cursor:pointer; font-size:13px; flex-shrink:0;">✕</button>`
