@@ -2520,17 +2520,10 @@ app.post("/api/v1/restaurante/:restaurant_id/imprimir-pedido", async (req, res) 
       .from("orders").select("*").eq("id", order_id).single();
     if (orderError || !order) return sendError(res, 404, "Pedido não encontrado");
 
-    let success;
+    // Só imprime resumo (caixa) — impressão normal fica no PATCH preparing
+    if (!printer_id_override) return res.json({ success: true });
 
-    if (printer_id_override) {
-      // Impressão de resumo — vai direto para a impressora especificada no layout caixa
-      success = await printOrder(order, config.api_key, printer_id_override, true);
-    } else {
-      // Impressão normal — filtra por categoria, só impressoras sem caixa
-      const impressorasSemCaixa = config.impressoras.filter(i => !toBool(i.is_caixa) && !toBool(i.caixa));
-      success = await printByCategory(order, config.api_key, impressorasSemCaixa);
-    }
-
+    const success = await printOrder(order, config.api_key, printer_id_override, true);
     if (!success) return sendError(res, 500, "Erro ao enviar para impressora");
     return res.json({ success: true });
 
