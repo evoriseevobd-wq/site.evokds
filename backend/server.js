@@ -2208,20 +2208,10 @@ async function printOrder(order, apiKey, printerId, is_caixa = false) {
       lineDash();
 
       for (const it of itensComPreco) {
-        const valorTxt = `R$${(it.preco * it.qty).toFixed(2)}`;
-const prefixo = `${it.qty}x `;
-const maxNome = 48 - prefixo.length - valorTxt.length - 1;
-if (it.nome.length <= maxNome) {
-  const nomeTxt = prefixo + it.nome;
-  const espacos = 48 - nomeTxt.length - valorTxt.length;
-  txt(nomeTxt + ' '.repeat(Math.max(1, espacos)) + valorTxt); lf();
-} else {
-  // Nome longo: primeira linha com nome, segunda com valor
-  txt(prefixo + it.nome); lf();
-  const espacos = 48 - valorTxt.length;
-  txt(' '.repeat(espacos) + valorTxt); lf();
-}  
-      }
+  b(GS, 0x21, 0x01);
+  txt(`${it.qty}x ${it.nome}`); lf();
+  b(GS, 0x21, 0x00);
+}
 
       lineDash();
 
