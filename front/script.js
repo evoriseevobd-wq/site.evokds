@@ -879,6 +879,8 @@ function toggleCardSelection(orderId, checked) {
     selectedOrderIds.delete(orderId);
   }
   updateSelectionBar();
+}
+
 function updateSelectionBar() {
   document.querySelectorAll(".col-action-bar").forEach(b => b.remove());
   document.getElementById("selection-bottom-bar")?.remove();
