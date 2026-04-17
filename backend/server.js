@@ -2534,6 +2534,25 @@ app.post("/api/v1/restaurante/:restaurant_id/imprimir-pedido", async (req, res) 
   }
 });
 
+app.post("/api/v1/restaurante/:restaurant_id/reimprimir-pedido", async (req, res) => {
+  try {
+    const { restaurant_id } = req.params;
+    const { order_id } = req.body;
+    if (!order_id) return sendError(res, 400, "order_id é obrigatório");
+    const config = await getIntegracao(restaurant_id, "printnode");
+    if (!config?.api_key) return sendError(res, 400, "Impressora não configurada");
+    const { data: order, error: orderError } = await supabase
+      .from("orders").select("*").eq("id", order_id).single();
+    if (orderError || !order) return sendError(res, 404, "Pedido não encontrado");
+    const impressorasSemCaixa = config.impressoras.filter(i => !toBool(i.is_caixa) && !toBool(i.caixa));
+    const success = await printByCategory(order, config.api_key, impressorasSemCaixa);
+    if (!success) return sendError(res, 500, "Erro ao reimprimir");
+    return res.json({ success: true });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno ao reimprimir");
+  }
+});
+
 app.patch("/api/v1/pedidos/:id/payment", async (req, res) => {
   try {
     const { id } = req.params;
