@@ -2195,7 +2195,7 @@ async function printOrder(order, apiKey, printerId, is_caixa = false) {
       // Mesa em destaque centralizada e maior
       if (order.table_number) {
         b(ESC, 0x61, 0x01);
-        b(GS, 0x21, 0x33);
+        b(GS, 0x21, 0x11);
         txt(`MESA ${order.table_number}`); lf();
         b(GS, 0x21, 0x00);
         b(ESC, 0x61, 0x00);
@@ -2204,14 +2204,23 @@ async function printOrder(order, apiKey, printerId, is_caixa = false) {
       lineDash();
 
       // Itens
-      b(ESC, 0x45, 0x01); txt("Itens:"); b(ESC, 0x45, 0x00); lf();
+      b(ESC, 0x45, 0x01); b(GS, 0x21, 0x01); txt("Itens:"); b(GS, 0x21, 0x00); b(ESC, 0x45, 0x00); lf();
       lineDash();
 
       for (const it of itensComPreco) {
-        const nomeTxt = `${it.qty}x ${it.nome}`;
         const valorTxt = `R$${(it.preco * it.qty).toFixed(2)}`;
-        const espacos = 48 - nomeTxt.length - valorTxt.length;
-        txt(nomeTxt + ' '.repeat(Math.max(1, espacos)) + valorTxt); lf();
+const prefixo = `${it.qty}x `;
+const maxNome = 48 - prefixo.length - valorTxt.length - 1;
+if (it.nome.length <= maxNome) {
+  const nomeTxt = prefixo + it.nome;
+  const espacos = 48 - nomeTxt.length - valorTxt.length;
+  txt(nomeTxt + ' '.repeat(Math.max(1, espacos)) + valorTxt); lf();
+} else {
+  // Nome longo: primeira linha com nome, segunda com valor
+  txt(prefixo + it.nome); lf();
+  const espacos = 48 - valorTxt.length;
+  txt(' '.repeat(espacos) + valorTxt); lf();
+}  
       }
 
       lineDash();
@@ -2432,17 +2441,13 @@ const is_caixa = impressora.is_caixa || impressora.caixa || false;
       const categoriasList = String(categorias || "")
         .split(",").map(c => c.trim().toLowerCase()).filter(Boolean);
 
-      const itensFiltrados = isTodos
-        ? itensComCategoria.filter(it => {
-            const cat  = String(it.categoria || it.category || "").toLowerCase().trim();
-            const nome = String(it.name || it.nome || "").toLowerCase().trim();
-            return !categoriasDeOutras.some(c => cat.includes(c) || nome.includes(c));
-          })
-        : itensComCategoria.filter(it => {
-            const cat  = String(it.categoria || it.category || "").toLowerCase().trim();
-            const nome = String(it.name || it.nome || "").toLowerCase().trim();
-            return categoriasList.some(c => cat.includes(c) || nome.includes(c));
-          });
+      const itensFiltrados = categoriasList.length === 0
+  ? itensComCategoria
+  : itensComCategoria.filter(it => {
+      const cat  = String(it.categoria || it.category || "").toLowerCase().trim();
+      const nome = String(it.name || it.nome || "").toLowerCase().trim();
+      return categoriasList.some(c => cat.includes(c) || nome.includes(c));
+    });
 
       if (itensFiltrados.length === 0) continue;
 
