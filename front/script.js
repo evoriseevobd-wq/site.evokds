@@ -5155,7 +5155,6 @@ const win = window.open("", "_blank");
     win.document.close();
   }
 
-  const rid = getRestaurantId();
   if (d.webhook_fechamento) {
     try {
       const htmlBase64 = btoa(unescape(encodeURIComponent(html)));
