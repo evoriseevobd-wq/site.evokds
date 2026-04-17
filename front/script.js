@@ -5149,7 +5149,6 @@ async function exportarFechamentoPDF() {
     </body></html>
   `;
 
-  // COLOCA isso no lugar:
 const win = window.open("", "_blank");
   if (win) {
     win.document.write(html);
