@@ -5159,10 +5159,12 @@ const win = window.open("", "_blank");
   const rid = getRestaurantId();
   if (d.webhook_fechamento) {
     try {
+      const htmlBase64 = btoa(unescape(encodeURIComponent(html)));
       await fetch(`${API_BASE}/api/v1/caixa/${rid}/webhook-fechamento`, {
         method: "POST",
         headers: buildHeaders(),
         body: JSON.stringify({
+          html_base64: htmlBase64,
           operador: _caixaState.operador,
           turno: _caixaState.turno,
           fundo_inicial: _caixaState.fundoInicial,
@@ -5172,8 +5174,7 @@ const win = window.open("", "_blank");
           esperado: esperado,
           contado: contado,
           diferenca: diffStr,
-          obs: _caixaState.obs || "",
-          top_itens: d.top_itens || []
+          obs: _caixaState.obs || ""
         })
       });
     } catch(e) {
