@@ -948,14 +948,13 @@ try {
 }
 // ⭐ FIM FIDELIZAÇÃO
 
-    
+emitOrderUpdate(restaurant_id, resultData); // dispara o socket
 return res.status(201).json({ 
   success: true, 
   order: resultData,
   tracking_code: trackingCode,
   tracking_link: trackingLink
-});  
-  emitOrderUpdate(restaurant_id, resultData);
+});
 
   } catch (err) {
     console.error("❌ Erro em /api/v1/pedidos:", err);
