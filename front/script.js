@@ -4011,10 +4011,10 @@ function openItemModal(item = null) {
  modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
 
   const variacoes = item?.opcoes ? (Array.isArray(item.opcoes) ? item.opcoes : JSON.parse(item.opcoes)) : [];
-  variacoes.forEach(v => adicionarVariacao(v.nome || v.name, v.preco));
+  variacoes.forEach(v => adicionarVariacao(v.nome || v.name, v.preco, v.texto_livre || false));
 }
 
-function adicionarVariacao(nome = "", preco = "") {
+function adicionarVariacao(nome = "", preco = "", textoLivre = false) {
   const lista = document.getElementById("variacoes-lista");
   if (!lista) return;
   const row = document.createElement("div");
@@ -4028,6 +4028,11 @@ function adicionarVariacao(nome = "", preco = "") {
       style="flex:1; padding:8px 12px; border-radius:8px; border:1px solid rgba(91,28,28,0.85);
       background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:13px; outline:none;"
       class="variacao-preco" />
+    <label style="display:flex; align-items:center; gap:4px; color:rgba(252,228,228,0.6); font-size:11px; white-space:nowrap; cursor:pointer;">
+      <input type="checkbox" class="variacao-texto-livre" ${textoLivre ? 'checked' : ''}
+        style="width:14px; height:14px; accent-color:#f97373; cursor:pointer;" />
+      2 sabores
+    </label>
     <button type="button" onclick="this.parentElement.remove()" style="
       width:28px; height:28px; border-radius:50%; border:none;
       background:rgba(239,68,68,0.2); color:rgba(239,68,68,0.8);
@@ -4396,10 +4401,11 @@ async function salvarItem(id = null) {
   // Coleta variações
   const opcoes = [];
   document.querySelectorAll("#variacoes-lista > div").forEach(row => {
-    const nomeV = row.querySelector(".variacao-nome")?.value.trim();
-    const precoV = parseFloat(row.querySelector(".variacao-preco")?.value.replace(/\./g,"").replace(",",".")) || 0;
-    if (nomeV && precoV) opcoes.push({ nome: nomeV, preco: precoV });
-  });
+  const nomeV = row.querySelector(".variacao-nome")?.value.trim();
+  const precoV = parseFloat(row.querySelector(".variacao-preco")?.value.replace(/\./g,"").replace(",",".")) || 0;
+  const textoLivre = row.querySelector(".variacao-texto-livre")?.checked || false;
+  if (nomeV && precoV) opcoes.push({ nome: nomeV, preco: precoV, texto_livre: textoLivre });
+});
 
   if (!nome || !preco) { alert("Nome e preço são obrigatórios."); return; }
 
