@@ -4010,22 +4010,22 @@ function openItemModal(item = null) {
   document.getElementById("item-save").addEventListener("click", () => salvarItem(item?.id));
  modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
 
-  const variacoes = item?.opcoes ? (Array.isArray(item.opcoes) ? item.opcoes : JSON.parse(item.opcoes)) : [];
-  variacoes.forEach(v => adicionarVariacao(v.nome || v.name, v.preco, v.texto_livre || false));
+ const variacoes = item?.opcoes ? (Array.isArray(item.opcoes) ? item.opcoes : JSON.parse(item.opcoes)) : [];
+variacoes.forEach(v => adicionarVariacao(v.nome || v.name, v.preco, v.texto_livre || false, v.filtro || ""));
 }
 
-function adicionarVariacao(nome = "", preco = "", textoLivre = false) {
+function adicionarVariacao(nome = "", preco = "", textoLivre = false, filtro = "") {
   const lista = document.getElementById("variacoes-lista");
   if (!lista) return;
   const row = document.createElement("div");
-  row.style.cssText = "display:flex; gap:8px; align-items:center;";
+  row.style.cssText = "display:flex; gap:8px; align-items:center; flex-wrap:wrap;";
   row.innerHTML = `
     <input placeholder="Ex: Grande, Com leite..." value="${escapeHtml(String(nome))}"
-      style="flex:2; padding:8px 12px; border-radius:8px; border:1px solid rgba(91,28,28,0.85);
+      style="flex:2; min-width:120px; padding:8px 12px; border-radius:8px; border:1px solid rgba(91,28,28,0.85);
       background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:13px; outline:none;"
       class="variacao-nome" />
     <input placeholder="0,00" value="${preco}" inputmode="decimal"
-      style="flex:1; padding:8px 12px; border-radius:8px; border:1px solid rgba(91,28,28,0.85);
+      style="flex:1; min-width:70px; padding:8px 12px; border-radius:8px; border:1px solid rgba(91,28,28,0.85);
       background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:13px; outline:none;"
       class="variacao-preco" />
     <label style="display:flex; align-items:center; gap:4px; color:rgba(252,228,228,0.6); font-size:11px; white-space:nowrap; cursor:pointer;">
@@ -4033,6 +4033,10 @@ function adicionarVariacao(nome = "", preco = "", textoLivre = false) {
         style="width:14px; height:14px; accent-color:#f97373; cursor:pointer;" />
       2 sabores
     </label>
+    <input placeholder="Filtrar (ex: grande)" value="${escapeHtml(String(filtro))}"
+      style="flex:1; min-width:90px; padding:8px 12px; border-radius:8px; border:1px solid rgba(91,28,28,0.85);
+      background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:11px; outline:none;"
+      class="variacao-filtro" />
     <button type="button" onclick="this.parentElement.remove()" style="
       width:28px; height:28px; border-radius:50%; border:none;
       background:rgba(239,68,68,0.2); color:rgba(239,68,68,0.8);
@@ -4404,7 +4408,8 @@ async function salvarItem(id = null) {
   const nomeV = row.querySelector(".variacao-nome")?.value.trim();
   const precoV = parseFloat(row.querySelector(".variacao-preco")?.value.replace(/\./g,"").replace(",",".")) || 0;
   const textoLivre = row.querySelector(".variacao-texto-livre")?.checked || false;
-  if (nomeV && precoV) opcoes.push({ nome: nomeV, preco: precoV, texto_livre: textoLivre });
+  const filtro = row.querySelector(".variacao-filtro")?.value.trim() || "";
+  if (nomeV && precoV) opcoes.push({ nome: nomeV, preco: precoV, texto_livre: textoLivre, filtro });
 });
 
   if (!nome || !preco) { alert("Nome e preço são obrigatórios."); return; }
