@@ -1799,12 +1799,12 @@ app.patch("/api/v1/cardapio/:restaurant_id/ordem-categorias", async (req, res) =
 
 // POST - Cria item
 app.post("/api/v1/cardapio", async (req, res) => {
-  const { restaurant_id, nome, descricao, preco, categoria, foto_url, ordem } = req.body;
+  const { restaurant_id, nome, descricao, preco, categoria, foto_url, ordem, opcoes } = req.body;
   if (!restaurant_id || !nome || !preco) return sendError(res, 400, "Campos obrigatórios: restaurant_id, nome, preco");
 
   const { data, error } = await supabase
     .from("cardapio")
-    .insert([{ restaurant_id, nome, descricao, preco, categoria: categoria || "Geral", foto_url, ordem: ordem || 0 }])
+    .insert([{ restaurant_id, nome, descricao, preco, categoria: categoria || "Geral", foto_url, ordem: ordem || 0, opcoes: opcoes || null }])
     .select().single();
 
   if (error) return sendError(res, 500, "Erro ao criar item");
