@@ -688,6 +688,7 @@ const { data: orderAntes } = await supabase
     
     if (error || !data) return sendError(res, 500, "Erro ao atualizar pedido");
     emitOrderUpdate(data.restaurant_id, data);
+    
 // ✅ COLOCA ISSO NO LUGAR:
 if (status === "preparing") {
   try {
@@ -708,19 +709,6 @@ if (status === "preparing") {
         if (impressorasSemCaixa.length > 0) {
           await printByCategory({ ...orderAntes, ...data }, config.api_key, impressorasSemCaixa);
           console.log(`🖨️ Impressão preparo disparada — Pedido #${data.order_number}`);
-        }
-      }
-    }
-  } catch (printErr) {
-    console.error("⚠️ Erro na impressão ao preparar:", printErr.message);
-  }
-}
-      const config = await getIntegracao(orderCompleto.restaurant_id, "printnode");
-      if (config?.api_key && Array.isArray(config?.impressoras) && config.impressoras.length > 0) {
-        const impressorasSemCaixa = config.impressoras.filter(i => !toBool(i.is_caixa) && !toBool(i.caixa) && i.printer_id);
-        if (impressorasSemCaixa.length > 0) {
-          await printByCategory(orderCompleto, config.api_key, impressorasSemCaixa);
-          console.log(`🖨️ Impressão preparo — Pedido #${orderCompleto.order_number}`);
         }
       }
     }
