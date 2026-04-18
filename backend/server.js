@@ -691,9 +691,12 @@ const { data: orderAntes } = await supabase
     
 // ✅ COLOCA ISSO NO LUGAR:
 if (status === "preparing") {
-  try {
-    // orderAntes foi buscado ANTES do update — preparing_at ainda era null
-    const isPrimeiraVez = orderAntes && !orderAntes.preparing_at;
+  if (ordersEmImpressao.has(id)) {
+    console.log(`⚠️ Pedido ${id} já está sendo impresso, ignorando`);
+  } else {
+    ordersEmImpressao.add(id);
+    try {
+      const isPrimeiraVez = orderAntes && !orderAntes.preparing_at;
     console.log(`🔍 Pedido #${data.order_number} — primeira vez em preparo: ${isPrimeiraVez}`);
 
     if (isPrimeiraVez) {
@@ -713,7 +716,10 @@ if (status === "preparing") {
       }
     }
   } catch (printErr) {
-    console.error("⚠️ Erro na impressão ao preparar:", printErr.message);
+      console.error("⚠️ Erro na impressão ao preparar:", printErr.message);
+    } finally {
+      ordersEmImpressao.delete(id);
+    }
   }
 }
 
