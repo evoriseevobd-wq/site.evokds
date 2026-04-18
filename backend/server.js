@@ -741,7 +741,7 @@ if (status === "preparing") {
   restaurant_id: data.restaurant_id,
   order_id: id,
   tipo: "satisfacao",
-  dispara_em: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+  dispara_em: new Date(Date.now() + 30 * 60 * 1000).toISOString()
 }]);
 console.log(`✅ Webhook satisfação agendado na fila — Pedido ${id}`);
     // Atualiza caixa aberto
@@ -3547,7 +3547,7 @@ app.post("/api/v1/caixa/:restaurant_id/webhook-fechamento", async (req, res) => 
 
 app.post("/internal/processar-webhooks", async (req, res) => {
   try {
-    const duasHorasAtras = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const duasHorasAtras = new Date(Date.now() - 30 * 60 * 1000).toISOString();
     const umDiaAtras = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     const { data: pedidos } = await supabase
