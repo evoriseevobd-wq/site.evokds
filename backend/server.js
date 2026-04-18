@@ -1611,15 +1611,26 @@ app.get("/api/v1/metrics/:restaurant_id/resumo-dia", async (req, res) => {
       .eq("id", restaurant_id)
       .single();
 
+    // ✅ Busca caixa aberto para usar como filtro de início
+    const { data: caixaAberto } = await supabase
+      .from("caixa")
+      .select("created_at")
+      .eq("restaurant_id", restaurant_id)
+      .eq("status", "aberto")
+      .single();
+
+    // Se tiver caixa aberto, filtra desde a abertura. Senão, desde meia-noite
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
+    const inicioPeriodo = caixaAberto?.created_at ? new Date(caixaAberto.created_at) : hoje;
+
     const amanha = new Date(hoje);
     amanha.setDate(amanha.getDate() + 1);
 
     const { data: orders, error } = await supabase
       .from("orders").select("*")
       .eq("restaurant_id", restaurant_id)
-      .gte("created_at", hoje.toISOString())
+      .gte("created_at", inicioPeriodo.toISOString())
       .lt("created_at", amanha.toISOString());
 
     if (error) return sendError(res, 500, "Erro ao buscar pedidos");
@@ -1631,38 +1642,37 @@ app.get("/api/v1/metrics/:restaurant_id/resumo-dia", async (req, res) => {
     const delivery = finalizados.filter(o => String(o.service_type || "").toLowerCase() === "delivery").length;
     const local = finalizados.filter(o => String(o.service_type || "").toLowerCase() !== "delivery").length;
 
-   const porPagamento = {};
-finalizados.forEach(o => {
-  const paymentStr = String(o.payment_method || "Não informado").toLowerCase();
-  const total = parseFloat(o.total_price) || 0;
-
-  if (paymentStr.includes("+")) {
-    const partes = paymentStr.split("+").map(p => p.trim());
-    partes.forEach(parte => {
-      const valorMatch = parte.match(/r?\$?([\d.,]+)/i);
-      const valor = valorMatch ? parseFloat(valorMatch[1].replace(",", ".")) : 0;
-      let metodo = "outros";
-      if (parte.includes("pix")) metodo = "Pix";
-      else if (parte.includes("credito") || parte.includes("crédito")) metodo = "Crédito";
-      else if (parte.includes("debito") || parte.includes("débito")) metodo = "Débito";
-      else if (parte.includes("dinheiro")) metodo = "Dinheiro";
-      else if (parte.includes("maquininha")) metodo = "Maquininha";
-      if (!porPagamento[metodo]) porPagamento[metodo] = { qtd: 0, valor: 0 };
-      porPagamento[metodo].qtd++;
-      porPagamento[metodo].valor += valor;
+    const porPagamento = {};
+    finalizados.forEach(o => {
+      const paymentStr = String(o.payment_method || "Não informado").toLowerCase();
+      const total = parseFloat(o.total_price) || 0;
+      if (paymentStr.includes("+")) {
+        const partes = paymentStr.split("+").map(p => p.trim());
+        partes.forEach(parte => {
+          const valorMatch = parte.match(/r?\$?([\d.,]+)/i);
+          const valor = valorMatch ? parseFloat(valorMatch[1].replace(",", ".")) : 0;
+          let metodo = "outros";
+          if (parte.includes("pix")) metodo = "Pix";
+          else if (parte.includes("credito") || parte.includes("crédito")) metodo = "Crédito";
+          else if (parte.includes("debito") || parte.includes("débito")) metodo = "Débito";
+          else if (parte.includes("dinheiro")) metodo = "Dinheiro";
+          else if (parte.includes("maquininha")) metodo = "Maquininha";
+          if (!porPagamento[metodo]) porPagamento[metodo] = { qtd: 0, valor: 0 };
+          porPagamento[metodo].qtd++;
+          porPagamento[metodo].valor += valor;
+        });
+      } else {
+        let metodo = "Outros";
+        if (paymentStr.includes("pix")) metodo = "Pix";
+        else if (paymentStr.includes("credito") || paymentStr.includes("crédito")) metodo = "Crédito";
+        else if (paymentStr.includes("debito") || paymentStr.includes("débito")) metodo = "Débito";
+        else if (paymentStr.includes("dinheiro")) metodo = "Dinheiro";
+        else if (paymentStr.includes("maquininha")) metodo = "Maquininha";
+        if (!porPagamento[metodo]) porPagamento[metodo] = { qtd: 0, valor: 0 };
+        porPagamento[metodo].qtd++;
+        porPagamento[metodo].valor += total;
+      }
     });
-  } else {
-    let metodo = "Outros";
-    if (paymentStr.includes("pix")) metodo = "Pix";
-    else if (paymentStr.includes("credito") || paymentStr.includes("crédito")) metodo = "Crédito";
-    else if (paymentStr.includes("debito") || paymentStr.includes("débito")) metodo = "Débito";
-    else if (paymentStr.includes("dinheiro")) metodo = "Dinheiro";
-    else if (paymentStr.includes("maquininha")) metodo = "Maquininha";
-    if (!porPagamento[metodo]) porPagamento[metodo] = { qtd: 0, valor: 0 };
-    porPagamento[metodo].qtd++;
-    porPagamento[metodo].valor += total;
-  }
-});
 
     const topItens = {};
     finalizados.forEach(o => {
@@ -1671,13 +1681,12 @@ finalizados.forEach(o => {
         topItens[nome] = (topItens[nome] || 0) + (it.qty || it.quantidade || 1);
       });
     });
-
     const topSorted = Object.entries(topItens)
       .sort((a, b) => b[1] - a[1]).slice(0, 5)
       .map(([nome, qty]) => ({ nome, qty }));
 
     return res.json({
-      data: hoje.toISOString(),
+      data: inicioPeriodo.toISOString(),
       total_pedidos: finalizados.length,
       faturamento,
       ticket_medio: ticketMedio,
@@ -1694,7 +1703,6 @@ finalizados.forEach(o => {
     return sendError(res, 500, `Erro interno: ${err.message}`);
   }
 });
-
 app.get("/api/v1/pedidos-cliente", async (req, res) => {
   try {
     const { restaurant_id, phone } = req.query;
