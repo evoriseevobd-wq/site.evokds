@@ -652,7 +652,11 @@ app.patch("/orders/:id/status", async (req, res) => {
     const { id } = req.params;
     const { status } = req.body || {};
     
-    if (!ALLOWED_STATUS.includes(status)) return sendError(res, 400, "status inválido");
+   if (!ALLOWED_STATUS.includes(status)) return sendError(res, 400, "status inválido");
+
+// ✅ Busca ANTES do update para saber o estado original
+const { data: orderAntes } = await supabase
+  .from("orders").select("preparing_at, restaurant_id").eq("id", id).single();
     
     const now = new Date().toISOString();
     
@@ -684,12 +688,33 @@ app.patch("/orders/:id/status", async (req, res) => {
     
     if (error || !data) return sendError(res, 500, "Erro ao atualizar pedido");
     emitOrderUpdate(data.restaurant_id, data);
+// ✅ COLOCA ISSO NO LUGAR:
 if (status === "preparing") {
   try {
-    const { data: orderCompleto } = await supabase
-      .from("orders").select("*").eq("id", id).single();
+    // orderAntes foi buscado ANTES do update — preparing_at ainda era null
+    const isPrimeiraVez = orderAntes && !orderAntes.preparing_at;
+    console.log(`🔍 Pedido #${data.order_number} — primeira vez em preparo: ${isPrimeiraVez}`);
 
-    if (orderCompleto && !orderCompleto.preparing_at) {
+    if (isPrimeiraVez) {
+      const config = await getIntegracao(data.restaurant_id, "printnode");
+      console.log(`🔍 Config printnode:`, config ? `ok, ${config.impressoras?.length} impressoras` : "NULL");
+
+      if (config?.api_key && Array.isArray(config?.impressoras) && config.impressoras.length > 0) {
+        const impressorasSemCaixa = config.impressoras.filter(
+          i => !toBool(i.is_caixa) && !toBool(i.caixa) && i.printer_id
+        );
+        console.log(`🔍 Impressoras sem caixa:`, JSON.stringify(impressorasSemCaixa));
+
+        if (impressorasSemCaixa.length > 0) {
+          await printByCategory({ ...orderAntes, ...data }, config.api_key, impressorasSemCaixa);
+          console.log(`🖨️ Impressão preparo disparada — Pedido #${data.order_number}`);
+        }
+      }
+    }
+  } catch (printErr) {
+    console.error("⚠️ Erro na impressão ao preparar:", printErr.message);
+  }
+}
       const config = await getIntegracao(orderCompleto.restaurant_id, "printnode");
       if (config?.api_key && Array.isArray(config?.impressoras) && config.impressoras.length > 0) {
         const impressorasSemCaixa = config.impressoras.filter(i => !toBool(i.is_caixa) && !toBool(i.caixa) && i.printer_id);
