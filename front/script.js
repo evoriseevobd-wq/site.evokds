@@ -4413,7 +4413,8 @@ async function salvarItem(id = null) {
 });
 
   if (!nome) { alert("Nome é obrigatório."); return; }
-
+console.log('💾 Salvando item:', { nome, preco, categoria, opcoes });
+  
   try {
     if (id) {
       await fetch(`${API_BASE}/api/v1/cardapio/${id}`, {
