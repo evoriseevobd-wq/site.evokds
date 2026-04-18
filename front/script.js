@@ -4412,7 +4412,7 @@ async function salvarItem(id = null) {
   if (nomeV && precoV) opcoes.push({ nome: nomeV, preco: precoV, texto_livre: textoLivre, filtro });
 });
 
-  if (!nome || !preco) { alert("Nome e preço são obrigatórios."); return; }
+  if (!nome) { alert("Nome é obrigatório."); return; }
 
   try {
     if (id) {
