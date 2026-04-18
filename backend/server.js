@@ -2250,8 +2250,8 @@ if (order.client_phone) { txt(`Telefone : ${order.client_phone}`); lf(); }
 
       // Obs sempre aparece
       b(ESC, 0x45, 0x01); txt("Obs:"); b(ESC, 0x45, 0x00);
-      if (order.notes) { txt(` ${order.notes}`); }
-      lf();
+if (order.notes) { b(GS, 0x21, 0x01); txt(` ${order.notes}`); b(GS, 0x21, 0x00); }
+lf();
 
       lf();
       b(GS, 0x56, 0x41, 0x06); // corte
