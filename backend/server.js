@@ -2424,22 +2424,24 @@ async function printByCategory(order, apiKey, impressoras) {
     if (order.restaurant_id && itens.length > 0) {
       const nomes = itens.map(it => String(it.name || it.nome || "").trim()).filter(Boolean);
       if (nomes.length > 0) {
-        const { data: cardapioItens } = await supabase
-          .from("cardapio")
-          .select("nome, categoria")
-          .eq("restaurant_id", order.restaurant_id)
-          .in("nome", nomes);
-        const mapaCategoria = {};
-        (cardapioItens || []).forEach(c => {
-          mapaCategoria[c.nome.toLowerCase().trim()] = c.categoria;
-        });
-        itensComCategoria = itens.map(it => {
-          const nomeKey = String(it.name || it.nome || "").toLowerCase().trim();
-          return {
-            ...it,
-            categoria: it.categoria || it.category || mapaCategoria[nomeKey] || ""
-          };
-        });
+const { data: cardapioItens } = await supabase
+  .from("cardapio")
+  .select("nome, categoria")
+  .eq("restaurant_id", order.restaurant_id);
+const mapaCategoria = {};
+(cardapioItens || []).forEach(c => {
+  mapaCategoria[c.nome.toLowerCase().trim()] = c.categoria;
+});
+itensComCategoria = itens.map(it => {
+  const nomeItem = String(it.name || it.nome || "").toLowerCase().trim();
+  const categoriaEncontrada = Object.keys(mapaCategoria).find(nomeCardapio =>
+    nomeItem.includes(nomeCardapio)
+  );
+  return {
+    ...it,
+    categoria: it.categoria || it.category || (categoriaEncontrada ? mapaCategoria[categoriaEncontrada] : "")
+  };
+});
       }
     }
 
