@@ -4409,7 +4409,7 @@ async function salvarItem(id = null) {
   const precoV = parseFloat(row.querySelector(".variacao-preco")?.value.replace(/\./g,"").replace(",",".")) || 0;
   const textoLivre = row.querySelector(".variacao-texto-livre")?.checked || false;
   const filtro = row.querySelector(".variacao-filtro")?.value.trim() || "";
-  if (nomeV && precoV) opcoes.push({ nome: nomeV, preco: precoV, texto_livre: textoLivre, filtro });
+ if (nomeV) opcoes.push({ nome: nomeV, preco: precoV || 0, texto_livre: textoLivre, filtro });
 });
 
   if (!nome) { alert("Nome é obrigatório."); return; }
