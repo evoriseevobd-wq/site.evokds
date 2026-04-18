@@ -1800,7 +1800,7 @@ app.patch("/api/v1/cardapio/:restaurant_id/ordem-categorias", async (req, res) =
 // POST - Cria item
 app.post("/api/v1/cardapio", async (req, res) => {
   const { restaurant_id, nome, descricao, preco, categoria, foto_url, ordem, opcoes } = req.body;
-  if (!restaurant_id || !nome || !preco) return sendError(res, 400, "Campos obrigatórios: restaurant_id, nome, preco");
+ if (!restaurant_id || !nome) return sendError(res, 400, "Campos obrigatórios: restaurant_id, nome");
 
   const { data, error } = await supabase
     .from("cardapio")
