@@ -5251,7 +5251,7 @@ async function _confirmarAbertura() {
     const data = await resp.json();
     if (!resp.ok) { alert(data.error || "Erro ao abrir caixa"); return; }
 
-    _caixaState = { aberto: true, operador, turno, horaAbertura: new Date().toISOString(), fundoInicial: fundo, obs: "", caixa_id: data.caixa.id };
+    _caixaState = { aberto: true, operador, turno, horaAbertura: data.caixa.created_at, fundoInicial: fundo, obs: "", caixa_id: data.caixa.id };
     _salvarCaixaState();
     _turnoSelecionado = "";
     document.getElementById("caixa-modal").remove();
