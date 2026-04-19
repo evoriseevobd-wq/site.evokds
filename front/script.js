@@ -967,6 +967,12 @@ function updateSelectionBar() {
         font-weight:700; cursor:pointer; font-family:inherit;">
         Cancelar
       </button>
+     <button onclick="advanceSelectedOrders()" style="
+        padding:10px 16px; border-radius:10px; border:1px solid rgba(139,92,246,0.5);
+        background:transparent; color:rgba(139,92,246,0.9); font-size:13px;
+        font-weight:700; cursor:pointer; font-family:inherit;">
+        ⏩ Avançar todos
+      </button>
       <button onclick="imprimirResumosSelecionados()" style="
         padding:10px 16px; border-radius:10px; border:1px solid rgba(249,115,115,0.5);
         background:transparent; color:rgba(249,115,115,0.9); font-size:13px;
