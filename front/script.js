@@ -755,17 +755,13 @@ async function updateOrderStatus(orderId, newFrontStatus) {
 
 function renderBoard() {
   if (!board || board.classList.contains("hidden")) return;
-
-  // Cancela todos os timers antes de limpar o DOM
   Object.keys(_autoTimers).forEach(id => {
     clearInterval(_autoTimers[id]);
     delete _autoTimers[id];
   });
-
   Object.values(columns).forEach((c) => {
     if (c) c.innerHTML = "";
   });
-
   const visibleStatuses = views[currentView];
   
   Object.keys(columns).forEach((statusKey) => {
@@ -779,18 +775,45 @@ function renderBoard() {
     }
   });
 
- const filtered = orders.filter((o) => {
-  if (!visibleStatuses.includes(o._frontStatus)) return false;
-  if (!searchTerm) return true;
-  const num = String(o.order_number || "").toLowerCase();
-const name = String(o.client_name || "").toLowerCase();
-const notes = String(o.notes || "").toLowerCase();
-const mesa = String(o.table_number || "").toLowerCase();
-return num.includes(searchTerm) || name.includes(searchTerm) || notes.includes(searchTerm) || mesa.includes(searchTerm);
-});
+  const filtered = orders.filter((o) => {
+    if (!visibleStatuses.includes(o._frontStatus)) return false;
+    if (!searchTerm) return true;
+    const num = String(o.order_number || "").toLowerCase();
+    const name = String(o.client_name || "").toLowerCase();
+    const notes = String(o.notes || "").toLowerCase();
+    const mesa = String(o.table_number || "").toLowerCase();
+    const mesaLabel = `mesa ${mesa}`;
+    return num.includes(searchTerm) || name.includes(searchTerm) || notes.includes(searchTerm) || mesa.includes(searchTerm) || mesaLabel.includes(searchTerm);
+  });
+
+  // Agrupa pedidos por mesa nas colunas ativas
+  const mesasVistas = new Set();
 
   filtered.forEach((o) => {
-    const card = buildOrderCard(o);
+    const mesa = o.table_number;
+
+    // Se não tem mesa ou é delivery, renderiza normalmente
+    if (!mesa) {
+      const card = buildOrderCard(o);
+      const col = columns[o._frontStatus];
+      col?.appendChild(card);
+      return;
+    }
+
+    // Agrupa por mesa — só renderiza uma vez por mesa por coluna
+    const mesaKey = `${mesa}_${o._frontStatus}`;
+    if (mesasVistas.has(mesaKey)) return;
+    mesasVistas.add(mesaKey);
+
+    // Pega todos os pedidos dessa mesa nessa coluna
+    const pedidosDaMesa = filtered.filter(p =>
+      p.table_number === mesa && p._frontStatus === o._frontStatus
+    );
+
+    const card = pedidosDaMesa.length > 1
+      ? buildMesaCard(pedidosDaMesa)
+      : buildOrderCard(o);
+
     const col = columns[o._frontStatus];
     col?.appendChild(card);
   });
@@ -864,6 +887,33 @@ ${order.origin === "fidelidade"
     setTimeout(() => startAutoTimer(order.id, order.created_at), 50);
   }
 
+  return card;
+}
+
+function buildMesaCard(pedidos) {
+  const card = document.createElement("div");
+  card.className = "order-card";
+  card.style.borderLeft = "4px solid var(--amber)";
+  card.style.borderRadius = "0 14px 14px 0";
+
+  const mesa = pedidos[0].table_number;
+  const totalItens = pedidos.reduce((s, p) => s + (Array.isArray(p.itens) ? p.itens.length : 0), 0);
+  const nomes = [...new Set(pedidos.map(p => p.client_name).filter(Boolean))].join(', ');
+  const horario = formatTime(pedidos[0].created_at);
+
+  card.innerHTML = `
+    <div class="order-top">
+      <div class="order-number" style="color:var(--amber)">Mesa ${mesa}</div>
+      <div class="order-client">${escapeHtml(nomes || 'Mesa')}</div>
+    </div>
+    <div class="order-meta">
+      <div class="order-time">${horario}</div>
+      <div class="order-items">${totalItens} item(ns) · ${pedidos.length} pedido(s)</div>
+    </div>
+    <div class="order-origin-tag">Autoatendimento</div>
+  `;
+
+  card.addEventListener("click", () => openOrderModal(pedidos[0].id));
   return card;
 }
 
