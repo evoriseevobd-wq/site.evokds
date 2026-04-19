@@ -786,14 +786,15 @@ function renderBoard() {
     return num.includes(searchTerm) || name.includes(searchTerm) || notes.includes(searchTerm) || mesa.includes(searchTerm) || mesaLabel.includes(searchTerm);
   });
 
-  // Agrupa pedidos por mesa nas colunas ativas
+ // Agrupa pedidos por mesa nas colunas ativas
   const mesasVistas = new Set();
+  const statusAtivos = ["recebido", "preparo", "pronto"];
 
   filtered.forEach((o) => {
     const mesa = o.table_number;
 
-    // Se não tem mesa ou é delivery, renderiza normalmente
-    if (!mesa) {
+    // Se não tem mesa ou não está em coluna ativa → renderiza normalmente
+    if (!mesa || !statusAtivos.includes(o._frontStatus)) {
       const card = buildOrderCard(o);
       const col = columns[o._frontStatus];
       col?.appendChild(card);
@@ -805,7 +806,6 @@ function renderBoard() {
     if (mesasVistas.has(mesaKey)) return;
     mesasVistas.add(mesaKey);
 
-    // Pega todos os pedidos dessa mesa nessa coluna
     const pedidosDaMesa = filtered.filter(p =>
       p.table_number === mesa && p._frontStatus === o._frontStatus
     );
@@ -898,13 +898,14 @@ function buildMesaCard(pedidos) {
 
   const mesa = pedidos[0].table_number;
   const totalItens = pedidos.reduce((s, p) => s + (Array.isArray(p.itens) ? p.itens.length : 0), 0);
-  const nomes = [...new Set(pedidos.map(p => p.client_name).filter(Boolean))].join(', ');
   const horario = formatTime(pedidos[0].created_at);
+  const primeiroNumero = pedidos[0].order_number;
+  const nomeLabel = pedidos[0].client_name || 'Mesa';
 
   card.innerHTML = `
     <div class="order-top">
-      <div class="order-number" style="color:var(--amber)">Mesa ${mesa}</div>
-      <div class="order-client">${escapeHtml(nomes || 'Mesa')}</div>
+      <div class="order-number">#${primeiroNumero} · Mesa ${mesa}</div>
+      <div class="order-client">${escapeHtml(nomeLabel)}</div>
     </div>
     <div class="order-meta">
       <div class="order-time">${horario}</div>
@@ -915,18 +916,6 @@ function buildMesaCard(pedidos) {
 
   card.addEventListener("click", () => openOrderModal(pedidos[0].id));
   return card;
-}
-
-// ===== SELEÇÃO MÚLTIPLA =====
-let selectedOrderIds = new Set();
-
-function toggleCardSelection(orderId, checked) {
-  if (checked) {
-    selectedOrderIds.add(orderId);
-  } else {
-    selectedOrderIds.delete(orderId);
-  }
-  updateSelectionBar();
 }
 
 function updateSelectionBar() {
