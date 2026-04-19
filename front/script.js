@@ -2755,7 +2755,148 @@ const resp = await fetch(`${API_BASE}/api/v1/cardapio/${rid}/busca?q=${encodeURI
     }, 250);
   });
 
-  window._selecionarItem = adicionarItem;
+function abrirModalVariacaoAdmin(item, opcoes) {
+  const existing = document.getElementById("variacao-admin-modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "variacao-admin-modal";
+  modal.className = "modal-backdrop open";
+
+  let selectedIdx = 0;
+
+  function getPreco(idx) {
+    return opcoes[idx]?.preco || 0;
+  }
+
+  function buildModalHtml() {
+    const op = opcoes[selectedIdx];
+    return `
+      <div class="modal confirm-modal" style="max-width:420px;">
+        <div class="modal-header">
+          <h3>${escapeHtml(item.nome)}</h3>
+          <button class="icon-button" onclick="document.getElementById('variacao-admin-modal').remove()">×</button>
+        </div>
+        <div class="modal-body" style="gap:12px;">
+
+          <div style="font-size:11px; font-weight:700; color:rgba(252,228,228,0.5); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Escolha uma opção</div>
+          <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            ${opcoes.map((op, idx) => `
+              <button onclick="window._adminSelecionarOpcao(${idx})" id="admin-pill-${idx}" style="
+                padding:7px 16px; border-radius:999px; cursor:pointer;
+                font-family:inherit; font-size:13px; font-weight:600;
+                transition:all 0.18s ease;
+                ${idx === selectedIdx
+                  ? 'background:rgba(252,228,228,1); color:#000; border:1.5px solid rgba(252,228,228,1);'
+                  : 'background:transparent; color:rgba(252,228,228,0.5); border:1.5px solid rgba(91,28,28,0.85);'}
+              ">
+                ${escapeHtml(op.nome)} — ${formatCurrency(op.preco)}
+              </button>
+            `).join('')}
+          </div>
+
+          ${op.texto_livre ? `
+          <div style="margin-top:8px;">
+            <div style="font-size:11px; font-weight:700; color:rgba(252,228,228,0.5); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Escolha 2 sabores</div>
+            <div id="admin-sabores-lista" style="display:flex; flex-direction:column; gap:6px;">
+              ${cardapioItems.filter(i => {
+                if (i.id === item.id || !i.ativo) return false;
+                if (i.categoria !== item.categoria) return false;
+                const filtro = op.filtro || "";
+                if (!filtro) return true;
+                return i.nome.toLowerCase().includes(filtro.toLowerCase());
+              }).map(s => `
+                <label style="display:flex; align-items:center; gap:10px; padding:10px 14px;
+                  border:1.5px solid rgba(91,28,28,0.85); border-radius:10px; cursor:pointer;
+                  background:rgba(46,8,8,0.45);">
+                  <input type="checkbox" value="${escapeHtml(s.nome)}"
+                    onchange="window._adminOnSaborChange()"
+                    style="width:18px; height:18px; accent-color:#f97373; cursor:pointer;" />
+                  <span style="font-size:14px; font-weight:500; color:rgba(252,228,228,0.9);">${escapeHtml(s.nome)}</span>
+                </label>
+              `).join('')}
+            </div>
+            <div id="admin-sabores-aviso" style="margin-top:6px; font-size:12px; color:rgba(249,115,115,0.9); display:none;">Selecione exatamente 2 sabores</div>
+          </div>
+          ` : ''}
+
+        </div>
+        <div class="modal-actions">
+          <button class="ghost-button" onclick="document.getElementById('variacao-admin-modal').remove()">Cancelar</button>
+          <button class="primary-button" onclick="window._adminConfirmarVariacao()">+ Adicionar</button>
+        </div>
+      </div>
+    `;
+  }
+
+  modal.innerHTML = buildModalHtml();
+  document.body.appendChild(modal);
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+
+  window._adminSelecionarOpcao = function(idx) {
+    selectedIdx = idx;
+    modal.querySelector(".modal.confirm-modal").innerHTML = buildModalHtml().match(/<div class="modal-header"[\s\S]*/)[0];
+    modal.innerHTML = buildModalHtml();
+    modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+  };
+
+  window._adminOnSaborChange = function() {
+    const todos = modal.querySelectorAll('#admin-sabores-lista input[type="checkbox"]');
+    const marcados = [...todos].filter(c => c.checked);
+    if (marcados.length > 2) {
+      const last = [...todos].find(c => c === document.activeElement);
+      if (last) last.checked = false;
+      return;
+    }
+    const aviso = document.getElementById("admin-sabores-aviso");
+    if (aviso) aviso.style.display = marcados.length > 0 && marcados.length < 2 ? 'block' : 'none';
+  };
+
+  window._adminConfirmarVariacao = function() {
+    const op = opcoes[selectedIdx];
+
+    if (op.texto_livre) {
+      const checkboxes = modal.querySelectorAll('#admin-sabores-lista input[type="checkbox"]:checked');
+      const sabores = [...checkboxes].map(c => c.value);
+      if (sabores.length !== 2) {
+        const aviso = document.getElementById("admin-sabores-aviso");
+        if (aviso) aviso.style.display = 'block';
+        return;
+      }
+
+      const nomeCompleto = `${item.nome}${item.nome.toLowerCase().includes(op.nome.toLowerCase()) ? '' : ' ' + op.nome} — ${sabores.join(' + ')}`;
+
+      let precoFinal = op.preco;
+      if (!op.preco || op.preco === 0) {
+        const precos = sabores.map(nome => {
+          const found = cardapioItems.find(i => i.nome === nome);
+          if (!found) return 0;
+          if (op.filtro && Array.isArray(found.opcoes)) {
+            const v = found.opcoes.find(v => v.nome?.toLowerCase().includes(op.filtro.toLowerCase()));
+            if (v) return parseFloat(v.preco) || 0;
+          }
+          return parseFloat(found.preco) || 0;
+        });
+        precoFinal = Math.max(...precos);
+      }
+
+      adicionarItem({ ...item, nome: nomeCompleto, preco: precoFinal });
+    } else {
+      adicionarItem({ ...item, nome: `${item.nome} — ${op.nome}`, preco: op.preco });
+    }
+
+    modal.remove();
+  };
+}
+  
+ window._selecionarItem = function(item) {
+  const opcoes = Array.isArray(item.opcoes) ? item.opcoes : [];
+  if (opcoes.length === 0) {
+    adicionarItem(item);
+    return;
+  }
+  abrirModalVariacaoAdmin(item, opcoes);
+};
 
   document.addEventListener("click", (e) => {
   document.querySelectorAll("[id^='cat-dropdown-']").forEach(d => {
