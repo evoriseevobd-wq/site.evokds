@@ -8,6 +8,7 @@ const AUTH_URL = `${API_BASE}/auth/google`;
 const CRM_URL = `${API_BASE}/crm`;
 const METRICS_URL = `${API_BASE}/api/v1/metrics`;
 const FORECAST_URL = `${API_BASE}/api/v1/demand-forecast`;
+let selectedOrderIds = new Set();
 
 // ===== STATUS MAP =====
 const STATUS_TO_BACKEND = {
