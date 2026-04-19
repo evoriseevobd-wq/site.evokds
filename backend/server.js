@@ -928,7 +928,7 @@ app.post("/api/v1/pedidos", async (req, res) => {
   client_phone: phone,
   itens: normalizedItems,
   notes: notes || "",
-  table_number: table_number || null,
+  ...(table_number !== undefined ? { table_number: table_number || null } : {}),
   total_price: total_price || 0,
   service_type: service_type || "local",
   address: address || null,
