@@ -912,6 +912,12 @@ function buildMesaCard(pedidos) {
       <div class="order-items">${totalItens} item(ns) · ${pedidos.length} pedido(s)</div>
     </div>
     <div class="order-origin-tag">Autoatendimento</div>
+    <div class="card-checkbox-wrap" onclick="event.stopPropagation()">
+      ${pedidos.map(p => `
+        <input type="checkbox" class="card-checkbox" data-id="${p.id}"
+          onchange="toggleCardSelection('${p.id}', this.checked)" />
+      `).join('')}
+    </div>
   `;
 
   card.addEventListener("click", () => openOrderModal(pedidos[0].id));
