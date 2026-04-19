@@ -1141,7 +1141,48 @@ modalNextBtn.classList.toggle("hidden", s === "finalizado" || s === "cancelado")
 
 const editBtn = document.getElementById("modal-edit-btn");
 if (editBtn) {
-  editBtn.classList.toggle("hidden", order._frontStatus !== "recebido" && order._frontStatus !== "pronto");
+  editBtn.classList.toggle("hidden", 
+    order._frontStatus !== "recebido" && 
+    order._frontStatus !== "preparo" && 
+    order._frontStatus !== "pronto"
+  );
+}
+
+// Navegador de pedidos da mesa
+let mesaNav = document.getElementById("modal-mesa-nav");
+if (mesaNav) mesaNav.remove();
+
+if (order.table_number) {
+  const pedidosDaMesa = orders.filter(o =>
+    o.table_number === order.table_number &&
+    ["recebido", "preparo", "pronto"].includes(o._frontStatus)
+  );
+
+  if (pedidosDaMesa.length > 1) {
+    mesaNav = document.createElement("div");
+    mesaNav.id = "modal-mesa-nav";
+    mesaNav.style.cssText = `
+      display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+      padding:10px 14px; background:rgba(46,8,8,0.45);
+      border:1px solid rgba(91,28,28,0.85); border-radius:10px;
+      margin-bottom:8px;
+    `;
+    mesaNav.innerHTML = `
+      <span style="font-size:11px; font-weight:700; color:rgba(252,228,228,0.4); text-transform:uppercase; letter-spacing:1px;">Pedidos da Mesa ${order.table_number}:</span>
+      ${pedidosDaMesa.map(p => `
+        <button onclick="openOrderModal('${p.id}')" style="
+          padding:5px 12px; border-radius:999px; cursor:pointer; font-family:inherit;
+          font-size:12px; font-weight:700; transition:all 0.15s;
+          ${p.id === orderId
+            ? 'background:rgba(252,228,228,1); color:#000; border:1.5px solid rgba(252,228,228,1);'
+            : 'background:transparent; color:rgba(252,228,228,0.5); border:1.5px solid rgba(91,28,28,0.85);'}
+        ">#${p.order_number}</button>
+      `).join('')}
+    `;
+
+    const modalBody = modalItems?.closest(".modal-body") || modalItems?.parentElement;
+    if (modalBody) modalBody.insertBefore(mesaNav, modalBody.firstChild);
+  }
 }
   
   openBackdrop(modalBackdrop);
