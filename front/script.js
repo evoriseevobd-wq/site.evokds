@@ -1026,11 +1026,13 @@ function toggleNoOrdersBalloons() {
     }
   });
 
-  // Restaura checkboxes após re-render
-  selectedOrderIds.forEach(id => {
-    const cb = document.querySelector(`.card-checkbox[data-id="${id}"]`);
-    if (cb) cb.checked = true;
-  });
+// Restaura checkboxes após re-render
+  if (typeof selectedOrderIds !== "undefined") {
+    selectedOrderIds.forEach(id => {
+      const cb = document.querySelector(`.card-checkbox[data-id="${id}"]`);
+      if (cb) cb.checked = true;
+    });
+  }
 }
 
 
