@@ -913,7 +913,7 @@ function buildMesaCard(pedidos) {
     </div>
     <div class="order-origin-tag">Autoatendimento</div>
     <div class="card-checkbox-wrap" onclick="event.stopPropagation()">
-      <input type="checkbox" class="card-checkbox mesa-group-checkbox" />
+      <input type="checkbox" class="card-checkbox mesa-group-checkbox" data-id="${pedidos[0].id}" />
     </div>
   `;
 
