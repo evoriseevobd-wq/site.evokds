@@ -917,8 +917,11 @@ function buildMesaCard(pedidos) {
     </div>
   `;
 
-  card.querySelector(".mesa-group-checkbox").addEventListener("change", function() {
-    pedidos.forEach(p => toggleCardSelection(p.id, this.checked));
+ card.querySelector(".mesa-group-checkbox").addEventListener("change", function() {
+    pedidos.forEach(p => {
+      selectedOrderIds[this.checked ? 'add' : 'delete'](p.id);
+    });
+    updateSelectionBar();
   });
 
   card.addEventListener("click", () => openOrderModal(pedidos[0].id));
