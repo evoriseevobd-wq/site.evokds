@@ -2644,11 +2644,20 @@ window.alterarQtd = function(index, delta) {
   
   
   function adicionarItem(item) {
+    let preco = parseFloat(item.preco || 0);
+
+    // Se for item com preço livre (Diversos ou preço 0)
+    if (preco === 0 || item.nome.toLowerCase().includes("diversos")) {
+      const input = prompt(`Qual o valor para "${item.nome}"?`, "0,00");
+      if (input === null) return; // cancelou
+      preco = parseFloat(input.replace(",", ".")) || 0;
+    }
+
     const existente = itensPedido.find(i => i.name === item.nome);
     if (existente) {
       existente.qty++;
     } else {
-      itensPedido.push({ name: item.nome, qty: 1, price: parseFloat(item.preco || 0), quantidade: 1 });
+      itensPedido.push({ name: item.nome, qty: 1, price: preco, quantidade: 1 });
     }
     renderItensSelecionados();
     searchInput.value = '';
