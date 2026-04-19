@@ -2020,7 +2020,8 @@ const body = {
   address: isDelivery ? address : null,
   payment_method: isDelivery ? payment_method : null,
   total_price,
-  origin: "balcao",
+  origin: orderAtual?.origin || "balcao",
+  table_number: orderAtual?.table_number || null,
   ...(editOrderId ? { 
     order_id: editOrderId,
     status: toBackStatus(orderAtual?._frontStatus || "recebido")
