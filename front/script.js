@@ -2744,7 +2744,16 @@ const resp = await fetch(`${API_BASE}/api/v1/cardapio/${rid}/busca?q=${encodeURI
     }, 250);
   });
 
-function abrirModalVariacaoAdmin(item, opcoes) {
+async function abrirModalVariacaoAdmin(item, opcoes) {
+  if (!cardapioItems || cardapioItems.length === 0) {
+    const rid = getRestaurantId();
+    try {
+      const resp = await fetch(`${API_BASE}/api/v1/cardapio/${rid}?admin=true`);
+      cardapioItems = await resp.json();
+    } catch(e) {
+      cardapioItems = [];
+    }
+  }
   const existing = document.getElementById("variacao-admin-modal");
   if (existing) existing.remove();
 
