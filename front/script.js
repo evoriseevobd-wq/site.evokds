@@ -993,7 +993,7 @@ function updateSelectionBar() {
 function clearSelection() {
   selectedOrderIds.clear();
   document.querySelectorAll(".card-checkbox").forEach(cb => cb.checked = false);
-  document.getElementById("selection-action-bar")?.remove();
+  document.getElementById("selection-bottom-bar")?.remove();
 }
 
 async function advanceSelectedOrders() {
