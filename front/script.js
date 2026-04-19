@@ -2682,15 +2682,57 @@ window.alterarQtd = function(index, delta) {
 };
   
   
-  function adicionarItem(item) {
+  async function adicionarItem(item) {
     let preco = parseFloat(item.preco || 0);
 
     // Se for item com preço livre (Diversos ou preço 0)
     if (preco === 0 || item.nome.toLowerCase().includes("diversos")) {
-      const input = prompt(`Qual o valor para "${item.nome}"?`, "0,00");
-      if (input === null) return; // cancelou
-      preco = parseFloat(input.replace(",", ".")) || 0;
-    }
+  await new Promise((resolve) => {
+    const modal = document.createElement("div");
+    modal.className = "modal-backdrop open";
+    modal.innerHTML = `
+      <div class="modal confirm-modal" style="max-width:360px;">
+        <div class="modal-header">
+          <h3>💰 ${escapeHtml(item.nome)}</h3>
+        </div>
+        <div class="modal-body" style="gap:12px;">
+          <div style="font-size:13px; color:rgba(252,228,228,0.7);">Qual o valor?</div>
+          <div style="position:relative;">
+            <span style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:rgba(252,228,228,0.4); font-size:13px;">R$</span>
+            <input id="modal-valor-livre" type="number" min="0" step="0.01" placeholder="0,00"
+              style="width:100%; padding:12px 14px 12px 36px; border-radius:10px;
+              border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45);
+              color:rgba(252,228,228,1); font-size:16px; outline:none; font-family:inherit;" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="ghost-button" id="modal-valor-cancelar">Cancelar</button>
+          <button class="primary-button" id="modal-valor-confirmar">Confirmar</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    setTimeout(() => document.getElementById("modal-valor-livre")?.focus(), 50);
+
+    document.getElementById("modal-valor-cancelar").addEventListener("click", () => {
+      modal.remove();
+      preco = null;
+      resolve();
+    });
+
+    document.getElementById("modal-valor-confirmar").addEventListener("click", () => {
+      preco = parseFloat(document.getElementById("modal-valor-livre").value) || 0;
+      modal.remove();
+      resolve();
+    });
+
+    document.getElementById("modal-valor-livre").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") document.getElementById("modal-valor-confirmar").click();
+    });
+  });
+
+  if (preco === null) return;
+}
 
     const existente = itensPedido.find(i => i.name === item.nome);
     if (existente) {
