@@ -913,16 +913,18 @@ function buildMesaCard(pedidos) {
     </div>
     <div class="order-origin-tag">Autoatendimento</div>
     <div class="card-checkbox-wrap" onclick="event.stopPropagation()">
-      ${pedidos.map(p => `
-        <input type="checkbox" class="card-checkbox" data-id="${p.id}"
-          onchange="toggleCardSelection('${p.id}', this.checked)" />
-      `).join('')}
+      <input type="checkbox" class="card-checkbox mesa-group-checkbox" />
     </div>
   `;
+
+  card.querySelector(".mesa-group-checkbox").addEventListener("change", function() {
+    pedidos.forEach(p => toggleCardSelection(p.id, this.checked));
+  });
 
   card.addEventListener("click", () => openOrderModal(pedidos[0].id));
   return card;
 }
+
 
 function updateSelectionBar() {
   document.querySelectorAll(".col-action-bar").forEach(b => b.remove());
