@@ -1889,7 +1889,7 @@ const qNorm = q.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerC
 
   const { data, error } = await supabase
     .from("cardapio")
-    .select("id, nome, preco, categoria")
+    .select("id, nome, preco, categoria, opcoes")
     .eq("restaurant_id", restaurant_id)
     .eq("ativo", true)
     .ilike("nome", `%${qNorm}%`)
