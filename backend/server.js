@@ -3435,8 +3435,26 @@ const statusResp = await fetch(
 async function dispararWebhookSatisfacao(order) {
   try {
     const webhookConfig = await getIntegracao(order.restaurant_id, "webhook_satisfaction");
-const webhookUrl = webhookConfig?.webhook_url;
+    const webhookUrl = webhookConfig?.webhook_url;
     if (!webhookUrl) return;
+
+    // Verifica se já foi disparado para esse telefone hoje
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    const { data: jaEnviado } = await supabase
+      .from("orders")
+      .select("id")
+      .eq("restaurant_id", order.restaurant_id)
+      .eq("client_phone", order.client_phone)
+      .eq("webhook_satisfaction_sent", true)
+      .gte("delivered_at", hoje.toISOString())
+      .limit(1);
+
+    if (jaEnviado && jaEnviado.length > 0) {
+      console.log(`⚠️ Webhook satisfação já enviado para ${order.client_phone} hoje — ignorando`);
+      return;
+    }
 
     await fetch(webhookUrl, {
       method: "POST",
