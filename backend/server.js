@@ -647,6 +647,93 @@ app.get("/orders/:restaurant_id", async (req, res) => {
   }
 });
 
+// ✅ NOVA ROTA — Busca pedido aberto de uma mesa
+app.get("/api/v1/pedidos-mesa", async (req, res) => {
+  try {
+    const { restaurant_id, mesa } = req.query;
+    if (!restaurant_id || !mesa) return sendError(res, 400, "restaurant_id e mesa são obrigatórios");
+
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("restaurant_id", restaurant_id)
+      .eq("table_number", mesa)
+      .in("status", ["pending", "preparing", "mounting"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error || !data) return res.json({ pedido: null });
+    return res.json({ pedido: data });
+  } catch (err) {
+    return res.json({ pedido: null });
+  }
+});
+
+// ✅ NOVA ROTA — Adiciona itens novos ao pedido existente e imprime só os novos
+app.patch("/api/v1/pedidos/:id/adicionar-itens", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { itens_novos, total_adicional, client_name, client_phone } = req.body;
+
+    if (!Array.isArray(itens_novos) || itens_novos.length === 0)
+      return sendError(res, 400, "itens_novos é obrigatório");
+
+    // Busca pedido atual
+    const { data: pedidoAtual, error: fetchError } = await supabase
+      .from("orders").select("*").eq("id", id).single();
+    if (fetchError || !pedidoAtual) return sendError(res, 404, "Pedido não encontrado");
+
+    // Monta itens combinados
+    const itensAntigos = Array.isArray(pedidoAtual.itens) ? pedidoAtual.itens : [];
+    const itensCombinados = [...itensAntigos, ...itens_novos];
+    const novoTotal = parseFloat(pedidoAtual.total_price || 0) + parseFloat(total_adicional || 0);
+
+    // Atualiza o pedido
+    const updatePayload = {
+      itens: itensCombinados,
+      total_price: novoTotal,
+      update_at: new Date().toISOString()
+    };
+    if (client_name && !pedidoAtual.client_name) updatePayload.client_name = client_name;
+    if (client_phone && !pedidoAtual.client_phone) updatePayload.client_phone = client_phone;
+
+    const { data: pedidoAtualizado, error: updateError } = await supabase
+      .from("orders")
+      .update(updatePayload)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (updateError || !pedidoAtualizado) return sendError(res, 500, "Erro ao atualizar pedido");
+
+    emitOrderUpdate(pedidoAtualizado.restaurant_id, pedidoAtualizado);
+    console.log(`➕ Itens adicionados ao pedido #${pedidoAtualizado.order_number} — ${itens_novos.length} novo(s)`);
+
+    // ✅ Imprime SÓ os itens novos
+    try {
+      const config = await getIntegracao(pedidoAtualizado.restaurant_id, "printnode");
+      if (config?.api_key && Array.isArray(config?.impressoras) && config.impressoras.length > 0) {
+        const impressorasSemCaixa = config.impressoras.filter(
+          i => !toBool(i.is_caixa) && !toBool(i.caixa) && i.printer_id
+        );
+        if (impressorasSemCaixa.length > 0) {
+          // Monta objeto do pedido com APENAS os itens novos para impressão
+          const pedidoParaImprimir = { ...pedidoAtualizado, itens: itens_novos };
+          await printByCategory(pedidoParaImprimir, config.api_key, impressorasSemCaixa);
+          console.log(`🖨️ Impressão adição — Pedido #${pedidoAtualizado.order_number} — ${itens_novos.length} item(ns) novo(s)`);
+        }
+      }
+    } catch (printErr) {
+      console.error("⚠️ Erro na impressão ao adicionar itens:", printErr.message);
+    }
+
+    return res.json({ success: true, order: pedidoAtualizado });
+  } catch (err) {
+    return sendError(res, 500, "Erro interno ao adicionar itens");
+  }
+});
+
 app.patch("/orders/:id/status", async (req, res) => {
   try {
     const { id } = req.params;
@@ -665,7 +752,7 @@ const { data: orderAntes } = await supabase
       update_at: now
     };
     
-    if (status === "pending") {
+      if (status === "pending") {
       updateData.confirmed_at = now;
     } else if (status === "preparing") {
       updateData.preparing_at = now;
