@@ -783,9 +783,10 @@ function renderBoard() {
   if (!visibleStatuses.includes(o._frontStatus)) return false;
   if (!searchTerm) return true;
   const num = String(o.order_number || "").toLowerCase();
-  const name = String(o.client_name || "").toLowerCase();
-  const notes = String(o.notes || "").toLowerCase();
-  return num.includes(searchTerm) || name.includes(searchTerm) || notes.includes(searchTerm);
+const name = String(o.client_name || "").toLowerCase();
+const notes = String(o.notes || "").toLowerCase();
+const mesa = String(o.table_number || "").toLowerCase();
+return num.includes(searchTerm) || name.includes(searchTerm) || notes.includes(searchTerm) || mesa.includes(searchTerm);
 });
 
   filtered.forEach((o) => {
