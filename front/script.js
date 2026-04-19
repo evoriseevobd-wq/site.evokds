@@ -2897,9 +2897,7 @@ async function abrirModalVariacaoAdmin(item, opcoes) {
               ${cardapioItems.filter(i => {
                 if (i.id === item.id || !i.ativo) return false;
                 if (i.categoria !== item.categoria) return false;
-                const filtro = op.filtro || "";
-                if (!filtro) return true;
-                return i.nome.toLowerCase().includes(filtro.toLowerCase());
+                return true;
               }).map(s => `
                 <label style="display:flex; align-items:center; gap:10px; padding:10px 14px;
                   border:1.5px solid rgba(91,28,28,0.85); border-radius:10px; cursor:pointer;
