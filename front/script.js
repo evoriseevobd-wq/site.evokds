@@ -925,6 +925,14 @@ function buildMesaCard(pedidos) {
     updateSelectionBar();
   });
 
+
+  // Timer automático para cada pedido da mesa
+  pedidos.forEach(p => {
+    if (p._frontStatus === "recebido") {
+      setTimeout(() => startAutoTimer(p.id, p.created_at), 50);
+    }
+  });
+
   card.addEventListener("click", () => openOrderModal(pedidos[0].id));
   return card;
 }
