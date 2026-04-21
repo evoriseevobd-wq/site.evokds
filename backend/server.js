@@ -698,8 +698,7 @@ app.patch("/api/v1/pedidos/:id/adicionar-itens", async (req, res) => {
     if (client_name && !pedidoAtual.client_name) updatePayload.client_name = client_name;
     if (client_phone && !pedidoAtual.client_phone) updatePayload.client_phone = client_phone;
     if (notes) {
-  const notesAtual = pedidoAtual.notes || '';
-  updatePayload.notes = notesAtual ? `${notesAtual} | ${notes}` : notes;
+  updatePayload.notes = notes;
 }
 
     const { data: pedidoAtualizado, error: updateError } = await supabase
