@@ -1846,7 +1846,16 @@ const elapsed = Date.now() - new Date(rawDate).getTime();
       const order = orders.find(o => o.id === orderId);
 if (order && order._frontStatus === "recebido") {
   tocarBip();
-  updateOrderStatus(orderId, 'preparo');
+  // Avança todos os pedidos da mesma mesa juntos
+  if (order.table_number) {
+    const pedidosDaMesa = orders.filter(o => 
+      o.table_number === order.table_number && 
+      o._frontStatus === "recebido"
+    );
+    pedidosDaMesa.forEach(p => updateOrderStatus(p.id, 'preparo'));
+  } else {
+    updateOrderStatus(orderId, 'preparo');
+  }
 }
       
       return;
