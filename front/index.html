@@ -266,6 +266,15 @@
       <div class="column-body" id="col-cancelado"></div>
     </section>
   </main>
+  
+<!-- MESAS VIEW -->
+  <main class="crm-view hidden" id="mesas-view">
+    <div class="crm-header">
+      <div class="crm-title">🪑 Mesas</div>
+      <button class="ghost-button" type="button" id="mesas-back-btn">Voltar</button>
+    </div>
+    <div class="crm-content" id="mesas-content"></div>
+  </main>
 
   <!-- CRM VIEW -->
   <main class="crm-view hidden" id="crm-view">
@@ -887,6 +896,49 @@
     <p id="settings-mp-status" style="margin-top:4px; font-size:13px; min-height:18px;"></p>
   </div>
 </div>
+
+      <!-- 🪑 MESAS & AUTOMAÇÃO -->
+      <div style="background:rgba(46,8,8,0.5); border:1px solid rgba(91,28,28,0.85); border-radius:16px; overflow:hidden;">
+        <button onclick="toggleAccordion('mesas')" style="width:100%; display:flex; align-items:center; justify-content:space-between; padding:20px 24px; background:transparent; border:none; cursor:pointer;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:20px;">🪑</span>
+            <span style="color:rgba(252,228,228,1); font-size:16px; font-weight:800;">Mesas & Automação</span>
+          </div>
+          <span id="arrow-mesas" style="color:rgba(252,228,228,0.5); font-size:18px; transition:transform 0.2s;">▼</span>
+        </button>
+        <div id="accordion-mesas" style="display:none; padding:0 24px 24px 24px; flex-direction:column; gap:12px;">
+          <p style="color:rgba(252,228,228,0.45); font-size:13px; margin:0 0 8px 0;">Configure o número de mesas e os tempos automáticos por etapa. Coloque 0 para desativar a automação de uma etapa.</p>
+          
+          <label style="display:flex; flex-direction:column; gap:6px;">
+            <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Número de mesas</span>
+            <input type="number" id="settings-num-mesas" min="0" max="100" placeholder="Ex: 20"
+              style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+          </label>
+
+          <div style="font-size:12px; font-weight:700; color:rgba(252,228,228,0.5); text-transform:uppercase; letter-spacing:1px; margin-top:4px;">Tempos automáticos por etapa (minutos)</div>
+
+          <label style="display:flex; flex-direction:column; gap:6px;">
+            <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:600;">Recebido → Preparo <span style="color:rgba(252,228,228,0.3); font-weight:400;">(0 = desativado)</span></span>
+            <input type="number" id="settings-tempo-recebido" min="0" placeholder="Ex: 2"
+              style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+          </label>
+
+          <label style="display:flex; flex-direction:column; gap:6px;">
+            <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:600;">Preparo → Pronto <span style="color:rgba(252,228,228,0.3); font-weight:400;">(0 = desativado)</span></span>
+            <input type="number" id="settings-tempo-preparo" min="0" placeholder="Ex: 20"
+              style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+          </label>
+
+          <label style="display:flex; flex-direction:column; gap:6px;">
+            <span style="color:rgba(252,228,228,0.6); font-size:12px; font-weight:600;">Pronto → Finalizado <span style="color:rgba(252,228,228,0.3); font-weight:400;">(0 = desativado)</span></span>
+            <input type="number" id="settings-tempo-pronto" min="0" placeholder="Ex: 10"
+              style="padding:12px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(20,4,4,0.6); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+          </label>
+
+          <button class="primary-button" id="btn-salvar-mesas" style="margin-top:4px; width:100%;">Salvar configuração</button>
+          <p id="settings-mesas-status" style="margin-top:4px; font-size:13px; min-height:18px;"></p>
+        </div>
+      </div>
   
 <!-- 🔔 WEBHOOK SATISFAÇÃO -->
 <div style="background:rgba(46,8,8,0.5); border:1px solid rgba(91,28,28,0.85); border-radius:16px; overflow:hidden;">
@@ -1129,9 +1181,12 @@
 
    <nav class="drawer-nav">
 
-  <div class="drawer-section-label">Operacional</div>
+ <div class="drawer-section-label">Operacional</div>
   <button type="button" class="drawer-item" id="drawer-orders">
     <span class="drawer-icon">🧾</span> Gestão de Pedidos
+  </button>
+  <button type="button" class="drawer-item" id="drawer-mesas">
+    <span class="drawer-icon">🪑</span> Mesas
   </button>
 
   <div class="drawer-section-label">Cardápio & Atendimento</div>
