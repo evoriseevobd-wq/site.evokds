@@ -533,7 +533,7 @@ function renderMesas() {
   mesas.push({ tipo: "balcao", numero: null });
 
   content.innerHTML = `
-    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:16px; padding:8px 0;">
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:16px; padding:8px 0;">
       ${mesas.map(m => {
         const label = m.tipo === "balcao" ? "Balcão" : `Mesa ${m.numero}`;
         const key = m.tipo === "balcao" ? "balcao" : String(m.numero);
