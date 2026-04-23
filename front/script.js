@@ -396,9 +396,10 @@ function showBoard() {
   document.getElementById("settings-view")?.classList.add("hidden");
   document.getElementById("cardapio-view")?.classList.add("hidden");
   document.getElementById("fidelidade-view")?.classList.add("hidden");
+  document.getElementById("mesas-view")?.classList.add("hidden");
   board?.classList.remove("hidden");
   showTabsBar();
-  document.getElementById("tabs-bar")?.classList.remove("hidden"); // ← aqui
+  document.getElementById("tabs-bar")?.classList.remove("hidden");
   closeDrawer();
   renderBoard();
 }
@@ -503,6 +504,156 @@ function showSettings() {
   hideTabsBar();
   closeDrawer();
   loadSettingsData();
+}
+
+function showMesas() {
+  board?.classList.add("hidden");
+  crmView?.classList.add("hidden");
+  resultsView?.classList.add("hidden");
+  document.getElementById("autoatendimento-view")?.classList.add("hidden");
+  document.getElementById("settings-view")?.classList.add("hidden");
+  document.getElementById("cardapio-view")?.classList.add("hidden");
+  document.getElementById("fidelidade-view")?.classList.add("hidden");
+  document.getElementById("mesas-view")?.classList.remove("hidden");
+  document.getElementById("tabs-bar")?.classList.add("hidden");
+  hideTabsBar();
+  closeDrawer();
+  renderMesas();
+}
+
+function renderMesas() {
+  const content = document.getElementById("mesas-content");
+  if (!content) return;
+
+  const numMesas = parseInt(localStorage.getItem("fluxon_num_mesas") || "10");
+
+  // Gera lista de mesas + balcão
+  const mesas = [];
+  for (let i = 1; i <= numMesas; i++) mesas.push({ tipo: "mesa", numero: i });
+  mesas.push({ tipo: "balcao", numero: null });
+
+  content.innerHTML = `
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:16px; padding:8px 0;">
+      ${mesas.map(m => {
+        const label = m.tipo === "balcao" ? "Balcão" : `Mesa ${m.numero}`;
+        const key = m.tipo === "balcao" ? "balcao" : String(m.numero);
+        const pedidosAtivos = orders.filter(o =>
+          ["recebido", "preparo", "pronto"].includes(o._frontStatus) &&
+          (m.tipo === "balcao"
+            ? (!o.table_number && o.service_type !== "delivery")
+            : String(o.table_number) === String(m.numero))
+        );
+        const ocupada = pedidosAtivos.length > 0;
+        const totalMesa = pedidosAtivos.reduce((s, o) => s + parseFloat(o.total_price || 0), 0);
+
+        return `
+          <div onclick="abrirDrawerMesa('${key}')" style="
+            background:${ocupada ? 'rgba(249,115,115,0.15)' : 'rgba(46,8,8,0.45)'};
+            border:1.5px solid ${ocupada ? 'rgba(249,115,115,0.6)' : 'rgba(91,28,28,0.85)'};
+            border-radius:14px; padding:20px 16px;
+            cursor:pointer; transition:all 0.2s;
+            display:flex; flex-direction:column; align-items:center; gap:8px;
+            text-align:center;
+          "
+          onmouseover="this.style.borderColor='rgba(252,228,228,0.4)'"
+          onmouseout="this.style.borderColor='${ocupada ? 'rgba(249,115,115,0.6)' : 'rgba(91,28,28,0.85)'}'">
+            <div style="font-size:24px;">${m.tipo === "balcao" ? "🍽️" : "🪑"}</div>
+            <div style="font-size:14px; font-weight:800; color:rgba(252,228,228,0.95);">${label}</div>
+            <div style="
+              font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
+              color:${ocupada ? 'rgba(249,115,115,0.9)' : 'rgba(252,228,228,0.35)'};
+            ">${ocupada ? `Ocupada · ${pedidosAtivos.length} pedido(s)` : 'Livre'}</div>
+            ${ocupada && totalMesa > 0 ? `<div style="font-size:13px; font-weight:900; color:rgba(251,191,36,1);">${formatCurrency(totalMesa)}</div>` : ''}
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function abrirDrawerMesa(key) {
+  const existing = document.getElementById("mesa-drawer-modal");
+  if (existing) existing.remove();
+
+  const isBalcao = key === "balcao";
+  const label = isBalcao ? "Balcão" : `Mesa ${key}`;
+
+  const pedidosAtivos = orders.filter(o =>
+    ["recebido", "preparo", "pronto"].includes(o._frontStatus) &&
+    (isBalcao
+      ? (!o.table_number && o.service_type !== "delivery")
+      : String(o.table_number) === String(key))
+  );
+
+  const modal = document.createElement("div");
+  modal.id = "mesa-drawer-modal";
+  modal.className = "modal-backdrop open";
+
+  modal.innerHTML = `
+    <div class="modal confirm-modal" style="max-width:480px;">
+      <div class="modal-header">
+        <h3>${isBalcao ? "🍽️" : "🪑"} ${label}</h3>
+        <button class="icon-button" onclick="document.getElementById('mesa-drawer-modal').remove()">×</button>
+      </div>
+      <div class="modal-body" style="gap:12px;">
+
+        ${pedidosAtivos.length > 0 ? `
+          <div style="font-size:11px; font-weight:700; color:rgba(252,228,228,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Pedidos ativos</div>
+          ${pedidosAtivos.map(o => `
+            <div onclick="document.getElementById('mesa-drawer-modal').remove(); openOrderModal('${o.id}')" style="
+              display:flex; justify-content:space-between; align-items:center;
+              padding:12px 14px; background:rgba(46,8,8,0.75);
+              border:1px solid rgba(91,28,28,0.85); border-radius:10px;
+              cursor:pointer; transition:border-color 0.15s;
+            "
+            onmouseover="this.style.borderColor='rgba(252,228,228,0.3)'"
+            onmouseout="this.style.borderColor='rgba(91,28,28,0.85)'">
+              <div>
+                <div style="font-size:14px; font-weight:700; color:rgba(252,228,228,0.95);">#${o.order_number} — ${escapeHtml(o.client_name || "Cliente")}</div>
+                <div style="font-size:12px; color:rgba(252,228,228,0.4); margin-top:2px;">${o._frontStatus} · ${Array.isArray(o.itens) ? o.itens.length : 0} item(ns)</div>
+              </div>
+              <span style="color:rgba(251,191,36,1); font-weight:900; font-size:14px;">${formatCurrency(o.total_price)}</span>
+            </div>
+          `).join('')}
+          <div style="margin-top:4px; padding-top:12px; border-top:1px solid rgba(91,28,28,0.4); display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:13px; font-weight:700; color:rgba(252,228,228,0.6);">Total da ${label}</span>
+            <span style="font-size:16px; font-weight:900; color:rgba(251,191,36,1);">${formatCurrency(pedidosAtivos.reduce((s,o) => s + parseFloat(o.total_price||0), 0))}</span>
+          </div>
+        ` : `
+          <div style="text-align:center; padding:20px 0; color:rgba(252,228,228,0.4); font-size:14px;">
+            ${label} está livre
+          </div>
+        `}
+
+      </div>
+      <div class="modal-actions">
+        <button class="ghost-button" onclick="document.getElementById('mesa-drawer-modal').remove()">Fechar</button>
+        <button class="primary-button" onclick="document.getElementById('mesa-drawer-modal').remove(); abrirCriarPedidoMesa('${key}')">+ Criar Pedido</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+}
+
+function abrirCriarPedidoMesa(key) {
+  const isBalcao = key === "balcao";
+  openCreateModal();
+  // Preenche a mesa automaticamente no campo de notas por enquanto
+  // Quando tiver campo de mesa no modal de criação, ajustar aqui
+  if (!isBalcao) {
+    setTimeout(() => {
+      const notesField = document.getElementById("new-notes");
+      if (notesField && !notesField.value) {
+        notesField.placeholder = `Mesa ${key}`;
+      }
+      // Salva a mesa para ser usada no saveNewOrder
+      window._mesaAtual = key;
+    }, 50);
+  } else {
+    window._mesaAtual = null;
+  }
 }
 
 async function loadSettingsData() {
@@ -2044,7 +2195,7 @@ const body = {
   payment_method: isDelivery ? payment_method : null,
   total_price,
   origin: orderAtual?.origin || "balcao",
-  table_number: orderAtual?.table_number || null,
+  table_number: orderAtual?.table_number || window._mesaAtual || null,
   ...(editOrderId ? { 
     order_id: editOrderId,
     status: toBackStatus(orderAtual?._frontStatus || "recebido")
@@ -2509,7 +2660,10 @@ function setupDrawer() {
   if (resultsBtn) resultsBtn.addEventListener("click", showResults);
   const resumoDiaBtn = document.getElementById("drawer-resumo-dia");
 if (resumoDiaBtn) resumoDiaBtn.addEventListener("click", () => { closeDrawer(); showCaixa(); });
-  const cardapioBtn = document.getElementById("drawer-cardapio");
+  const mesasBtn = document.getElementById("drawer-mesas");
+if (mesasBtn) mesasBtn.addEventListener("click", showMesas);
+
+const cardapioBtn = document.getElementById("drawer-cardapio");
 if (cardapioBtn) cardapioBtn.addEventListener("click", showCardapio);
 
 const fidelidadeBtn = document.getElementById("drawer-fidelidade");
@@ -3043,6 +3197,9 @@ if (crmBackBtn) crmBackBtn.addEventListener("click", showBoard);
 if (resultsBackBtn) resultsBackBtn.addEventListener("click", showBoard);
   const autoatendimentoBackBtn = document.getElementById("autoatendimento-back-btn");
 if (autoatendimentoBackBtn) autoatendimentoBackBtn.addEventListener("click", showBoard);
+const mesasBackBtn = document.getElementById("mesas-back-btn");
+if (mesasBackBtn) mesasBackBtn.addEventListener("click", showBoard);
+
 const cardapioBackBtn = document.getElementById("cardapio-back-btn");
 if (cardapioBackBtn) cardapioBackBtn.addEventListener("click", showBoard);
 
@@ -3055,6 +3212,7 @@ if (settingsBtn) settingsBtn.addEventListener("click", showSettings);
 const settingsBackBtn = document.getElementById("settings-back-btn");
 if (settingsBackBtn) settingsBackBtn.addEventListener("click", showBoard);
 
+document.getElementById("btn-salvar-mesas")?.addEventListener("click", salvarConfigMesas);
 document.getElementById("btn-salvar-impressora")?.addEventListener("click", salvarImpressora);
 document.getElementById("btn-testar-impressora")?.addEventListener("click", testarImpressora);
 document.getElementById("btn-salvar-rastreio")?.addEventListener("click", salvarRastreio);
@@ -4998,6 +5156,31 @@ function adicionarImpressora() {
 function removerImpressora(index) {
   impressorasConfig.splice(index, 1);
   renderImpressoras();
+}
+
+async function salvarConfigMesas() {
+  const rid = getRestaurantId();
+  const numMesas = parseInt(document.getElementById("settings-num-mesas")?.value) || 0;
+  const tempoRecebido = parseFloat(document.getElementById("settings-tempo-recebido")?.value) || 0;
+  const tempoPreparo = parseFloat(document.getElementById("settings-tempo-preparo")?.value) || 0;
+  const tempoProto = parseFloat(document.getElementById("settings-tempo-pronto")?.value) || 0;
+  const status = document.getElementById("settings-mesas-status");
+
+  localStorage.setItem("fluxon_num_mesas", numMesas);
+  localStorage.setItem("fluxon_tempo_recebido", tempoRecebido);
+  localStorage.setItem("fluxon_tempo_preparo", tempoPreparo);
+  localStorage.setItem("fluxon_tempo_pronto", tempoProto);
+
+  try {
+    await fetch(`${API_BASE}/api/v1/restaurante/${rid}/config`, {
+      method: "PATCH",
+      headers: buildHeaders(),
+      body: JSON.stringify({ num_mesas: numMesas, tempo_recebido: tempoRecebido, tempo_preparo: tempoPreparo, tempo_pronto: tempoProto })
+    });
+    if (status) { status.textContent = "✅ Configuração salva!"; status.style.color = "rgba(34,197,94,0.9)"; }
+  } catch(e) {
+    if (status) { status.textContent = "❌ Erro ao salvar."; status.style.color = "rgba(239,68,68,0.9)"; }
+  }
 }
 
 async function salvarImpressora() {
