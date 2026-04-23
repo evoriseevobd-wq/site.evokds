@@ -577,7 +577,14 @@ function renderMesas() {
     </div>
   </div>
 `;
+      }).join('')}
+    </div>
+  `;
+}
 
+function abrirDrawerMesa(key) {
+
+        
 function abrirDrawerMesa(key) {
   const existing = document.getElementById("mesa-drawer-modal");
   if (existing) existing.remove();
