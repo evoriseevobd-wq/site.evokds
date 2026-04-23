@@ -565,6 +565,10 @@ function renderMesas() {
             ${ocupada && totalMesa > 0 ? `<div style="font-size:13px; font-weight:900; color:rgba(251,191,36,1); margin-top:2px;">${formatCurrency(totalMesa)}</div>` : ''}
           </div>
         `;
+      }).join('')}
+    </div>
+  `;
+}
 
 function abrirDrawerMesa(key) {
   const existing = document.getElementById("mesa-drawer-modal");
