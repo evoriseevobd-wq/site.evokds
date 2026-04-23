@@ -546,29 +546,25 @@ function renderMesas() {
         const ocupada = pedidosAtivos.length > 0;
         const totalMesa = pedidosAtivos.reduce((s, o) => s + parseFloat(o.total_price || 0), 0);
 
-        return `
+       return `
           <div onclick="abrirDrawerMesa('${key}')" style="
             background:${ocupada ? 'rgba(249,115,115,0.15)' : 'rgba(46,8,8,0.45)'};
             border:1.5px solid ${ocupada ? 'rgba(249,115,115,0.6)' : 'rgba(91,28,28,0.85)'};
-            border-radius:14px; padding:20px 16px;
+            border-radius:14px; padding:24px 20px;
             cursor:pointer; transition:all 0.2s;
-            display:flex; flex-direction:column; align-items:center; gap:8px;
-            text-align:center;
+            display:flex; flex-direction:column; align-items:center; gap:6px;
+            text-align:center; min-height:100px; justify-content:center;
           "
           onmouseover="this.style.borderColor='rgba(252,228,228,0.4)'"
           onmouseout="this.style.borderColor='${ocupada ? 'rgba(249,115,115,0.6)' : 'rgba(91,28,28,0.85)'}'">
-            <div style="font-size:24px;">${m.tipo === "balcao" ? "🍽️" : "🪑"}</div>
-            <div style="font-size:14px; font-weight:800; color:rgba(252,228,228,0.95);">${label}</div>
+            <div style="font-size:15px; font-weight:800; color:rgba(252,228,228,0.95); margin-bottom:2px;">${label}</div>
             <div style="
               font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
               color:${ocupada ? 'rgba(249,115,115,0.9)' : 'rgba(252,228,228,0.35)'};
             ">${ocupada ? `Ocupada · ${pedidosAtivos.length} pedido(s)` : 'Livre'}</div>
-            ${ocupada && totalMesa > 0 ? `<div style="font-size:13px; font-weight:900; color:rgba(251,191,36,1);">${formatCurrency(totalMesa)}</div>` : ''}
+            ${ocupada && totalMesa > 0 ? `<div style="font-size:13px; font-weight:900; color:rgba(251,191,36,1); margin-top:2px;">${formatCurrency(totalMesa)}</div>` : ''}
           </div>
         `;
-      }).join('')}
-    </div>
-  `;
 }
 
 function abrirDrawerMesa(key) {
