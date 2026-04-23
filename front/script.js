@@ -582,8 +582,6 @@ function renderMesas() {
   `;
 }
 
-function abrirDrawerMesa(key) {
-
         
 function abrirDrawerMesa(key) {
   const existing = document.getElementById("mesa-drawer-modal");
