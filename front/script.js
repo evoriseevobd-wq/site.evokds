@@ -557,12 +557,14 @@ function renderMesas() {
           "
           onmouseover="this.style.borderColor='rgba(252,228,228,0.4)'"
           onmouseout="this.style.borderColor='${ocupada ? 'rgba(249,115,115,0.6)' : 'rgba(91,28,28,0.85)'}'">
-            <div style="font-size:15px; font-weight:800; color:rgba(252,228,228,0.95); margin-bottom:2px;">${label}</div>
+            <div style="font-size:16px; font-weight:900; color:rgba(252,228,228,1); letter-spacing:-0.02em; align-self:flex-start; width:100%; text-align:left; padding-left:2px;">${label}</div>
+            <div style="flex:1;"></div>
             <div style="
               font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
               color:${ocupada ? 'rgba(249,115,115,0.9)' : 'rgba(252,228,228,0.35)'};
+              align-self:flex-start; width:100%; text-align:left; padding-left:2px;
             ">${ocupada ? `Ocupada · ${pedidosAtivos.length} pedido(s)` : 'Livre'}</div>
-            ${ocupada && totalMesa > 0 ? `<div style="font-size:13px; font-weight:900; color:rgba(251,191,36,1); margin-top:2px;">${formatCurrency(totalMesa)}</div>` : ''}
+            ${ocupada && totalMesa > 0 ? `<div style="font-size:13px; font-weight:900; color:rgba(251,191,36,1); align-self:flex-start; padding-left:2px;">${formatCurrency(totalMesa)}</div>` : ''}
           </div>
         `;
       }).join('')}
@@ -3320,6 +3322,10 @@ socket.on("order_updated", (order) => {
   }
   if (!modalBackdrop?.classList.contains("open") && !createModal?.classList.contains("open")) {
     renderBoard();
+  }
+  // Atualiza tela de mesas em tempo real
+  if (!document.getElementById("mesas-view")?.classList.contains("hidden")) {
+    renderMesas();
   }
 });
 
