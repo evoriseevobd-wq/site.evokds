@@ -538,11 +538,12 @@ function renderMesas() {
         const label = m.tipo === "balcao" ? "Balcão" : `Mesa ${m.numero}`;
         const key = m.tipo === "balcao" ? "balcao" : String(m.numero);
         const pedidosAtivos = orders.filter(o =>
-          ["recebido", "preparo", "pronto"].includes(o._frontStatus) &&
-          (m.tipo === "balcao"
-            ? (!o.table_number && o.service_type !== "delivery")
-            : String(o.table_number) === String(m.numero))
-        );
+  ["recebido", "preparo", "pronto"].includes(o._frontStatus) &&
+  ["autoatendimento", "balcao"].includes(String(o.origin || "").toLowerCase()) &&
+  (m.tipo === "balcao"
+    ? (!o.table_number && o.service_type !== "delivery")
+    : String(o.table_number) === String(m.numero))
+);
         const ocupada = pedidosAtivos.length > 0;
         const totalMesa = pedidosAtivos.reduce((s, o) => s + parseFloat(o.total_price || 0), 0);
 
@@ -591,11 +592,12 @@ function abrirDrawerMesa(key) {
   const label = isBalcao ? "Balcão" : `Mesa ${key}`;
 
   const pedidosAtivos = orders.filter(o =>
-    ["recebido", "preparo", "pronto"].includes(o._frontStatus) &&
-    (isBalcao
-      ? (!o.table_number && o.service_type !== "delivery")
-      : String(o.table_number) === String(key))
-  );
+  ["recebido", "preparo", "pronto"].includes(o._frontStatus) &&
+  ["autoatendimento", "balcao"].includes(String(o.origin || "").toLowerCase()) &&
+  (isBalcao
+    ? (!o.table_number && o.service_type !== "delivery")
+    : String(o.table_number) === String(key))
+);
 
   const modal = document.createElement("div");
   modal.id = "mesa-drawer-modal";
