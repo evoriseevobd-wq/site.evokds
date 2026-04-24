@@ -1190,9 +1190,13 @@ async function updateOrderStatus(orderId, newFrontStatus) {
 
 function renderBoard() {
   if (!board || board.classList.contains("hidden")) return;
+  // Só limpa timers de pedidos que mudaram de status ou não existem mais
   Object.keys(_autoTimers).forEach(id => {
-    clearInterval(_autoTimers[id]);
-    delete _autoTimers[id];
+    const order = orders.find(o => o.id === id);
+    if (!order || !["recebido", "preparo", "pronto"].includes(order._frontStatus)) {
+      clearInterval(_autoTimers[id]);
+      delete _autoTimers[id];
+    }
   });
   Object.values(columns).forEach((c) => {
     if (c) c.innerHTML = "";
