@@ -2073,7 +2073,12 @@ app.get("/api/v1/restaurante/:restaurant_id/config", async (req, res) => {
       telefone: config?.telefone || null,
       instagram: config?.instagram || null,
       descricao: config?.descricao || null,
-      tema: config?.tema || "dark"
+      tema: config?.tema || "dark",
+      num_mesas: config?.num_mesas || 10,
+      tempo_recebido: config?.tempo_recebido ?? 1.5,
+      tempo_preparo: config?.tempo_preparo ?? 20,
+      tempo_pronto: config?.tempo_pronto ?? 10,
+      categorias_ordem: config?.categorias_ordem || []
     });
   } catch (err) {
     return sendError(res, 500, "Erro ao buscar configuração");
