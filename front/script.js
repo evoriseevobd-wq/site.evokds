@@ -433,6 +433,7 @@ function showResults() {
   document.getElementById("settings-view")?.classList.add("hidden");
   document.getElementById("cardapio-view")?.classList.add("hidden");
   document.getElementById("fidelidade-view")?.classList.add("hidden");
+  document.getElementById("mesas-view")?.classList.add("hidden");
   resultsView?.classList.remove("hidden");
   hideTabsBar();
   closeDrawer();
