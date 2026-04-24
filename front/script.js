@@ -3656,7 +3656,10 @@ socket.on("order_updated", (order) => {
   if (idx !== -1) {
     orders[idx] = { ...order, _frontStatus: toFrontStatus(order.status) };
   } else {
-    orders.push({ ...order, _frontStatus: toFrontStatus(order.status) });
+    const jaExiste = orders.some(o => o.id === order.id);
+    if (!jaExiste) {
+      orders.push({ ...order, _frontStatus: toFrontStatus(order.status) });
+    }
   }
   if (!modalBackdrop?.classList.contains("open") && !createModal?.classList.contains("open")) {
     renderBoard();
