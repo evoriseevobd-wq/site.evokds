@@ -657,6 +657,23 @@ function abrirDrawerMesa(key) {
   modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
 }
 
+function finalizarMesa(key) {
+  const isBalcao = key === "balcao";
+  const pedidosAtivos = orders.filter(o =>
+    ["recebido", "preparo", "pronto"].includes(o._frontStatus) &&
+    ["autoatendimento", "balcao"].includes(String(o.origin || "").toLowerCase()) &&
+    (isBalcao
+      ? (!o.table_number && o.service_type !== "delivery")
+      : String(o.table_number) === String(key))
+  );
+
+  if (!pedidosAtivos.length) return;
+
+  selectedOrderIds.clear();
+  pedidosAtivos.forEach(o => selectedOrderIds.add(o.id));
+  cobrarJuntos();
+}
+
 function abrirCriarPedidoMesa(key) {
   const isBalcao = key === "balcao";
   openCreateModal();
