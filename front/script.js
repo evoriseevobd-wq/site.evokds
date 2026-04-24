@@ -2846,6 +2846,7 @@ async function handleCredentialResponse(response) {
       localStorage.setItem("user_email", payload.email);
       localStorage.setItem("user_name", payload.name);
       localStorage.setItem("user_picture", payload.picture);
+      if (data.token) localStorage.setItem("fluxon_token", data.token);
 
       location.reload();
     } else {
