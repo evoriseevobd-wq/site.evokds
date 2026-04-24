@@ -3669,7 +3669,7 @@ socket.on("order_updated", (order) => {
   }
   if (!modalBackdrop?.classList.contains("open") && !createModal?.classList.contains("open")) {
     clearTimeout(_renderDebounce);
-    _renderDebounce = setTimeout(() => renderBoard(), 300);
+    _renderDebounce = setTimeout(() => renderBoard(), 500);
   }
   // Atualiza tela de mesas em tempo real
   if (!document.getElementById("mesas-view")?.classList.contains("hidden")) {
