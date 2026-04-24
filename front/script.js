@@ -302,10 +302,12 @@ const tabsContainer = findTabsContainer();
 
 function showTabsBar() {
   tabsContainer?.classList.remove("hidden");
+  document.getElementById("tabs-bar")?.classList.remove("hidden");
 }
 
 function hideTabsBar() {
   tabsContainer?.classList.add("hidden");
+  document.getElementById("tabs-bar")?.classList.add("hidden");
 }
 
 // ===== UPGRADE MODAL =====
