@@ -1994,7 +1994,7 @@ async function imprimirResumo(orderId) {
 
   } catch (e) {
     console.error('Erro ao imprimir resumo:', e);
-    alert('Erro ao imprimir resumo: ' + e.message);
+    console.warn('Erro ao imprimir resumo:', e.message);
   }
 }
 
