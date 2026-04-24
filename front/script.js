@@ -1381,39 +1381,53 @@ function buildMesaCard(pedidos) {
 
 
 function updateSelectionBar() {
+  // Remove botões anteriores
+  document.querySelectorAll(".col-avancar-btn").forEach(b => b.remove());
   document.getElementById("selection-bottom-bar")?.remove();
-  
+
   if (selectedOrderIds.size === 0) return;
 
-  // Mostra botão avançar em cada card selecionado
+  // Descobre quais colunas têm pedidos selecionados
+  const colunasSelecionadas = new Set();
   selectedOrderIds.forEach(id => {
     const card = document.querySelector(`.order-card[data-id="${id}"]`);
     if (!card) return;
-    if (card.querySelector(".btn-avancar-card")) return;
+    const col = card.closest(".column-body");
+    if (col) colunasSelecionadas.add(col.id);
+  });
+
+  // Adiciona botão no header de cada coluna com pedidos selecionados
+  colunasSelecionadas.forEach(colId => {
+    const col = document.getElementById(colId);
+    if (!col) return;
+    const header = col.closest(".column")?.querySelector(".column-header");
+    if (!header) return;
+    if (header.querySelector(".col-avancar-btn")) return;
 
     const btn = document.createElement("button");
-    btn.className = "btn-avancar-card";
-    btn.textContent = "⏩ Avançar";
+    btn.className = "col-avancar-btn";
+    btn.textContent = "⏩ Avançar todos";
     btn.style.cssText = `
-      position:absolute; bottom:10px; left:10px;
       padding:5px 12px; border-radius:8px; border:none;
       background:rgba(139,92,246,0.9); color:#fff;
       font-size:11px; font-weight:700; cursor:pointer;
-      font-family:inherit; z-index:10;
+      font-family:inherit; margin-left:auto;
     `;
     btn.onclick = (e) => {
       e.stopPropagation();
       advanceSelectedOrders();
     };
-    card.style.position = "relative";
-    card.appendChild(btn);
+    header.style.display = "flex";
+    header.style.alignItems = "center";
+    header.style.justifyContent = "space-between";
+    header.appendChild(btn);
   });
 }
 
 function clearSelection() {
   selectedOrderIds.clear();
   document.querySelectorAll(".card-checkbox").forEach(cb => cb.checked = false);
-  document.querySelectorAll(".btn-avancar-card").forEach(btn => btn.remove());
+  document.querySelectorAll(".col-avancar-btn").forEach(btn => btn.remove());
   document.getElementById("selection-bottom-bar")?.remove();
 }
 
