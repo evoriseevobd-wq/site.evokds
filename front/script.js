@@ -639,10 +639,16 @@ function abrirDrawerMesa(key) {
           </div>
         `}
 
-      </div>
-      <div class="modal-actions">
+      <div class="modal-actions" style="justify-content:space-between;">
         <button class="ghost-button" onclick="document.getElementById('mesa-drawer-modal').remove()">Fechar</button>
-        <button class="primary-button" onclick="document.getElementById('mesa-drawer-modal').remove(); abrirCriarPedidoMesa('${key}')">+ Criar Pedido</button>
+        <div style="display:flex; gap:10px;">
+          ${pedidosAtivos.length > 0 ? `
+          <button class="ghost-button" style="border-color:rgba(34,197,94,0.5); color:rgba(34,197,94,1);"
+            onclick="document.getElementById('mesa-drawer-modal').remove(); finalizarMesa('${key}')">
+            💳 Finalizar Mesa
+          </button>` : ''}
+          <button class="primary-button" onclick="document.getElementById('mesa-drawer-modal').remove(); abrirCriarPedidoMesa('${key}')">+ Criar Pedido</button>
+        </div>
       </div>
     </div>
   `;
