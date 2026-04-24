@@ -603,12 +603,31 @@ function renderMesas() {
 
     const o = pedidosRecebido[0];
 
-   // Usa o mesmo startAutoTimer do kanban
-    pedidosRecebido.forEach(p => {
-      if (!_autoTimers[p.id]) {
-        startAutoTimer(p.id, p.created_at);
+   function tickMesa() {
+      const timerEl = document.getElementById(`mesa-timer-${key}`);
+      if (!timerEl) return;
+      // Usa o timestamp da etapa atual igual ao startAutoTimer do kanban
+      const etapaInicio = o._frontStatus === "preparo" ? (o.preparing_at || o.created_at)
+                        : o._frontStatus === "pronto"  ? (o.mounting_at  || o.created_at)
+                        : o.created_at;
+      const rawDate = etapaInicio.includes('Z') || etapaInicio.includes('+') ? etapaInicio : etapaInicio + 'Z';
+      const elapsed = Date.now() - new Date(rawDate).getTime();
+      const remaining = LIMIT_MS - elapsed;
+      if (remaining <= 0) {
+        timerEl.textContent = "✅";
+        timerEl.style.color = "rgba(34,197,94,1)";
+        return;
       }
-    });
+      const mins = Math.floor(remaining / 60000);
+      const secs = Math.floor((remaining % 60000) / 1000);
+      timerEl.textContent = `⏱ ${mins}:${String(secs).padStart(2, "0")}`;
+      const pct = remaining / LIMIT_MS;
+      timerEl.style.color = pct > 0.5 ? "rgba(34,197,94,1)" : pct > 0.2 ? "rgba(251,191,36,1)" : "rgba(239,68,68,1)";
+      setTimeout(tickMesa, 1000);
+    }
+    tickMesa();
+  });
+}
         
 function abrirDrawerMesa(key) {
   const existing = document.getElementById("mesa-drawer-modal");
