@@ -627,12 +627,32 @@ function abrirDrawerMesa(key) {
   const label = isBalcao ? "Balcão" : `Mesa ${key}`;
 
   const pedidosAtivos = orders.filter(o =>
-  ["recebido", "preparo", "pronto"].includes(o._frontStatus) &&
-  ["autoatendimento", "balcao"].includes(String(o.origin || "").toLowerCase()) &&
-  (isBalcao
-    ? (!o.table_number && o.service_type !== "delivery")
-    : String(o.table_number) === String(key))
-);
+    ["recebido", "preparo", "pronto"].includes(o._frontStatus) &&
+    ["autoatendimento", "balcao"].includes(String(o.origin || "").toLowerCase()) &&
+    (isBalcao
+      ? (!o.table_number && o.service_type !== "delivery")
+      : String(o.table_number) === String(key))
+  );
+
+  const ocupada = pedidosAtivos.length > 0;
+
+  // Agrega todos os itens de todos os pedidos da mesa
+  const todosItens = [];
+  pedidosAtivos.forEach(o => {
+    (Array.isArray(o.itens) ? o.itens : []).forEach(it => {
+      const nome = it.name || it.nome || "Item";
+      const qty = it.qty || it.quantidade || 1;
+      const price = parseFloat(it.price || it.preco || 0);
+      const existente = todosItens.find(i => i.nome === nome);
+      if (existente) {
+        existente.qty += qty;
+      } else {
+        todosItens.push({ nome, qty, price });
+      }
+    });
+  });
+
+  const totalMesa = pedidosAtivos.reduce((s, o) => s + parseFloat(o.total_price || 0), 0);
 
   const modal = document.createElement("div");
   modal.id = "mesa-drawer-modal";
@@ -646,27 +666,23 @@ function abrirDrawerMesa(key) {
       </div>
       <div class="modal-body" style="gap:12px;">
 
-        ${pedidosAtivos.length > 0 ? `
-          <div style="font-size:11px; font-weight:700; color:rgba(252,228,228,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Pedidos ativos</div>
-          ${pedidosAtivos.map(o => `
-            <div onclick="document.getElementById('mesa-drawer-modal').remove(); openOrderModal('${o.id}')" style="
+        ${ocupada ? `
+          <div style="font-size:11px; font-weight:700; color:rgba(252,228,228,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Itens da mesa</div>
+          ${todosItens.map(it => `
+            <div style="
               display:flex; justify-content:space-between; align-items:center;
-              padding:12px 14px; background:rgba(46,8,8,0.75);
+              padding:10px 14px; background:rgba(46,8,8,0.75);
               border:1px solid rgba(91,28,28,0.85); border-radius:10px;
-              cursor:pointer; transition:border-color 0.15s;
-            "
-            onmouseover="this.style.borderColor='rgba(252,228,228,0.3)'"
-            onmouseout="this.style.borderColor='rgba(91,28,28,0.85)'">
-              <div>
-                <div style="font-size:14px; font-weight:700; color:rgba(252,228,228,0.95);">#${o.order_number} — ${escapeHtml(o.client_name || "Cliente")}</div>
-                <div style="font-size:12px; color:rgba(252,228,228,0.4); margin-top:2px;">${o._frontStatus} · ${Array.isArray(o.itens) ? o.itens.length : 0} item(ns)</div>
+            ">
+              <div style="font-size:14px; font-weight:600; color:rgba(252,228,228,0.95);">
+                ${escapeHtml(it.nome)} <span style="color:rgba(252,228,228,0.4); font-size:12px;">× ${it.qty}</span>
               </div>
-              <span style="color:rgba(251,191,36,1); font-weight:900; font-size:14px;">${formatCurrency(o.total_price)}</span>
+              ${it.price > 0 ? `<span style="color:rgba(251,191,36,1); font-weight:700; font-size:13px;">${formatCurrency(it.price * it.qty)}</span>` : ''}
             </div>
           `).join('')}
-          <div style="margin-top:4px; padding-top:12px; border-top:1px solid rgba(91,28,28,0.4); display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:13px; font-weight:700; color:rgba(252,228,228,0.6);">Total da ${label}</span>
-            <span style="font-size:16px; font-weight:900; color:rgba(251,191,36,1);">${formatCurrency(pedidosAtivos.reduce((s,o) => s + parseFloat(o.total_price||0), 0))}</span>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; padding-top:12px; border-top:1px solid rgba(91,28,28,0.4);">
+            <span style="font-size:13px; font-weight:700; color:rgba(252,228,228,0.6);">Total</span>
+            <span style="font-size:16px; font-weight:900; color:rgba(251,191,36,1);">${formatCurrency(totalMesa)}</span>
           </div>
         ` : `
           <div style="text-align:center; padding:20px 0; color:rgba(252,228,228,0.4); font-size:14px;">
@@ -674,16 +690,26 @@ function abrirDrawerMesa(key) {
           </div>
         `}
 
+      </div>
       <div class="modal-actions" style="justify-content:space-between;">
         <button class="ghost-button" onclick="document.getElementById('mesa-drawer-modal').remove()">Fechar</button>
         <div style="display:flex; gap:10px;">
-          ${pedidosAtivos.length > 0 ? `
-          <button class="primary-button" onclick="document.getElementById('mesa-drawer-modal').remove(); abrirCriarPedidoMesa('${key}')">+ Criar Pedido</button>
-          <button class="ghost-button" style="border-color:rgba(34,197,94,0.5); color:rgba(34,197,94,1);"
+          ${ocupada ? `
+          <button class="ghost-button" onclick="document.getElementById('mesa-drawer-modal').remove(); abrirCriarPedidoMesa('${key}')">
+            + Adicionar Itens
+          </button>
+          <button style="
+            padding:10px 20px; border-radius:10px; border:1.5px solid rgba(34,197,94,0.5);
+            background:transparent; color:rgba(34,197,94,1); font-size:13px;
+            font-weight:700; cursor:pointer; font-family:inherit;"
             onclick="document.getElementById('mesa-drawer-modal').remove(); finalizarMesa('${key}')">
             💳 Finalizar Mesa
-          </button>` : ''}
-          
+          </button>
+          ` : `
+          <button class="primary-button" onclick="document.getElementById('mesa-drawer-modal').remove(); abrirCriarPedidoMesa('${key}')">
+            Abrir Mesa
+          </button>
+          `}
         </div>
       </div>
     </div>
