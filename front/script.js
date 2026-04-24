@@ -1190,9 +1190,13 @@ async function updateOrderStatus(orderId, newFrontStatus) {
   }
 }
 
+let _renderingBoard = false;
 function renderBoard() {
+  if (_renderingBoard) return;
+  _renderingBoard = true;
+  setTimeout(() => { _renderingBoard = false; }, 100);
+
   if (!board || board.classList.contains("hidden")) return;
-  // Só limpa timers de pedidos que mudaram de status ou não existem mais
   Object.keys(_autoTimers).forEach(id => {
     const order = orders.find(o => o.id === id);
     if (!order || !["recebido", "preparo", "pronto"].includes(order._frontStatus)) {
@@ -1216,12 +1220,11 @@ function renderBoard() {
     }
   });
 
- const filtered = orders.filter((o) => {
-  if (!visibleStatuses.includes(o._frontStatus)) return false;
-// Pedidos de mesa/balcão ficam só na tela de mesas (só se tiver mesa vinculada)
-  const origem = String(o.origin || "").toLowerCase();
-  if (origem === "autoatendimento" || origem === "balcao") return false;
-  if (!searchTerm) return true;
+  const filtered = orders.filter((o) => {
+    if (!visibleStatuses.includes(o._frontStatus)) return false;
+    const origem = String(o.origin || "").toLowerCase();
+    if (origem === "autoatendimento" || origem === "balcao") return false;
+    if (!searchTerm) return true;
     const num = String(o.order_number || "").toLowerCase();
     const name = String(o.client_name || "").toLowerCase();
     const notes = String(o.notes || "").toLowerCase();
@@ -1230,41 +1233,32 @@ function renderBoard() {
     return num.includes(searchTerm) || name.includes(searchTerm) || notes.includes(searchTerm) || mesa.includes(searchTerm) || mesaLabel.includes(searchTerm);
   });
 
- // Agrupa pedidos por mesa nas colunas ativas
   const mesasVistas = new Set();
   const statusAtivos = ["recebido", "preparo", "pronto"];
 
   filtered.forEach((o) => {
     const mesa = o.table_number;
-
-    // Se não tem mesa ou não está em coluna ativa → renderiza normalmente
     if (!mesa || !statusAtivos.includes(o._frontStatus)) {
       const card = buildOrderCard(o);
       const col = columns[o._frontStatus];
       col?.appendChild(card);
       return;
     }
-
-    // Agrupa por mesa — só renderiza uma vez por mesa por coluna
     const mesaKey = `${mesa}_${o._frontStatus}`;
     if (mesasVistas.has(mesaKey)) return;
     mesasVistas.add(mesaKey);
-
     const pedidosDaMesa = filtered.filter(p =>
       p.table_number === mesa && p._frontStatus === o._frontStatus
     );
-
     const card = pedidosDaMesa.length > 1
       ? buildMesaCard(pedidosDaMesa)
       : buildOrderCard(o);
-
     const col = columns[o._frontStatus];
     col?.appendChild(card);
   });
 
   toggleNoOrdersBalloons();
 }
-
 function getOriginLabel(origin) {
   const map = {
     ia_whatsapp: "WhatsApp",
