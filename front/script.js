@@ -1223,7 +1223,7 @@ function renderBoard() {
   const filtered = orders.filter((o) => {
     if (!visibleStatuses.includes(o._frontStatus)) return false;
     const origem = String(o.origin || "").toLowerCase();
-    if (origem === "autoatendimento" || origem === "balcao") return false;
+   if ((origem === "autoatendimento" || origem === "balcao") && o.table_number) return false;
     if (!searchTerm) return true;
     const num = String(o.order_number || "").toLowerCase();
     const name = String(o.client_name || "").toLowerCase();
