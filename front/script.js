@@ -585,7 +585,7 @@ function renderMesas() {
     </div>
   `;
 
-  // Inicia timers nos cards com pedidos ainda em recebido
+  // Inicia timers nos cards de mesa usando a mesma lógica do kanban
   mesas.forEach(m => {
     const key = m.tipo === "balcao" ? "balcao" : String(m.numero);
     const pedidosRecebido = orders.filter(o =>
@@ -597,31 +597,18 @@ function renderMesas() {
     );
     if (!pedidosRecebido.length) return;
 
+    const tempoRecebidoRaw = parseFloat(localStorage.getItem("fluxon_tempo_recebido"));
+    const tempoMin = isNaN(tempoRecebidoRaw) ? 1.5 : tempoRecebidoRaw;
+    const LIMIT_MS = tempoMin * 60 * 1000;
+
     const o = pedidosRecebido[0];
-    const LIMIT_MS = 1.5 * 60 * 1000;
 
-    function tickMesa() {
-      const timerEl = document.getElementById(`mesa-timer-${key}`);
-      if (!timerEl) return;
-      const rawDate = o.created_at.includes('Z') || o.created_at.includes('+') ? o.created_at : o.created_at + 'Z';
-      const elapsed = Date.now() - new Date(rawDate).getTime();
-      const remaining = LIMIT_MS - elapsed;
-      if (remaining <= 0) {
-        timerEl.textContent = "✅ Impresso";
-        timerEl.style.color = "rgba(34,197,94,1)";
-        return;
+   // Usa o mesmo startAutoTimer do kanban
+    pedidosRecebido.forEach(p => {
+      if (!_autoTimers[p.id]) {
+        startAutoTimer(p.id, p.created_at);
       }
-      const mins = Math.floor(remaining / 60000);
-      const secs = Math.floor((remaining % 60000) / 1000);
-      timerEl.textContent = `⏱ ${mins}:${String(secs).padStart(2, "0")}`;
-      const pct = remaining / LIMIT_MS;
-      timerEl.style.color = pct > 0.5 ? "rgba(34,197,94,1)" : pct > 0.2 ? "rgba(251,191,36,1)" : "rgba(239,68,68,1)";
-      setTimeout(tickMesa, 1000);
-    }
-    tickMesa();
-  });
-}
-
+    });
         
 function abrirDrawerMesa(key) {
   const existing = document.getElementById("mesa-drawer-modal");
