@@ -3010,6 +3010,37 @@ function toggleAccordion(id) {
   arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
 }
 
+async function checkAndRefreshToken() {
+  const token = localStorage.getItem("fluxon_token");
+  if (!token) return;
+
+  try {
+    // Decodifica o token para ver quando expira
+    const payload = decodeJwt(token);
+    if (!payload?.exp) return;
+
+    const expMs = payload.exp * 1000;
+    const agoraMs = Date.now();
+    const tresHorasMs = 3 * 60 * 60 * 1000;
+
+    // Se falta menos de 3h para expirar, renova
+    if (expMs - agoraMs < tresHorasMs) {
+      console.log("🔄 Renovando token JWT...");
+      const resp = await fetch(`${API_BASE}/auth/refresh`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await resp.json();
+      if (data.token) {
+        localStorage.setItem("fluxon_token", data.token);
+        console.log("✅ Token renovado!");
+      }
+    }
+  } catch(e) {
+    console.error("Erro ao renovar token:", e);
+  }
+}
+
 // ===== INIT =====
 function init() {
   const rid = getRestaurantId();
@@ -3021,8 +3052,9 @@ function init() {
     return;
   }
 
-  loginScreen?.classList.add("hidden");
+ loginScreen?.classList.add("hidden");
   board?.classList.remove("hidden");
+  checkAndRefreshToken(); // ← renova token se necessário
 
   restaurantPlan = localStorage.getItem("restaurant_plan") || "basic";
   applyAccessUI();
