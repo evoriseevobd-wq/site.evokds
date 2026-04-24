@@ -1381,17 +1381,13 @@ function buildMesaCard(pedidos) {
 
 
 function updateSelectionBar() {
-  document.querySelectorAll(".col-action-bar").forEach(b => b.remove());
   document.getElementById("selection-bottom-bar")?.remove();
   
   if (selectedOrderIds.size === 0) return;
 
-  // Calcula total dos pedidos selecionados
   const pedidosSelecionados = [...selectedOrderIds].map(id => orders.find(x => x.id === id)).filter(Boolean);
   const totalGeral = pedidosSelecionados.reduce((s, o) => s + parseFloat(o.total_price || 0), 0);
-  const temNaoLocal = false;
 
-  // Barra no rodapé
   const bar = document.createElement("div");
   bar.id = "selection-bottom-bar";
   bar.style.cssText = `
@@ -1417,29 +1413,17 @@ function updateSelectionBar() {
         font-weight:700; cursor:pointer; font-family:inherit;">
         Cancelar
       </button>
-     <button onclick="advanceSelectedOrders()" style="
-        padding:10px 16px; border-radius:10px; border:1px solid rgba(139,92,246,0.5);
-        background:transparent; color:rgba(139,92,246,0.9); font-size:13px;
+      <button onclick="advanceSelectedOrders()" style="
+        padding:10px 20px; border-radius:10px; border:none;
+        background:rgba(139,92,246,0.9); color:#fff; font-size:13px;
         font-weight:700; cursor:pointer; font-family:inherit;">
         ⏩ Avançar todos
       </button>
-      <button onclick="imprimirResumosSelecionados()" style="
-        padding:10px 16px; border-radius:10px; border:1px solid rgba(249,115,115,0.5);
-        background:transparent; color:rgba(249,115,115,0.9); font-size:13px;
-        font-weight:700; cursor:pointer; font-family:inherit;">
-        🖨️ Imprimir resumos
-      </button>
-      ${!temNaoLocal ? `
-      <button onclick="cobrarJuntos()" style="
-        padding:10px 20px; border-radius:10px; border:none;
-        background:rgba(34,197,94,0.9); color:#fff; font-size:13px;
-        font-weight:700; cursor:pointer; font-family:inherit;">
-        💳 Cobrar juntos ${formatCurrency(totalGeral)}
-      </button>` : ""}
     </div>
   `;
   document.body.appendChild(bar);
 }
+
 function clearSelection() {
   selectedOrderIds.clear();
   document.querySelectorAll(".card-checkbox").forEach(cb => cb.checked = false);
