@@ -1002,15 +1002,39 @@ async function loadSettingsData() {
   } catch (e) {
     console.error("Erro ao carregar maquininha:", e);
   }
-  // Webhook fechamento de caixa
-try {
-  const whFechResp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/webhook-fechamento`);
-  const whFechData = await whFechResp.json();
-  if (whFechData.webhook_url)
-    document.getElementById("settings-webhook-fechamento").value = whFechData.webhook_url;
-} catch (e) {
-  console.error("Erro ao carregar webhook fechamento:", e);
-}
+// Webhook fechamento de caixa
+  try {
+    const whFechResp = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/webhook-fechamento`);
+    const whFechData = await whFechResp.json();
+    if (whFechData.webhook_url)
+      document.getElementById("settings-webhook-fechamento").value = whFechData.webhook_url;
+  } catch (e) {
+    console.error("Erro ao carregar webhook fechamento:", e);
+  }
+
+  // Mesas & Automação — carrega do banco
+  try {
+    const respConfig = await fetch(`${API_BASE}/api/v1/restaurante/${rid}/config`);
+    const dataConfig = await respConfig.json();
+    if (dataConfig.num_mesas) {
+      document.getElementById("settings-num-mesas").value = dataConfig.num_mesas;
+      localStorage.setItem("fluxon_num_mesas", dataConfig.num_mesas);
+    }
+    if (dataConfig.tempo_recebido !== undefined) {
+      document.getElementById("settings-tempo-recebido").value = dataConfig.tempo_recebido;
+      localStorage.setItem("fluxon_tempo_recebido", dataConfig.tempo_recebido);
+    }
+    if (dataConfig.tempo_preparo !== undefined) {
+      document.getElementById("settings-tempo-preparo").value = dataConfig.tempo_preparo;
+      localStorage.setItem("fluxon_tempo_preparo", dataConfig.tempo_preparo);
+    }
+    if (dataConfig.tempo_pronto !== undefined) {
+      document.getElementById("settings-tempo-pronto").value = dataConfig.tempo_pronto;
+      localStorage.setItem("fluxon_tempo_pronto", dataConfig.tempo_pronto);
+    }
+  } catch(e) {
+    console.error("Erro ao carregar config mesas:", e);
+  }
 }
 
 function setupPeriodButtons() {
@@ -2256,7 +2280,8 @@ function _tentarVibrar() {
 
 function startAutoTimer(orderId, createdAt) {
   if (_autoTimers[orderId]) return;
-  const LIMIT_MS = 1.5 * 60 * 1000; // ← muda de 3 para 1.5 min
+  const tempoMin = parseFloat(localStorage.getItem("fluxon_tempo_recebido") ?? "1.5");
+  const LIMIT_MS = tempoMin * 60 * 1000;
 
   function tick() {
    const rawDate = createdAt.includes('Z') || createdAt.includes('+') ? createdAt : createdAt + 'Z';
