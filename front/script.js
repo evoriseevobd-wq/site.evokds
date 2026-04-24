@@ -6770,7 +6770,7 @@ function onMaquininhaChange(tipo) {
     if (el) el.style.display = t === tipo ? 'flex' : 'none';
     });
   }
-}
+
 
 // ===== INICIALIZA =====
 if (document.readyState === 'loading') {
