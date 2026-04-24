@@ -1140,9 +1140,14 @@ try {
     const newOrders = Array.isArray(data) ? data : [];
 
     orders = newOrders.map((o) => ({
-      ...o,
-      _frontStatus: toFrontStatus(o.status),
-    }));
+  ...o,
+  _frontStatus: toFrontStatus(o.status),
+}));
+
+// Remove duplicatas por id
+orders = orders.filter((o, index, self) =>
+  index === self.findIndex(x => x.id === o.id)
+);
 
     if (!crmView?.classList.contains("hidden")) {
       // Não renderiza
