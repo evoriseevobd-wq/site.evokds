@@ -568,7 +568,7 @@ function renderMesas() {
               ${ocupada ? `
               <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
                 ${impresso
-                  ? `<span style="font-size:11px; color:rgba(34,197,94,1); font-weight:700;">✅ Impresso</span>`
+                  ? `<span style="font-size:11px; color:rgba(34,197,94,1); font-weight:700;">✅</span>`
                   : `<span id="mesa-timer-${key}" style="font-size:11px; color:rgba(34,197,94,1); font-weight:700;">⏱ ...</span>`
                 }
                 <span style="font-size:14px; font-weight:900; color:rgba(251,191,36,1);">${formatCurrency(totalMesa)}</span>
