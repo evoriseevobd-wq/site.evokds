@@ -1121,13 +1121,48 @@ app.post("/auth/google", async (req, res) => {
     const token = jwt.sign(
       { restaurant_id: data[0].id, email, plan: data[0].plan },
       process.env.JWT_SECRET,
-      { expiresIn: "12h" }
+     { expiresIn: "1d" }
     );
 
     return res.json({ authorized: true, restaurant: data[0], token });
   } catch (err) {
     console.error("Erro auth:", err);
     return res.status(500).json({ error: "Erro inesperado" });
+  }
+});
+
+app.post("/auth/refresh", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer "))
+      return res.status(401).json({ error: "Token ausente" });
+
+    const token = authHeader.split(" ")[1];
+    let payload;
+    try {
+      payload = jwt.verify(token, process.env.JWT_SECRET);
+    } catch {
+      return res.status(401).json({ error: "Token inválido ou expirado" });
+    }
+
+    const { data, error } = await supabase
+      .from("restaurants")
+      .select("id, plan")
+      .eq("id", payload.restaurant_id)
+      .single();
+
+    if (error || !data)
+      return res.status(403).json({ error: "Restaurante não encontrado" });
+
+    const newToken = jwt.sign(
+      { restaurant_id: data.id, email: payload.email, plan: data.plan },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    return res.json({ success: true, token: newToken });
+  } catch (err) {
+    return res.status(500).json({ error: "Erro interno" });
   }
 });
 
