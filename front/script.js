@@ -2354,6 +2354,15 @@ function startAutoTimer(orderId, createdAt) {
   _autoTimers[orderId] = setInterval(tick, 1000);
 }
 
+const WAIT_THRESHOLDS = {
+  recebido:   null,
+  preparo:    { green: 10, yellow: 15 },
+  pronto:     { green: 14, yellow: 20 },
+  caminho:    { green: 20, yellow: 30 },
+  finalizado: null,
+  cancelado:  null,
+};
+
 function getWaitColor(frontStatus, createdAt) {
   const threshold = WAIT_THRESHOLDS[frontStatus];
   if (!threshold) return null;
