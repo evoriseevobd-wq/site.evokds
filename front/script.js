@@ -738,21 +738,172 @@ function finalizarMesa(key) {
 
 function abrirCriarPedidoMesa(key) {
   const isBalcao = key === "balcao";
-  openCreateModal();
-  // Preenche a mesa automaticamente no campo de notas por enquanto
-  // Quando tiver campo de mesa no modal de criação, ajustar aqui
-  if (!isBalcao) {
-    setTimeout(() => {
-      const notesField = document.getElementById("new-notes");
-      if (notesField && !notesField.value) {
-        notesField.placeholder = `Mesa ${key}`;
-      }
-      // Salva a mesa para ser usada no saveNewOrder
-      window._mesaAtual = key;
-    }, 50);
-  } else {
-    window._mesaAtual = null;
+  const label = isBalcao ? "Balcão" : `Mesa ${key}`;
+
+  const pedidosAtivos = orders.filter(o =>
+    ["recebido", "preparo", "pronto"].includes(o._frontStatus) &&
+    ["autoatendimento", "balcao"].includes(String(o.origin || "").toLowerCase()) &&
+    (isBalcao
+      ? (!o.table_number && o.service_type !== "delivery")
+      : String(o.table_number) === String(key))
+  );
+
+  // Se mesa livre → abre modal de novo pedido normal
+  if (pedidosAtivos.length === 0) {
+    window._mesaAtual = isBalcao ? null : key;
+    openCreateModal();
+    return;
   }
+
+  // Mesa ocupada → modal simplificado de adicionar itens
+  const pedidoExistente = pedidosAtivos[0];
+  const existing = document.getElementById("adicionar-itens-modal");
+  if (existing) existing.remove();
+
+  let itensSelecionados = [];
+
+  const modal = document.createElement("div");
+  modal.id = "adicionar-itens-modal";
+  modal.className = "modal-backdrop open";
+
+  modal.innerHTML = `
+    <div class="modal confirm-modal" style="max-width:480px;">
+      <div class="modal-header">
+        <h3>+ Adicionar Itens — ${label}</h3>
+        <button class="icon-button" onclick="document.getElementById('adicionar-itens-modal').remove()">×</button>
+      </div>
+      <div class="modal-body" style="gap:12px;">
+
+        <div style="position:relative;">
+          <input id="add-itens-search" autocomplete="off" placeholder="Buscar item no cardápio..."
+            style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85);
+            background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
+          <div id="add-itens-dropdown" style="display:none; position:absolute; left:0; right:0; top:48px; z-index:9999;
+            background:rgba(30,6,6,0.98); border:1px solid rgba(91,28,28,0.85); border-radius:12px;
+            max-height:220px; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.6);"></div>
+        </div>
+
+        <div id="add-itens-lista" style="display:flex; flex-direction:column; gap:8px;"></div>
+
+        <label style="color:rgba(252,228,228,0.7); font-size:13px; font-weight:700;">Observações
+          <input id="add-itens-obs" placeholder="Ex: sem cebola, bem passado..."
+            style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px;
+            border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45);
+            color:rgba(252,228,228,1); font-size:13px; outline:none; font-family:inherit;" />
+        </label>
+
+      </div>
+      <div class="modal-actions">
+        <button class="ghost-button" onclick="document.getElementById('adicionar-itens-modal').remove()">Cancelar</button>
+        <button class="primary-button" id="btn-confirmar-adicionar">Adicionar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+
+  function renderItens() {
+    const lista = document.getElementById("add-itens-lista");
+    if (!lista) return;
+    lista.innerHTML = itensSelecionados.map((it, i) => `
+      <div style="display:flex; align-items:center; justify-content:space-between;
+        padding:10px 14px; background:rgba(46,8,8,0.75);
+        border:1px solid rgba(91,28,28,0.85); border-radius:10px;">
+        <span style="font-size:14px; font-weight:700; color:rgba(252,228,228,0.95); flex:1;">${escapeHtml(it.name)}</span>
+        <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+          <button onclick="window._addQty(${i}, -1)" style="background:none; border:none; color:rgba(252,228,228,0.5); font-size:18px; cursor:pointer; padding:0 4px;">−</button>
+          <span style="font-size:14px; font-weight:800; min-width:20px; text-align:center;">${it.qty}</span>
+          <button onclick="window._addQty(${i}, 1)" style="background:none; border:none; color:rgba(252,228,228,0.5); font-size:18px; cursor:pointer; padding:0 4px;">+</button>
+          ${it.price > 0 ? `<span style="color:rgba(251,191,36,0.85); font-size:13px; font-weight:700; min-width:60px; text-align:right;">${formatCurrency(it.price * it.qty)}</span>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  window._addQty = function(index, delta) {
+    itensSelecionados[index].qty += delta;
+    if (itensSelecionados[index].qty <= 0) itensSelecionados.splice(index, 1);
+    renderItens();
+  };
+
+  // Autocomplete
+  let timer = null;
+  const searchInput = document.getElementById("add-itens-search");
+  const dropdown = document.getElementById("add-itens-dropdown");
+
+  searchInput?.addEventListener("input", () => {
+    clearTimeout(timer);
+    const q = searchInput.value.trim();
+    if (q.length < 1) { dropdown.style.display = 'none'; return; }
+    timer = setTimeout(async () => {
+      const rid = getRestaurantId();
+      try {
+        const qNorm = q.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        const resp = await fetch(`${API_BASE}/api/v1/cardapio/${rid}/busca?q=${encodeURIComponent(qNorm)}`);
+        const itens = await resp.json();
+        if (!itens.length) { dropdown.style.display = 'none'; return; }
+        dropdown.innerHTML = itens.map(it => `
+          <div onclick="window._addItem(${JSON.stringify(it).replace(/"/g, '&quot;')})"
+            style="padding:12px 16px; cursor:pointer; border-bottom:1px solid rgba(91,28,28,0.4);
+            display:flex; justify-content:space-between; align-items:center;"
+            onmouseover="this.style.background='rgba(91,28,28,0.5)'"
+            onmouseout="this.style.background='transparent'">
+            <span style="color:rgba(252,228,228,0.95); font-weight:700; font-size:14px;">${it.nome}</span>
+            <span style="color:rgba(251,191,36,0.9); font-weight:800; font-size:13px;">${formatCurrency(it.preco)}</span>
+          </div>
+        `).join('');
+        dropdown.style.display = 'block';
+      } catch(e) { dropdown.style.display = 'none'; }
+    }, 250);
+  });
+
+  window._addItem = function(item) {
+    const existente = itensSelecionados.find(i => i.name === item.nome);
+    if (existente) {
+      existente.qty++;
+    } else {
+      itensSelecionados.push({ name: item.nome, qty: 1, price: parseFloat(item.preco || 0), quantidade: 1 });
+    }
+    searchInput.value = '';
+    dropdown.style.display = 'none';
+    renderItens();
+  };
+
+  // Confirmar
+  document.getElementById("btn-confirmar-adicionar")?.addEventListener("click", async () => {
+    if (!itensSelecionados.length) { alert("Adicione pelo menos um item."); return; }
+    const obs = document.getElementById("add-itens-obs")?.value.trim() || "";
+    const total = itensSelecionados.reduce((s, i) => s + i.price * i.qty, 0);
+    const btn = document.getElementById("btn-confirmar-adicionar");
+    btn.disabled = true;
+    btn.textContent = "Enviando...";
+
+    try {
+      const resp = await fetch(`${API_BASE}/api/v1/pedidos/${pedidoExistente.id}/adicionar-itens`, {
+        method: "PATCH",
+        headers: buildHeaders(),
+        body: JSON.stringify({
+          itens_novos: itensSelecionados.map(i => ({
+            name: i.name, nome: i.name,
+            qty: i.qty, quantidade: i.qty,
+            price: i.price, preco: i.price
+          })),
+          total_adicional: total,
+          notes: obs || null
+        })
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Erro ao adicionar itens");
+      modal.remove();
+      await fetchOrders();
+      renderMesas();
+    } catch(e) {
+      alert("Erro ao adicionar itens: " + e.message);
+      btn.disabled = false;
+      btn.textContent = "Adicionar";
+    }
+  });
 }
 
 async function loadSettingsData() {
