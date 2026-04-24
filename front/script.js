@@ -1381,53 +1381,39 @@ function buildMesaCard(pedidos) {
 
 
 function updateSelectionBar() {
-  document.querySelectorAll(".col-action-bar").forEach(b => b.remove());
   document.getElementById("selection-bottom-bar")?.remove();
   
   if (selectedOrderIds.size === 0) return;
 
-  const pedidosSelecionados = [...selectedOrderIds].map(id => orders.find(x => x.id === id)).filter(Boolean);
-  const totalGeral = pedidosSelecionados.reduce((s, o) => s + parseFloat(o.total_price || 0), 0);
+  // Mostra botão avançar em cada card selecionado
+  selectedOrderIds.forEach(id => {
+    const card = document.querySelector(`.order-card[data-id="${id}"]`);
+    if (!card) return;
+    if (card.querySelector(".btn-avancar-card")) return;
 
-  const bar = document.createElement("div");
-  bar.id = "selection-bottom-bar";
-  bar.style.cssText = `
-    position:fixed; bottom:0; left:0; right:0; z-index:999;
-    background:rgba(20,3,3,0.97); border-top:1px solid rgba(91,28,28,0.85);
-    padding:14px 24px; display:flex; align-items:center; justify-content:space-between;
-    gap:12px; flex-wrap:wrap;
-    box-shadow:0 -4px 24px rgba(0,0,0,0.4);
-  `;
-  bar.innerHTML = `
-    <div style="display:flex; align-items:center; gap:12px;">
-      <span style="color:rgba(252,228,228,0.6); font-size:13px; font-weight:700;">
-        ${selectedOrderIds.size} pedido(s) selecionado(s)
-      </span>
-      <span style="color:rgba(251,191,36,1); font-size:16px; font-weight:900;">
-        ${formatCurrency(totalGeral)}
-      </span>
-    </div>
-    <div style="display:flex; gap:10px;">
-      <button onclick="clearSelection()" style="
-        padding:10px 16px; border-radius:10px; border:1px solid rgba(91,28,28,0.85);
-        background:transparent; color:rgba(252,228,228,0.6); font-size:13px;
-        font-weight:700; cursor:pointer; font-family:inherit;">
-        Cancelar
-      </button>
-      <button onclick="advanceSelectedOrders()" style="
-        padding:10px 20px; border-radius:10px; border:none;
-        background:rgba(139,92,246,0.9); color:#fff; font-size:13px;
-        font-weight:700; cursor:pointer; font-family:inherit;">
-        ⏩ Avançar todos
-      </button>
-    </div>
-  `;
-  document.body.appendChild(bar);
+    const btn = document.createElement("button");
+    btn.className = "btn-avancar-card";
+    btn.textContent = "⏩ Avançar";
+    btn.style.cssText = `
+      position:absolute; bottom:10px; left:10px;
+      padding:5px 12px; border-radius:8px; border:none;
+      background:rgba(139,92,246,0.9); color:#fff;
+      font-size:11px; font-weight:700; cursor:pointer;
+      font-family:inherit; z-index:10;
+    `;
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      advanceSelectedOrders();
+    };
+    card.style.position = "relative";
+    card.appendChild(btn);
+  });
 }
 
 function clearSelection() {
   selectedOrderIds.clear();
   document.querySelectorAll(".card-checkbox").forEach(cb => cb.checked = false);
+  document.querySelectorAll(".btn-avancar-card").forEach(btn => btn.remove());
   document.getElementById("selection-bottom-bar")?.remove();
 }
 
