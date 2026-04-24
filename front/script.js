@@ -2355,7 +2355,8 @@ function updateCreateDeliveryVisibility() {
 function openCreateModal(e) {
   if (e) { e.stopPropagation(); e.preventDefault(); }
   closeDrawer();
-  saveCreateBtn.dataset.editOrderId = ""; // ← só limpa ao abrir como NOVO
+  editingOrderId = null; // ← limpa o ID de edição
+  saveCreateBtn.dataset.editOrderId = "";
   openBackdrop(createModal);
   updateCreateDeliveryVisibility();
 }
