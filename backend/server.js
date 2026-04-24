@@ -66,7 +66,52 @@ function emitOrderUpdate(restaurant_id, order) {
   io.to(restaurant_id).emit("order_updated", order);
 }
 
-app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'], allowedHeaders: ['Content-Type', 'Authorization'] }));
+const ALLOWED_ORIGINS_FIXED = [
+  'https://fluxon.evoriseai.com.br',
+  'https://n8n-front.dahead.easypanel.host',
+];
+
+let _dominiosCache = null;
+let _dominiosCacheTime = 0;
+
+async function getDominiosPermitidos() {
+  const agora = Date.now();
+  if (_dominiosCache && agora - _dominiosCacheTime < 5 * 60 * 1000) {
+    return _dominiosCache;
+  }
+  try {
+    const { data } = await supabase
+      .from("restaurants")
+      .select("cardapio_url, fidelidade_url, tracking_url, cardapio_delivery_url");
+    
+    const dominios = new Set(ALLOWED_ORIGINS_FIXED);
+    (data || []).forEach(r => {
+      if (r.cardapio_url) dominios.add(`https://${r.cardapio_url.replace(/^https?:\/\//, '')}`);
+      if (r.fidelidade_url) dominios.add(`https://${r.fidelidade_url.replace(/^https?:\/\//, '')}`);
+      if (r.tracking_url) dominios.add(`https://${r.tracking_url.replace(/^https?:\/\//, '')}`);
+      if (r.cardapio_delivery_url) dominios.add(`https://${r.cardapio_delivery_url.replace(/^https?:\/\//, '')}`);
+    });
+    
+    _dominiosCache = [...dominios];
+    _dominiosCacheTime = agora;
+    return _dominiosCache;
+  } catch(e) {
+    console.error("Erro ao buscar domínios:", e);
+    return ALLOWED_ORIGINS_FIXED;
+  }
+}
+
+app.use(cors({
+  origin: async (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const permitidos = await getDominiosPermitidos();
+    if (permitidos.includes(origin)) return callback(null, true);
+    console.warn(`🚫 CORS bloqueado: ${origin}`);
+    return callback(new Error(`CORS: origem não permitida: ${origin}`));
+  },
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
