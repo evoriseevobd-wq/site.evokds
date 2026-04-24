@@ -3656,6 +3656,7 @@ socket.on("connect", () => {
   }
 });
 
+let _renderDebounce = null;
 socket.on("order_updated", (order) => {
   const idx = orders.findIndex(o => o.id === order.id);
   if (idx !== -1) {
@@ -3667,7 +3668,8 @@ socket.on("order_updated", (order) => {
     }
   }
   if (!modalBackdrop?.classList.contains("open") && !createModal?.classList.contains("open")) {
-    renderBoard();
+    clearTimeout(_renderDebounce);
+    _renderDebounce = setTimeout(() => renderBoard(), 300);
   }
   // Atualiza tela de mesas em tempo real
   if (!document.getElementById("mesas-view")?.classList.contains("hidden")) {
