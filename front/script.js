@@ -2154,7 +2154,7 @@ async function imprimirResumosSelecionados() {
             body: JSON.stringify({ status: "finished" })
           });
           // Imprime resumo automaticamente ao finalizar
-          await imprimirResumo(o.id);
+try { await imprimirResumo(o.id); } catch(e) {}
         }
         modal.remove();
         clearSelection();
