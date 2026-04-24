@@ -1389,7 +1389,7 @@ function updateSelectionBar() {
   // Calcula total dos pedidos selecionados
   const pedidosSelecionados = [...selectedOrderIds].map(id => orders.find(x => x.id === id)).filter(Boolean);
   const totalGeral = pedidosSelecionados.reduce((s, o) => s + parseFloat(o.total_price || 0), 0);
-  const temNaoLocal = pedidosSelecionados.some(o => String(o.service_type || "").toLowerCase() === "delivery");
+  const temNaoLocal = false;
 
   // Barra no rodapé
   const bar = document.createElement("div");
