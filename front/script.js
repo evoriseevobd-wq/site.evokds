@@ -1304,7 +1304,7 @@ ${order.origin === "fidelidade"
   : order.origin ? `<div class="order-origin-tag">${getOriginLabel(order.origin)}</div>` : ""}
   <div class="card-checkbox-wrap" onclick="event.stopPropagation()">
     <input type="checkbox" class="card-checkbox" data-id="${order.id}"
-      onchange="toggleCardSelection('${order.id}', this.checked)" />
+      onchange="selectedOrderIds[this.checked ? 'add' : 'delete']('${order.id}'); updateSelectionBar();" />
   </div>
   `;
 
