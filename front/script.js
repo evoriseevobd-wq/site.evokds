@@ -2280,12 +2280,42 @@ function _tentarVibrar() {
 
 function startAutoTimer(orderId, createdAt) {
   if (_autoTimers[orderId]) return;
-  const tempoMin = parseFloat(localStorage.getItem("fluxon_tempo_recebido") ?? "1.5");
-  const LIMIT_MS = tempoMin * 60 * 1000;
+
+  const tempoRecebido = parseFloat(localStorage.getItem("fluxon_tempo_recebido") ?? "1.5");
+  const tempoPreparo = parseFloat(localStorage.getItem("fluxon_tempo_preparo") ?? "0");
+  const tempoProto = parseFloat(localStorage.getItem("fluxon_tempo_pronto") ?? "0");
+
+  const order = orders.find(o => o.id === orderId);
+  if (!order) return;
+
+  // Decide o tempo limite baseado no status atual
+  let LIMIT_MS = 0;
+  if (order._frontStatus === "recebido") {
+    if (tempoRecebido <= 0) {
+      // Imprime imediatamente
+      tocarBip();
+      if (order.table_number) {
+        orders.filter(o => o.table_number === order.table_number && o._frontStatus === "recebido")
+          .forEach(p => updateOrderStatus(p.id, "preparo"));
+      } else {
+        updateOrderStatus(orderId, "preparo");
+      }
+      return;
+    }
+    LIMIT_MS = tempoRecebido * 60 * 1000;
+  } else if (order._frontStatus === "preparo") {
+    if (tempoPreparo <= 0) return;
+    LIMIT_MS = tempoPreparo * 60 * 1000;
+  } else if (order._frontStatus === "pronto") {
+    if (tempoProto <= 0) return;
+    LIMIT_MS = tempoProto * 60 * 1000;
+  } else {
+    return;
+  }
 
   function tick() {
-   const rawDate = createdAt.includes('Z') || createdAt.includes('+') ? createdAt : createdAt + 'Z';
-const elapsed = Date.now() - new Date(rawDate).getTime();
+    const rawDate = createdAt.includes('Z') || createdAt.includes('+') ? createdAt : createdAt + 'Z';
+    const elapsed = Date.now() - new Date(rawDate).getTime();
     const remaining = LIMIT_MS - elapsed;
     const el = document.getElementById(`timer-${orderId}`);
     if (!el) { clearInterval(_autoTimers[orderId]); delete _autoTimers[orderId]; return; }
@@ -2295,21 +2325,25 @@ const elapsed = Date.now() - new Date(rawDate).getTime();
       delete _autoTimers[orderId];
       el.textContent = "⏰ 0:00";
       el.style.color = "rgba(239,68,68,1)";
-      const order = orders.find(o => o.id === orderId);
-if (order && order._frontStatus === "recebido") {
-  tocarBip();
-  // Avança todos os pedidos da mesma mesa juntos
-  if (order.table_number) {
-    const pedidosDaMesa = orders.filter(o => 
-      o.table_number === order.table_number && 
-      o._frontStatus === "recebido"
-    );
-    pedidosDaMesa.forEach(p => updateOrderStatus(p.id, 'preparo'));
-  } else {
-    updateOrderStatus(orderId, 'preparo');
-  }
-}
-      
+
+      const currentOrder = orders.find(o => o.id === orderId);
+      if (!currentOrder) return;
+
+      tocarBip();
+
+      if (currentOrder._frontStatus === "recebido") {
+        if (currentOrder.table_number) {
+          orders.filter(o => o.table_number === currentOrder.table_number && o._frontStatus === "recebido")
+            .forEach(p => updateOrderStatus(p.id, "preparo"));
+        } else {
+          updateOrderStatus(orderId, "preparo");
+        }
+      } else if (currentOrder._frontStatus === "preparo") {
+        updateOrderStatus(orderId, "pronto");
+      } else if (currentOrder._frontStatus === "pronto") {
+        const isDelivery = String(currentOrder.service_type || "").toLowerCase() === "delivery";
+        updateOrderStatus(orderId, isDelivery ? "caminho" : "finalizado");
+      }
       return;
     }
 
@@ -2325,16 +2359,6 @@ if (order && order._frontStatus === "recebido") {
   tick();
   _autoTimers[orderId] = setInterval(tick, 1000);
 }
-
-// ===== SEMÁFORO DE ESPERA POR COLUNA =====
-const WAIT_THRESHOLDS = {
-  recebido:   null,
-  preparo:    { green: 10, yellow: 15 },
-  pronto:     { green: 14, yellow: 20 },
-  caminho:    { green: 20, yellow: 30 },
-  finalizado: null,
-  cancelado:  null,
-};
 
 function getWaitColor(frontStatus, createdAt) {
   const threshold = WAIT_THRESHOLDS[frontStatus];
