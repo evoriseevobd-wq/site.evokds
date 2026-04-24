@@ -6768,7 +6768,8 @@ function onMaquininhaChange(tipo) {
   todos.forEach(t => {
     const el = document.getElementById(`fields-${t}`);
     if (el) el.style.display = t === tipo ? 'flex' : 'none';
-  });
+    });
+  }
 }
 
 // ===== INICIALIZA =====
