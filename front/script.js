@@ -1381,6 +1381,7 @@ function buildMesaCard(pedidos) {
 
 
 function updateSelectionBar() {
+  document.querySelectorAll(".col-action-bar").forEach(b => b.remove());
   document.getElementById("selection-bottom-bar")?.remove();
   
   if (selectedOrderIds.size === 0) return;
