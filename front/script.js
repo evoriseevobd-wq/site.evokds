@@ -498,9 +498,10 @@ function showSettings() {
   crmView?.classList.add("hidden");
   resultsView?.classList.add("hidden");
   document.getElementById("autoatendimento-view")?.classList.add("hidden");
+  document.getElementById("mesas-view")?.classList.add("hidden");
   document.getElementById("settings-view")?.classList.remove("hidden");
-  document.getElementById("fidelidade-view")?.classList.add("hidden");  // adiciona
-  document.getElementById("cardapio-view")?.classList.add("hidden");    // adiciona
+  document.getElementById("fidelidade-view")?.classList.add("hidden");
+  document.getElementById("cardapio-view")?.classList.add("hidden");
   document.getElementById("tabs-bar")?.classList.add("hidden");
   hideTabsBar();
   closeDrawer();
