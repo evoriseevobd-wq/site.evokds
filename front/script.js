@@ -2145,11 +2145,17 @@ async function imprimirResumosSelecionados() {
             headers: buildHeaders(),
             body: JSON.stringify({ status: "finished" })
           });
+          // Imprime resumo automaticamente ao finalizar
+          await imprimirResumo(o.id);
         }
         modal.remove();
         clearSelection();
         await fetchOrders();
         renderBoard();
+        // Atualiza tela de mesas se estiver visível
+        if (!document.getElementById("mesas-view")?.classList.contains("hidden")) {
+          renderMesas();
+        }
       } catch(err) {
         console.error("Erro ao finalizar:", err);
         confirmBtn.disabled = false;
