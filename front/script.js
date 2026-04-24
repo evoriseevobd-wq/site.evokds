@@ -749,10 +749,18 @@ function abrirCriarPedidoMesa(key) {
       : String(o.table_number) === String(key))
   );
 
-  // Se mesa livre → abre modal de novo pedido normal
+ // Se mesa livre → abre modal simplificado sem delivery
   if (pedidosAtivos.length === 0) {
     window._mesaAtual = isBalcao ? null : key;
     openCreateModal();
+    // Esconde o campo de delivery pois é pedido de mesa
+    setTimeout(() => {
+      const deliveryWrap = document.getElementById("delivery-address-wrap");
+      const newDeliveryCheck = document.getElementById("new-delivery");
+      const deliveryLabel = newDeliveryCheck?.closest("div[style]");
+      if (newDeliveryCheck) newDeliveryCheck.checked = false;
+      if (deliveryLabel) deliveryLabel.style.display = "none";
+    }, 50);
     return;
   }
 
