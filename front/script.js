@@ -401,6 +401,7 @@ function showBoard() {
   showTabsBar();
   document.getElementById("tabs-bar")?.classList.remove("hidden");
   closeDrawer();
+  document.getElementById("open-create")?.classList.remove("hidden"); 
   renderBoard();
 }
 
@@ -516,6 +517,7 @@ function showMesas() {
   document.getElementById("fidelidade-view")?.classList.add("hidden");
   document.getElementById("mesas-view")?.classList.remove("hidden");
   document.getElementById("tabs-bar")?.classList.add("hidden");
+  document.getElementById("open-create")?.classList.add("hidden");
   hideTabsBar();
   closeDrawer();
   renderMesas();
@@ -524,10 +526,7 @@ function showMesas() {
 function renderMesas() {
   const content = document.getElementById("mesas-content");
   if (!content) return;
-
   const numMesas = parseInt(localStorage.getItem("fluxon_num_mesas") || "10");
-
-  // Gera lista de mesas + balcão
   const mesas = [];
   for (let i = 1; i <= numMesas; i++) mesas.push({ tipo: "mesa", numero: i });
   mesas.push({ tipo: "balcao", numero: null });
@@ -538,49 +537,85 @@ function renderMesas() {
         const label = m.tipo === "balcao" ? "Balcão" : `Mesa ${m.numero}`;
         const key = m.tipo === "balcao" ? "balcao" : String(m.numero);
         const pedidosAtivos = orders.filter(o =>
-  ["recebido", "preparo", "pronto"].includes(o._frontStatus) &&
-  ["autoatendimento", "balcao"].includes(String(o.origin || "").toLowerCase()) &&
-  (m.tipo === "balcao"
-    ? (!o.table_number && o.service_type !== "delivery")
-    : String(o.table_number) === String(m.numero))
-);
+          ["recebido", "preparo", "pronto"].includes(o._frontStatus) &&
+          ["autoatendimento", "balcao"].includes(String(o.origin || "").toLowerCase()) &&
+          (m.tipo === "balcao"
+            ? (!o.table_number && o.service_type !== "delivery")
+            : String(o.table_number) === String(m.numero))
+        );
         const ocupada = pedidosAtivos.length > 0;
         const totalMesa = pedidosAtivos.reduce((s, o) => s + parseFloat(o.total_price || 0), 0);
+        const impresso = pedidosAtivos.length > 0 && pedidosAtivos.every(o => o._frontStatus !== "recebido");
 
-       return `
-  <div onclick="abrirDrawerMesa('${key}')" style="
-    background:${ocupada ? 'rgba(249,115,115,0.15)' : 'rgba(46,8,8,0.45)'};
-    border:1.5px solid ${ocupada ? 'rgba(249,115,115,0.6)' : 'rgba(91,28,28,0.85)'};
-    border-radius:14px; padding:14px 16px;
-    cursor:pointer; transition:all 0.2s;
-    display:flex; flex-direction:column;
-    min-height:110px; justify-content:space-between;
-    position:relative;
-  "
-  onmouseover="this.style.borderColor='rgba(252,228,228,0.4)'"
-  onmouseout="this.style.borderColor='${ocupada ? 'rgba(249,115,115,0.6)' : 'rgba(91,28,28,0.85)'}'">
-
-    <!-- TOPO: nome da mesa -->
-    <div style="font-size:16px; font-weight:900; color:rgba(252,228,228,1); letter-spacing:-0.02em;">${label}</div>
-
-    <!-- BOTTOM -->
-    <div style="display:flex; flex-direction:column; gap:4px; margin-top:8px;">
-      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
-        color:${ocupada ? 'rgba(249,115,115,0.9)' : 'rgba(252,228,228,0.3)'};">
-        ${ocupada ? `Ocupada · ${pedidosAtivos.length} pedido(s)` : 'Livre'}
-      </div>
-      ${ocupada ? `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
-        <span style="font-size:11px; color:rgba(252,228,228,0.3); font-weight:600;">⏱ em andamento</span>
-        <span style="font-size:14px; font-weight:900; color:rgba(251,191,36,1);">${formatCurrency(totalMesa)}</span>
-      </div>
-      ` : ''}
-    </div>
-  </div>
-`;
+        return `
+          <div onclick="abrirDrawerMesa('${key}')" style="
+            background:${ocupada ? 'rgba(249,115,115,0.15)' : 'rgba(46,8,8,0.45)'};
+            border:1.5px solid ${ocupada ? 'rgba(249,115,115,0.6)' : 'rgba(91,28,28,0.85)'};
+            border-radius:14px; padding:14px 16px;
+            cursor:pointer; transition:all 0.2s;
+            display:flex; flex-direction:column;
+            min-height:110px; justify-content:space-between;
+            position:relative;
+          "
+          onmouseover="this.style.borderColor='rgba(252,228,228,0.4)'"
+          onmouseout="this.style.borderColor='${ocupada ? 'rgba(249,115,115,0.6)' : 'rgba(91,28,28,0.85)'}'">
+            <div style="font-size:16px; font-weight:900; color:rgba(252,228,228,1); letter-spacing:-0.02em;">${label}</div>
+            <div style="display:flex; flex-direction:column; gap:4px; margin-top:8px;">
+              <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
+                color:${ocupada ? 'rgba(249,115,115,0.9)' : 'rgba(252,228,228,0.3)'};">
+                ${ocupada ? `Ocupada · ${pedidosAtivos.length} pedido(s)` : 'Livre'}
+              </div>
+              ${ocupada ? `
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                ${impresso
+                  ? `<span style="font-size:11px; color:rgba(34,197,94,1); font-weight:700;">✅ Impresso</span>`
+                  : `<span id="mesa-timer-${key}" style="font-size:11px; color:rgba(34,197,94,1); font-weight:700;">⏱ ...</span>`
+                }
+                <span style="font-size:14px; font-weight:900; color:rgba(251,191,36,1);">${formatCurrency(totalMesa)}</span>
+              </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
       }).join('')}
     </div>
   `;
+
+  // Inicia timers nos cards com pedidos ainda em recebido
+  mesas.forEach(m => {
+    const key = m.tipo === "balcao" ? "balcao" : String(m.numero);
+    const pedidosRecebido = orders.filter(o =>
+      o._frontStatus === "recebido" &&
+      ["autoatendimento", "balcao"].includes(String(o.origin || "").toLowerCase()) &&
+      (m.tipo === "balcao"
+        ? (!o.table_number && o.service_type !== "delivery")
+        : String(o.table_number) === String(m.numero))
+    );
+    if (!pedidosRecebido.length) return;
+
+    const o = pedidosRecebido[0];
+    const LIMIT_MS = 1.5 * 60 * 1000;
+
+    function tickMesa() {
+      const timerEl = document.getElementById(`mesa-timer-${key}`);
+      if (!timerEl) return;
+      const rawDate = o.created_at.includes('Z') || o.created_at.includes('+') ? o.created_at : o.created_at + 'Z';
+      const elapsed = Date.now() - new Date(rawDate).getTime();
+      const remaining = LIMIT_MS - elapsed;
+      if (remaining <= 0) {
+        timerEl.textContent = "✅ Impresso";
+        timerEl.style.color = "rgba(34,197,94,1)";
+        return;
+      }
+      const mins = Math.floor(remaining / 60000);
+      const secs = Math.floor((remaining % 60000) / 1000);
+      timerEl.textContent = `⏱ ${mins}:${String(secs).padStart(2, "0")}`;
+      const pct = remaining / LIMIT_MS;
+      timerEl.style.color = pct > 0.5 ? "rgba(34,197,94,1)" : pct > 0.2 ? "rgba(251,191,36,1)" : "rgba(239,68,68,1)";
+      setTimeout(tickMesa, 1000);
+    }
+    tickMesa();
+  });
 }
 
         
