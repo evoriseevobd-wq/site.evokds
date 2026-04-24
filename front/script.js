@@ -1489,6 +1489,7 @@ function toggleNoOrdersBalloons() {
       const cb = document.querySelector(`.card-checkbox[data-id="${id}"]`);
       if (cb) cb.checked = true;
     });
+    if (selectedOrderIds.size > 0) updateSelectionBar();
   }
 }
 
