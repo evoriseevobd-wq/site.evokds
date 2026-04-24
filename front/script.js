@@ -2289,10 +2289,25 @@ function startAutoTimer(orderId, createdAt) {
   const tempoPreparo = isNaN(tempoPreparoRaw) ? 20 : tempoPreparoRaw;
   const tempoProto = isNaN(tempoProtoRaw) ? 15 : tempoProtoRaw;
 
-  const LIMIT_MS = tempoRecebido * 60 * 1000;
+  const order = orders.find(o => o.id === orderId);
+  if (!order) return;
+
+  // Usa o timestamp da etapa atual para calcular o tempo decorrido
+  let etapaInicio = createdAt;
+  let LIMIT_MS = tempoRecebido * 60 * 1000;
+
+  if (order._frontStatus === "preparo") {
+    etapaInicio = order.preparing_at || createdAt;
+    LIMIT_MS = tempoPreparo * 60 * 1000;
+    if (tempoPreparo <= 0) return;
+  } else if (order._frontStatus === "pronto") {
+    etapaInicio = order.mounting_at || createdAt;
+    LIMIT_MS = tempoProto * 60 * 1000;
+    if (tempoProto <= 0) return;
+  }
 
   function tick() {
-    const rawDate = createdAt.includes('Z') || createdAt.includes('+') ? createdAt : createdAt + 'Z';
+    const rawDate = etapaInicio.includes('Z') || etapaInicio.includes('+') ? etapaInicio : etapaInicio + 'Z';
     const elapsed = Date.now() - new Date(rawDate).getTime();
     const remaining = LIMIT_MS - elapsed;
     const el = document.getElementById(`timer-${orderId}`);
@@ -2304,29 +2319,24 @@ function startAutoTimer(orderId, createdAt) {
       el.textContent = "⏰ 0:00";
       el.style.color = "rgba(239,68,68,1)";
 
-      const order = orders.find(o => o.id === orderId);
-      if (order && order._frontStatus === "recebido") {
+      const currentOrder = orders.find(o => o.id === orderId);
+      if (!currentOrder) return;
+
+      if (currentOrder._frontStatus === "recebido") {
         tocarBip();
-        if (order.table_number) {
-          const pedidosDaMesa = orders.filter(o =>
-            o.table_number === order.table_number &&
-            o._frontStatus === "recebido"
-          );
-          pedidosDaMesa.forEach(p => updateOrderStatus(p.id, 'preparo'));
+        if (currentOrder.table_number) {
+          orders.filter(o => o.table_number === currentOrder.table_number && o._frontStatus === "recebido")
+            .forEach(p => updateOrderStatus(p.id, 'preparo'));
         } else {
           updateOrderStatus(orderId, 'preparo');
         }
-      } else if (order && order._frontStatus === "preparo") {
-        if (tempoPreparo > 0) {
-          tocarBip();
-          updateOrderStatus(orderId, 'pronto');
-        }
-      } else if (order && order._frontStatus === "pronto") {
-        if (tempoProto > 0) {
-          tocarBip();
-          const isDelivery = String(order.service_type || "").toLowerCase() === "delivery";
-          updateOrderStatus(orderId, isDelivery ? "caminho" : "finalizado");
-        }
+      } else if (currentOrder._frontStatus === "preparo") {
+        tocarBip();
+        updateOrderStatus(orderId, 'pronto');
+      } else if (currentOrder._frontStatus === "pronto") {
+        tocarBip();
+        const isDelivery = String(currentOrder.service_type || "").toLowerCase() === "delivery";
+        updateOrderStatus(orderId, isDelivery ? "caminho" : "finalizado");
       }
       return;
     }
