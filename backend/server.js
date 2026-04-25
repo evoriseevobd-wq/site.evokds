@@ -12,6 +12,22 @@ import { Server } from "socket.io";
 
 dotenv.config();
 
+const _impressoraCache = {};
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+async function getIntegracaoComCache(restaurant_id, tipo) {
+  const key = `${restaurant_id}_${tipo}`;
+  const agora = Date.now();
+  
+  if (_impressoraCache[key] && agora - _impressoraCache[key].ts < CACHE_TTL) {
+    return _impressoraCache[key].dados;
+  }
+  
+  const dados = await getIntegracao(restaurant_id, tipo);
+  _impressoraCache[key] = { dados, ts: agora };
+  return dados;
+}
+
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -760,7 +776,7 @@ app.patch("/api/v1/pedidos/:id/adicionar-itens", async (req, res) => {
 
     // ✅ Imprime SÓ os itens novos
     try {
-      const config = await getIntegracao(pedidoAtualizado.restaurant_id, "printnode");
+     const config = await getIntegracaoComCache(pedidoAtualizado.restaurant_id, "printnode");
       if (config?.api_key && Array.isArray(config?.impressoras) && config.impressoras.length > 0) {
         const impressorasSemCaixa = config.impressoras.filter(
           i => !toBool(i.is_caixa) && !toBool(i.caixa) && i.printer_id
@@ -836,7 +852,7 @@ if (status === "preparing") {
     console.log(`🔍 Pedido #${data.order_number} — primeira vez em preparo: ${isPrimeiraVez}`);
 
     if (isPrimeiraVez) {
-      const config = await getIntegracao(data.restaurant_id, "printnode");
+      const config = await getIntegracaoComCache(data.restaurant_id, "printnode");
       console.log(`🔍 Config printnode:`, config ? `ok, ${config.impressoras?.length} impressoras` : "NULL");
 
       if (config?.api_key && Array.isArray(config?.impressoras) && config.impressoras.length > 0) {
@@ -2694,7 +2710,7 @@ const is_caixa = toBool(impressora.is_caixa) || toBool(impressora.caixa);
 app.post("/api/v1/restaurante/:restaurant_id/impressora/teste", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
-    const data = await getIntegracao(restaurant_id, "printnode");
+   const data = await getIntegracaoComCache(restaurant_id, "printnode");
     if (!data?.api_key || !Array.isArray(data?.impressoras) || data.impressoras.length === 0)
       return sendError(res, 400, "Impressora não configurada");
 
@@ -2730,7 +2746,7 @@ app.post("/api/v1/restaurante/:restaurant_id/imprimir-pedido", async (req, res) 
 
     if (!order_id) return sendError(res, 400, "order_id é obrigatório");
 
-    const config = await getIntegracao(restaurant_id, "printnode");
+    const config = await getIntegracaoComCache(restaurant_id, "printnode");
     if (!config?.api_key) return sendError(res, 400, "Impressora não configurada");
 
     const { data: order, error: orderError } = await supabase
@@ -2755,7 +2771,7 @@ app.post("/api/v1/restaurante/:restaurant_id/reimprimir-pedido", async (req, res
     const { restaurant_id } = req.params;
     const { order_id } = req.body;
     if (!order_id) return sendError(res, 400, "order_id é obrigatório");
-    const config = await getIntegracao(restaurant_id, "printnode");
+    const config = await getIntegracaoComCache(restaurant_id, "printnode");
     if (!config?.api_key) return sendError(res, 400, "Impressora não configurada");
     const { data: order, error: orderError } = await supabase
       .from("orders").select("*").eq("id", order_id).single();
