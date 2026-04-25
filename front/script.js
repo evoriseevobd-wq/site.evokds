@@ -441,6 +441,7 @@ function showCardapio() {
   resultsView?.classList.add("hidden");
   document.getElementById("settings-view")?.classList.add("hidden");
   document.getElementById("autoatendimento-view")?.classList.add("hidden");
+  document.getElementById("mesas-view")?.classList.add("hidden");
   document.getElementById("fidelidade-view")?.classList.add("hidden");
   document.getElementById("cardapio-view")?.classList.remove("hidden");
   hideTabsBar();
