@@ -519,6 +519,15 @@ function showMesas() {
 function renderMesas() {
   const content = document.getElementById("mesas-content");
   if (!content) return;
+
+  const styleEl = document.getElementById('mesa-pulse-style') || document.createElement('style');
+  styleEl.id = 'mesa-pulse-style';
+  styleEl.textContent = '@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.6)} }';
+  document.head.appendChild(styleEl);
+
+  const numMesas = parseInt(localStorage.getItem("fluxon_num_mesas") || "10");
+  const content = document.getElementById("mesas-content");
+  if (!content) return;
   const numMesas = parseInt(localStorage.getItem("fluxon_num_mesas") || "10");
   const mesas = [];
   for (let i = 1; i <= numMesas; i++) mesas.push({ tipo: "mesa", numero: i });
@@ -543,8 +552,8 @@ function renderMesas() {
         return `
           <div onclick="abrirDrawerMesa('${key}')" style="
             background:${ocupada ? 'rgba(249,115,115,0.15)' : 'rgba(46,8,8,0.45)'};
-            border:1.5px solid ${ocupada ? 'rgba(249,115,115,0.6)' : 'rgba(91,28,28,0.85)'};
-            border-radius:14px; padding:14px 16px;
+border:1.5px solid ${ocupada ? 'rgba(249,115,115,0.6)' : 'rgba(91,28,28,0.85)'};
+border-radius:14px; padding:20px 20px;
             cursor:pointer; transition:all 0.2s;
             display:flex; flex-direction:column;
             min-height:110px; justify-content:space-between;
@@ -552,7 +561,10 @@ function renderMesas() {
           "
           onmouseover="this.style.borderColor='rgba(252,228,228,0.4)'"
           onmouseout="this.style.borderColor='${ocupada ? 'rgba(249,115,115,0.6)' : 'rgba(91,28,28,0.85)'}'">
-            <div style="font-size:16px; font-weight:900; color:rgba(252,228,228,1); letter-spacing:-0.02em;">${label}</div>
+            <div style="display:flex; align-items:center; gap:8px;">
+  ${ocupada ? `<div style="width:8px;height:8px;border-radius:50%;background:rgba(249,115,115,1);flex-shrink:0;animation:pulse 1.5s infinite;"></div>` : ''}
+  <div style="font-size:20px; font-weight:900; color:rgba(252,228,228,1); letter-spacing:-0.02em;">${label}</div>
+</div>
             <div style="display:flex; flex-direction:column; gap:4px; margin-top:8px;">
               <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
                 color:${ocupada ? 'rgba(249,115,115,0.9)' : 'rgba(252,228,228,0.3)'};">
