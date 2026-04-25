@@ -9,9 +9,29 @@ import rateLimit from "express-rate-limit";
 import { fileTypeFromBuffer } from "file-type";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import { Queue, Worker } from "bullmq";
+import { createAdapter } from "@socket.io/redis-adapter";
+import Redis from "ioredis";
 
 dotenv.config();
 
+// ===== REDIS =====
+const redisConnection = new Redis(process.env.REDIS_URL, {
+  maxRetriesPerRequest: null,
+  tls: { rejectUnauthorized: false }
+});
+
+const pubClient = new Redis(process.env.REDIS_URL, {
+  maxRetriesPerRequest: null,
+  tls: { rejectUnauthorized: false }
+});
+
+const subClient = pubClient.duplicate();
+
+// ===== FILA DE IMPRESSÃO =====
+const printQueue = new Queue("impressao", { connection: redisConnection });
+
+// ===== CACHE IMPRESSORA =====
 const _impressoraCache = {};
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
@@ -34,12 +54,47 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 const app = express();
 const httpServer = createServer(app);
 const ordersEmImpressao = new Set();
+
 const io = new Server(httpServer, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"]
   }
 });
+
+pubClient.on("ready", () => {
+  io.adapter(createAdapter(pubClient, subClient));
+  console.log("✅ Socket.io Redis adapter conectado!");
+});
+
+pubClient.on("ready", () => {
+  io.adapter(createAdapter(pubClient, subClient));
+  console.log("✅ Socket.io Redis adapter conectado!");
+});
+
+pubClient.on("ready", () => {
+  io.adapter(createAdapter(pubClient, subClient));
+  console.log("✅ Socket.io Redis adapter conectado!");
+});
+
+// ===== WORKER DE IMPRESSÃO =====
+const printWorker = new Worker("impressao", async (job) => {
+  const { order, apiKey, impressoras } = job.data;
+  await printByCategory(order, apiKey, impressoras);
+}, { 
+  connection: redisConnection,
+  concurrency: 3
+});
+
+printWorker.on("completed", (job) => {
+  console.log(`✅ Impressão concluída — Pedido #${job.data.order.order_number}`);
+});
+
+printWorker.on("failed", (job, err) => {
+  console.error(`❌ Impressão falhou — Pedido #${job.data.order.order_number}:`, err.message);
+});
+
+
 const PORT = process.env.PORT || 3001;
 const HOST = '0.0.0.0';
 
@@ -784,9 +839,15 @@ app.patch("/api/v1/pedidos/:id/adicionar-itens", async (req, res) => {
         if (impressorasSemCaixa.length > 0) {
           // Monta objeto do pedido com APENAS os itens novos para impressão
           const pedidoParaImprimir = { ...pedidoAtualizado, itens: itens_novos };
-          printByCategory(pedidoParaImprimir, config.api_key, impressorasSemCaixa)
-  .then(() => console.log(`🖨️ Impressão adição — Pedido #${pedidoAtualizado.order_number} — ${itens_novos.length} item(ns) novo(s)`))
-  .catch(err => console.error(`⚠️ Erro na impressão assíncrona adição:`, err.message));
+          await printQueue.add("imprimir", {
+  order: { ...pedidoParaImprimir },
+  apiKey: config.api_key,
+  impressoras: impressorasSemCaixa
+}, {
+  attempts: 3,
+  backoff: { type: "exponential", delay: 2000 }
+});
+console.log(`🖨️ Job de impressão adicionado — Pedido #${pedidoAtualizado.order_number}`);
         }
       }
     } catch (printErr) {
@@ -862,9 +923,15 @@ if (status === "preparing") {
         console.log(`🔍 Impressoras sem caixa:`, JSON.stringify(impressorasSemCaixa));
 
         if (impressorasSemCaixa.length > 0) {
-          printByCategory({ ...orderAntes, ...data }, config.api_key, impressorasSemCaixa)
-  .then(() => console.log(`🖨️ Impressão preparo disparada — Pedido #${data.order_number}`))
-  .catch(err => console.error(`⚠️ Erro na impressão assíncrona:`, err.message));
+         await printQueue.add("imprimir", {
+  order: { ...orderAntes, ...data },
+  apiKey: config.api_key,
+  impressoras: impressorasSemCaixa
+}, {
+  attempts: 3,
+  backoff: { type: "exponential", delay: 2000 }
+});
+console.log(`🖨️ Job de impressão adicionado — Pedido #${data.order_number}`);
         }
       }
     }
