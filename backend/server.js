@@ -18,16 +18,21 @@ dotenv.config();
 // ===== REDIS =====
 const redisConnection = new Redis(process.env.REDIS_URL, {
   maxRetriesPerRequest: null,
-  tls: { rejectUnauthorized: false }
+  tls: { rejectUnauthorized: false },
+  lazyConnect: true,
+  connectTimeout: 10000,
+  retryStrategy: (times) => Math.min(times * 500, 5000)
 });
 
 const pubClient = new Redis(process.env.REDIS_URL, {
   maxRetriesPerRequest: null,
-  tls: { rejectUnauthorized: false }
+  tls: { rejectUnauthorized: false },
+  lazyConnect: true,
+  connectTimeout: 10000,
+  retryStrategy: (times) => Math.min(times * 500, 5000)
 });
 
 const subClient = pubClient.duplicate();
-
 // ===== FILA DE IMPRESSÃO =====
 const printQueue = new Queue("impressao", { connection: redisConnection });
 
