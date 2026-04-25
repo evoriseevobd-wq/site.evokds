@@ -556,7 +556,7 @@ function renderMesas() {
             <div style="display:flex; flex-direction:column; gap:4px; margin-top:8px;">
               <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
                 color:${ocupada ? 'rgba(249,115,115,0.9)' : 'rgba(252,228,228,0.3)'};">
-                ${ocupada ? `Ocupada · ${pedidosAtivos.length} pedido(s)` : 'Livre'}
+                ${ocupada ? `Ocupada` : 'Livre'}
               </div>
               ${ocupada ? `
               <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
