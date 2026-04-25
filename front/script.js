@@ -3633,9 +3633,6 @@ if (unauthClose) unauthClose.addEventListener("click", () => closeBackdrop(unaut
 
 
 
-setInterval(() => {
-  if (!isFetching) fetchOrders();
-}, 20000);
 fetchOrders();
 // Busca no board
 document.getElementById("search-order")?.addEventListener("input", function() {
