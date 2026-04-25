@@ -768,8 +768,9 @@ app.patch("/api/v1/pedidos/:id/adicionar-itens", async (req, res) => {
         if (impressorasSemCaixa.length > 0) {
           // Monta objeto do pedido com APENAS os itens novos para impressão
           const pedidoParaImprimir = { ...pedidoAtualizado, itens: itens_novos };
-          await printByCategory(pedidoParaImprimir, config.api_key, impressorasSemCaixa);
-          console.log(`🖨️ Impressão adição — Pedido #${pedidoAtualizado.order_number} — ${itens_novos.length} item(ns) novo(s)`);
+          printByCategory(pedidoParaImprimir, config.api_key, impressorasSemCaixa)
+  .then(() => console.log(`🖨️ Impressão adição — Pedido #${pedidoAtualizado.order_number} — ${itens_novos.length} item(ns) novo(s)`))
+  .catch(err => console.error(`⚠️ Erro na impressão assíncrona adição:`, err.message));
         }
       }
     } catch (printErr) {
