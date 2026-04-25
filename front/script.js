@@ -529,9 +529,19 @@ function renderMesas() {
   const mesas = [];
   for (let i = 1; i <= numMesas; i++) mesas.push({ tipo: "mesa", numero: i });
   mesas.push({ tipo: "balcao", numero: null });
+
   content.innerHTML = `
     <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:16px; padding:8px 0;">
       ${mesas.map(m => {
+        const label = m.tipo === "balcao" ? "Balcão" : `Mesa ${m.numero}`;
+        const key = m.tipo === "balcao" ? "balcao" : String(m.numero);
+        const pedidosAtivos = orders.filter(o =>
+          ["recebido", "preparo", "pronto"].includes(o._frontStatus) &&
+          ["autoatendimento", "balcao"].includes(String(o.origin || "").toLowerCase()) &&
+          (m.tipo === "balcao"
+            ? (!o.table_number && o.service_type !== "delivery")
+            : String(o.table_number) === String(m.numero))
+        );
         const ocupada = pedidosAtivos.length > 0;
         const totalMesa = pedidosAtivos.reduce((s, o) => s + parseFloat(o.total_price || 0), 0);
         const impresso = pedidosAtivos.length > 0 && pedidosAtivos.every(o => o._frontStatus !== "recebido");
@@ -539,8 +549,8 @@ function renderMesas() {
         return `
           <div onclick="abrirDrawerMesa('${key}')" style="
             background:${ocupada ? 'rgba(249,115,115,0.15)' : 'rgba(46,8,8,0.45)'};
-border:1.5px solid ${ocupada ? 'rgba(249,115,115,0.6)' : 'rgba(91,28,28,0.85)'};
-border-radius:14px; padding:20px 20px;
+            border:1.5px solid ${ocupada ? 'rgba(249,115,115,0.6)' : 'rgba(91,28,28,0.85)'};
+            border-radius:14px; padding:20px 20px;
             cursor:pointer; transition:all 0.2s;
             display:flex; flex-direction:column;
             min-height:110px; justify-content:space-between;
@@ -549,13 +559,13 @@ border-radius:14px; padding:20px 20px;
           onmouseover="this.style.borderColor='rgba(252,228,228,0.4)'"
           onmouseout="this.style.borderColor='${ocupada ? 'rgba(249,115,115,0.6)' : 'rgba(91,28,28,0.85)'}'">
             <div style="display:flex; align-items:center; gap:8px;">
-  ${ocupada ? `<div style="width:8px;height:8px;border-radius:50%;background:rgba(249,115,115,1);flex-shrink:0;animation:pulse 1.5s infinite;"></div>` : ''}
-  <div style="font-size:20px; font-weight:900; color:rgba(252,228,228,1); letter-spacing:-0.02em;">${label}</div>
-</div>
+              ${ocupada ? `<div style="width:8px;height:8px;border-radius:50%;background:rgba(249,115,115,1);flex-shrink:0;animation:pulse 1.5s infinite;"></div>` : ''}
+              <div style="font-size:20px; font-weight:900; color:rgba(252,228,228,1); letter-spacing:-0.02em;">${label}</div>
+            </div>
             <div style="display:flex; flex-direction:column; gap:4px; margin-top:8px;">
               <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
                 color:${ocupada ? 'rgba(249,115,115,0.9)' : 'rgba(252,228,228,0.3)'};">
-  ${ocupada ? `Ocupada` : 'Livre'}
+                ${ocupada ? `Ocupada` : 'Livre'}
               </div>
               ${ocupada ? `
               <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
@@ -572,7 +582,6 @@ border-radius:14px; padding:20px 20px;
       }).join('')}
     </div>
   `;
-
   // Inicia timers nos cards de mesa usando a mesma lógica do kanban
   mesas.forEach(m => {
     const key = m.tipo === "balcao" ? "balcao" : String(m.numero);
