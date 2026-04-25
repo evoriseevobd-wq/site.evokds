@@ -1013,14 +1013,10 @@ const { data, error } = await supabase
   }
   resultData = data; // ← estava faltando!
 } else {
-  const { data: last } = await supabase
-    .from("orders")
-    .select("order_number")
-    .eq("restaurant_id", restaurant_id)
-    .order("order_number", { ascending: false })
-    .limit(1);
+ const { data: numData } = await supabase
+  .rpc('get_next_order_number', { rid: restaurant_id });
 
-  const nextNumber = last && last.length > 0 ? Number(last[0].order_number) + 1 : 1;
+const nextNumber = numData || 1;
 
   const { data, error } = await supabase
     .from("orders")
@@ -2967,8 +2963,8 @@ app.post("/api/v1/fidelidade/resgatar", async (req, res) => {
     if (cliente.pontos < totalPontos)
       return sendError(res, 400, "Pontos insuficientes");
 
-   const { data: numData } = await supabase
-  .rpc('get_next_order_number', { rid: restaurant_id });
+  const { data: numData } = await supabase
+  .rpc('get_next_order_number', { rid: cliente.restaurant_id });
 
 const nextNumber = numData || 1;
 
