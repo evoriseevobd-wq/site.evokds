@@ -845,8 +845,9 @@ if (status === "preparing") {
         console.log(`🔍 Impressoras sem caixa:`, JSON.stringify(impressorasSemCaixa));
 
         if (impressorasSemCaixa.length > 0) {
-          await printByCategory({ ...orderAntes, ...data }, config.api_key, impressorasSemCaixa);
-          console.log(`🖨️ Impressão preparo disparada — Pedido #${data.order_number}`);
+          printByCategory({ ...orderAntes, ...data }, config.api_key, impressorasSemCaixa)
+  .then(() => console.log(`🖨️ Impressão preparo disparada — Pedido #${data.order_number}`))
+  .catch(err => console.error(`⚠️ Erro na impressão assíncrona:`, err.message));
         }
       }
     }
@@ -2548,9 +2549,16 @@ lf();
 
       b(GS, 0x56, 0x41, 0x06);
     }
+    
+const rawBuffer = Buffer.from(bytes);
+let response;
+let tentativas = 0;
+const MAX_TENTATIVAS = 3;
 
-    const rawBuffer = Buffer.from(bytes);
-    const response = await fetch("https://api.printnode.com/printjobs", {
+while (tentativas < MAX_TENTATIVAS) {
+  tentativas++;
+  try {
+    response = await fetch("https://api.printnode.com/printjobs", {
       method: "POST",
       headers: {
         "Authorization": "Basic " + Buffer.from(`${apiKey}:`).toString("base64"),
@@ -2564,15 +2572,24 @@ lf();
         source: "FluxON"
       })
     });
+    if (response.ok) break;
+    console.warn(`⚠️ Tentativa ${tentativas} falhou — status ${response.status}`);
+    await new Promise(r => setTimeout(r, 1000 * tentativas));
+  } catch(err) {
+    console.warn(`⚠️ Tentativa ${tentativas} erro: ${err.message}`);
+    if (tentativas === MAX_TENTATIVAS) throw err;
+    await new Promise(r => setTimeout(r, 1000 * tentativas));
+  }
+}
 
-    const result = await response.json();
-    if (!response.ok || result.error) {
-      console.error(`❌ PrintNode erro:`, result);
-      return false;
-    }
+const result = await response.json();
+if (!response.ok || result.error) {
+  console.error(`❌ PrintNode erro:`, result);
+  return false;
+}
 
-    console.log(`🖨️ Pedido #${order.order_number} impresso na ${printerId}:`, result);
-    return true;
+console.log(`🖨️ Pedido #${order.order_number} impresso na ${printerId}:`, result);
+return true;
 
   } catch (err) {
     console.error("⚠️ Erro ao imprimir:", err.message);
