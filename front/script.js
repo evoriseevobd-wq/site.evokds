@@ -601,11 +601,15 @@ function renderMesas() {
       const rawDate = etapaInicio.includes('Z') || etapaInicio.includes('+') ? etapaInicio : etapaInicio + 'Z';
       const elapsed = Date.now() - new Date(rawDate).getTime();
       const remaining = LIMIT_MS - elapsed;
-      if (remaining <= 0) {
-        timerEl.textContent = "✅";
-        timerEl.style.color = "rgba(34,197,94,1)";
-        return;
-      }
+     if (remaining <= 0) {
+  timerEl.textContent = "✅";
+  timerEl.style.color = "rgba(34,197,94,1)";
+  const currentOrder = orders.find(x => x.id === o.id);
+  if (currentOrder && currentOrder._frontStatus === "recebido") {
+    updateOrderStatus(o.id, 'preparo');
+  }
+  return;
+}
       const mins = Math.floor(remaining / 60000);
       const secs = Math.floor((remaining % 60000) / 1000);
       timerEl.textContent = `⏱ ${mins}:${String(secs).padStart(2, "0")}`;
