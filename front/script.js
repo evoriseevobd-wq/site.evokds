@@ -3643,6 +3643,7 @@ if (unauthClose) unauthClose.addEventListener("click", () => closeBackdrop(unaut
 
 
 fetchOrders();
+showMesas();
 // Busca no board
 document.getElementById("search-order")?.addEventListener("input", function() {
   searchTerm = this.value.toLowerCase().trim();
