@@ -185,6 +185,26 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json({ limit: '10mb' }));
+// ===== RATE LIMITING =====
+const limiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minuto
+  max: 200, // máximo 200 requisições por minuto por IP
+  message: { error: "Muitas requisições. Tente novamente em 1 minuto." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const limiterStrict = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10, // máximo 10 tentativas por minuto
+  message: { error: "Muitas tentativas. Tente novamente em 1 minuto." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use("/api/", limiter);
+app.use("/auth/", limiterStrict);
+app.use("/orders/", limiter);
 
 const ALLOWED_STATUS = ["draft", "pending", "preparing", "mounting", "delivering", "finished", "cancelled", "canceled"];
 
