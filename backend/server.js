@@ -678,7 +678,7 @@ app.get("/orders/:restaurant_id", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
     const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 2);
+cutoff.setHours(cutoff.getHours() - 12);
     const { data, error } = await supabase
       .from("orders")
       .select("*")
