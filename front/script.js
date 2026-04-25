@@ -526,25 +526,12 @@ function renderMesas() {
   document.head.appendChild(styleEl);
 
   const numMesas = parseInt(localStorage.getItem("fluxon_num_mesas") || "10");
-  const content = document.getElementById("mesas-content");
-  if (!content) return;
-  const numMesas = parseInt(localStorage.getItem("fluxon_num_mesas") || "10");
   const mesas = [];
   for (let i = 1; i <= numMesas; i++) mesas.push({ tipo: "mesa", numero: i });
   mesas.push({ tipo: "balcao", numero: null });
-
   content.innerHTML = `
     <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:16px; padding:8px 0;">
       ${mesas.map(m => {
-        const label = m.tipo === "balcao" ? "Balcão" : `Mesa ${m.numero}`;
-        const key = m.tipo === "balcao" ? "balcao" : String(m.numero);
-        const pedidosAtivos = orders.filter(o =>
-          ["recebido", "preparo", "pronto"].includes(o._frontStatus) &&
-          ["autoatendimento", "balcao"].includes(String(o.origin || "").toLowerCase()) &&
-          (m.tipo === "balcao"
-            ? (!o.table_number && o.service_type !== "delivery")
-            : String(o.table_number) === String(m.numero))
-        );
         const ocupada = pedidosAtivos.length > 0;
         const totalMesa = pedidosAtivos.reduce((s, o) => s + parseFloat(o.total_price || 0), 0);
         const impresso = pedidosAtivos.length > 0 && pedidosAtivos.every(o => o._frontStatus !== "recebido");
