@@ -57,6 +57,7 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const app = express();
+app.set('trust proxy', 1);
 const httpServer = createServer(app);
 const ordersEmImpressao = new Set();
 
