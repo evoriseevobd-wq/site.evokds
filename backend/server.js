@@ -77,24 +77,6 @@ pubClient.on("ready", () => {
   console.log("✅ Socket.io Redis adapter conectado!");
 });
 
-// ===== WORKER DE IMPRESSÃO =====
-const printWorker = new Worker("impressao", async (job) => {
-  const { order, apiKey, impressoras } = job.data;
-  await printByCategory(order, apiKey, impressoras);
-}, { 
-  connection: redisConnection,
-  concurrency: 3
-});
-
-printWorker.on("completed", (job) => {
-  console.log(`✅ Impressão concluída — Pedido #${job.data.order.order_number}`);
-});
-
-printWorker.on("failed", (job, err) => {
-  console.error(`❌ Impressão falhou — Pedido #${job.data.order.order_number}:`, err.message);
-});
-
-
 const PORT = process.env.PORT || 3001;
 const HOST = '0.0.0.0';
 
@@ -2768,6 +2750,23 @@ const is_caixa = toBool(impressora.is_caixa) || toBool(impressora.caixa);
     return false;
   }
 }
+
+// ===== WORKER DE IMPRESSÃO =====
+const printWorker = new Worker("impressao", async (job) => {
+  const { order, apiKey, impressoras } = job.data;
+  await printByCategory(order, apiKey, impressoras);
+}, { 
+  connection: redisConnection,
+  concurrency: 3
+});
+
+printWorker.on("completed", (job) => {
+  console.log(`✅ Impressão concluída — Pedido #${job.data.order.order_number}`);
+});
+
+printWorker.on("failed", (job, err) => {
+  console.error(`❌ Impressão falhou — Pedido #${job.data.order.order_number}:`, err.message);
+});
 
 // POST - Testa impressão
 app.post("/api/v1/restaurante/:restaurant_id/impressora/teste", async (req, res) => {
