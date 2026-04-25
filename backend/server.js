@@ -2683,10 +2683,18 @@ async function printByCategory(order, apiKey, impressoras) {
     if (order.restaurant_id && itens.length > 0) {
       const nomes = itens.map(it => String(it.name || it.nome || "").trim()).filter(Boolean);
       if (nomes.length > 0) {
-const { data: cardapioItens } = await supabase
-  .from("cardapio")
-  .select("nome, categoria")
-  .eq("restaurant_id", order.restaurant_id);
+const cacheKey = `cardapio_${order.restaurant_id}`;
+const agora = Date.now();
+
+if (!_impressoraCache[cacheKey] || agora - _impressoraCache[cacheKey].ts > CACHE_TTL) {
+  const { data } = await supabase
+    .from("cardapio")
+    .select("nome, categoria")
+    .eq("restaurant_id", order.restaurant_id);
+  _impressoraCache[cacheKey] = { dados: data || [], ts: agora };
+}
+
+const cardapioItens = _impressoraCache[cacheKey].dados;
 const mapaCategoria = {};
 (cardapioItens || []).forEach(c => {
   mapaCategoria[c.nome.toLowerCase().trim()] = c.categoria;
