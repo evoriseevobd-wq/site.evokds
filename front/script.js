@@ -5316,13 +5316,26 @@ function openCategoriasModal() {
           ${cats.length === 0
             ? `<p style="color:rgba(252,228,228,0.4); text-align:center; padding:20px 0; font-size:13px;">Nenhuma categoria ainda.</p>`
             : cats.map(cat => `
-              <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:10px;">
-                <span style="color:rgba(252,228,228,0.9); font-weight:700; font-size:14px;">${escapeHtml(cat)}</span>
-                <div style="display:flex; gap:8px;">
-                  <button onclick="renomearCategoria('${escapeHtml(cat)}')" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:transparent; color:rgba(252,228,228,0.7); cursor:pointer; font-size:11px;">Renomear</button>
-                  <button onclick="deletarCategoria('${escapeHtml(cat)}')" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(239,68,68,0.5); background:transparent; color:rgba(239,68,68,0.8); cursor:pointer; font-size:11px;">Excluir</button>
-                </div>
-              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:10px; gap:12px;">
+  <div style="display:flex; align-items:center; gap:10px; flex:1;">
+    ${(() => {
+      const catObj = categoriasOrdem.find(c => (c.nome || c) === cat);
+      const fotoUrl = catObj?.foto_url || null;
+      return fotoUrl
+        ? `<img src="${fotoUrl}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" />`
+        : `<div style="width:40px; height:40px; border-radius:50%; background:rgba(91,28,28,0.5); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">📂</div>`;
+    })()}
+    <span style="color:rgba(252,228,228,0.9); font-weight:700; font-size:14px;">${escapeHtml(cat)}</span>
+  </div>
+  <div style="display:flex; gap:8px; flex-shrink:0;">
+    <label style="padding:6px 10px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:transparent; color:rgba(252,228,228,0.7); cursor:pointer; font-size:11px; position:relative;">
+      📷
+      <input type="file" accept="image/*" style="position:absolute; inset:0; opacity:0; cursor:pointer;" onchange="uploadFotoCategoria('${escapeHtml(cat)}', this)" />
+    </label>
+    <button onclick="renomearCategoria('${escapeHtml(cat)}')" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:transparent; color:rgba(252,228,228,0.7); cursor:pointer; font-size:11px;">Renomear</button>
+    <button onclick="deletarCategoria('${escapeHtml(cat)}')" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(239,68,68,0.5); background:transparent; color:rgba(239,68,68,0.8); cursor:pointer; font-size:11px;">Excluir</button>
+  </div>
+</div>
             `).join('')}
         </div>
 
@@ -5405,6 +5418,39 @@ async function deletarCategoria(nome) {
     });
     openCategoriasModal();
   });
+}
+
+async function uploadFotoCategoria(nomeCategoria, input) {
+  if (!input.files[0]) return;
+  const croppedBlob = await openCropModal(input.files[0]);
+  if (!croppedBlob) return;
+
+  try {
+    const formData = new FormData();
+    formData.append('file', croppedBlob, 'foto.jpg');
+    const resp = await fetch(`${API_BASE}/api/v1/upload-image`, { method: 'POST', body: formData });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Erro no upload');
+
+    // Atualiza a ordem com a nova foto
+    const rid = getRestaurantId();
+    const novaOrdem = categoriasOrdem.map(c => {
+      const nome = c.nome || c;
+      if (nome === nomeCategoria) return { nome, foto_url: data.url };
+      return typeof c === 'string' ? { nome: c, foto_url: null } : c;
+    });
+
+    await fetch(`${API_BASE}/api/v1/cardapio/${rid}/ordem-categorias`, {
+      method: "PATCH",
+      headers: buildHeaders(),
+      body: JSON.stringify({ ordem: novaOrdem })
+    });
+
+    categoriasOrdem = novaOrdem;
+    openCategoriasModal();
+  } catch(e) {
+    alert('Erro ao enviar foto: ' + e.message);
+  }
 }
 
 function toggleDominioConfig() {
