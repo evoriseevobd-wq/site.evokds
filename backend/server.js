@@ -2074,9 +2074,16 @@ app.patch("/api/v1/cardapio/:restaurant_id/ordem-categorias", async (req, res) =
   const { ordem } = req.body;
   if (!Array.isArray(ordem)) return sendError(res, 400, "ordem deve ser um array");
 
+  // Normaliza para array de objetos independente do formato recebido
+  const ordemNormalizada = ordem.map(cat =>
+    typeof cat === "string"
+      ? { nome: cat, foto_url: null }
+      : { nome: cat.nome, foto_url: cat.foto_url || null }
+  );
+
   const { error } = await supabase
     .from("restaurante_config")
-    .upsert({ restaurant_id, categorias_ordem: ordem }, { onConflict: "restaurant_id" });
+    .upsert({ restaurant_id, categorias_ordem: ordemNormalizada }, { onConflict: "restaurant_id" });
 
   if (error) return sendError(res, 500, "Erro ao salvar ordem");
   return res.json({ success: true });
