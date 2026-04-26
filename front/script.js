@@ -4776,10 +4776,15 @@ function openItemModal(item = null) {
           <input id="item-preco" value="${item ? item.preco : ""}" placeholder="0,00" inputmode="decimal"
             style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
         </label>
-        <label style="color:rgba(252,228,228,0.8); font-size:13px;">Categoria
-          <input id="item-categoria" value="${item ? escapeHtml(item.categoria || "") : ""}" placeholder="Ex: Lanches, Bebidas..."
-            style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;" />
-        </label>
+       <label style="color:rgba(252,228,228,0.8); font-size:13px;">Categoria
+  <select id="item-categoria"
+    style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none; appearance:none;">
+    <option value="">Selecione uma categoria...</option>
+    ${[...new Set(cardapioItems.map(i => i.categoria).filter(Boolean))].sort().map(cat =>
+      `<option value="${escapeHtml(cat)}" ${item?.categoria === cat ? 'selected' : ''}>${escapeHtml(cat)}</option>`
+    ).join('')}
+  </select>
+</label>
 
         <label style="color:rgba(252,228,228,0.8); font-size:13px;">Fotos do Item (até 3)
           <div style="display:flex; gap:10px; margin-top:8px;">
@@ -5279,6 +5284,126 @@ async function deletarItem(id) {
   showConfirmModal("Tem certeza que deseja excluir este item?", async () => {
     await fetch(`${API_BASE}/api/v1/cardapio/${id}`, { method: "DELETE", headers: buildHeaders() });
     await fetchCardapio();
+  });
+}
+
+function openCategoriasModal() {
+  const existing = document.getElementById("categorias-modal");
+  if (existing) existing.remove();
+
+  const cats = [...new Set(cardapioItems.map(i => i.categoria).filter(Boolean))].sort();
+
+  const modal = document.createElement("div");
+  modal.id = "categorias-modal";
+  modal.className = "modal-backdrop open";
+
+  modal.innerHTML = `
+    <div class="modal confirm-modal" style="max-width:480px;">
+      <div class="modal-header">
+        <h3>📂 Categorias</h3>
+        <button class="icon-button" onclick="document.getElementById('categorias-modal').remove()">×</button>
+      </div>
+      <div class="modal-body" style="gap:12px;">
+
+        <div style="display:flex; gap:8px;">
+          <input id="input-nova-categoria" placeholder="Nome da nova categoria..."
+            style="flex:1; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none;"
+            onkeydown="if(event.key==='Enter') criarCategoria()" />
+          <button class="primary-button" onclick="criarCategoria()" style="white-space:nowrap;">+ Criar</button>
+        </div>
+
+        <div id="lista-categorias-modal" style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
+          ${cats.length === 0
+            ? `<p style="color:rgba(252,228,228,0.4); text-align:center; padding:20px 0; font-size:13px;">Nenhuma categoria ainda.</p>`
+            : cats.map(cat => `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:10px;">
+                <span style="color:rgba(252,228,228,0.9); font-weight:700; font-size:14px;">${escapeHtml(cat)}</span>
+                <div style="display:flex; gap:8px;">
+                  <button onclick="renomearCategoria('${escapeHtml(cat)}')" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:transparent; color:rgba(252,228,228,0.7); cursor:pointer; font-size:11px;">Renomear</button>
+                  <button onclick="deletarCategoria('${escapeHtml(cat)}')" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(239,68,68,0.5); background:transparent; color:rgba(239,68,68,0.8); cursor:pointer; font-size:11px;">Excluir</button>
+                </div>
+              </div>
+            `).join('')}
+        </div>
+
+      </div>
+      <div class="modal-actions">
+        <button class="ghost-button" onclick="document.getElementById('categorias-modal').remove()">Fechar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+}
+
+async function criarCategoria() {
+  const input = document.getElementById("input-nova-categoria");
+  const nome = input?.value.trim();
+  if (!nome) { alert("Digite o nome da categoria."); return; }
+
+  const jaExiste = cardapioItems.some(i => i.categoria?.toLowerCase() === nome.toLowerCase());
+  if (jaExiste) { alert("Essa categoria já existe."); return; }
+
+  // Adiciona na ordem salva
+  const rid = getRestaurantId();
+  const novaOrdem = [...categoriasOrdem, nome];
+  await fetch(`${API_BASE}/api/v1/cardapio/${rid}/ordem-categorias`, {
+    method: "PATCH",
+    headers: buildHeaders(),
+    body: JSON.stringify({ ordem: novaOrdem })
+  });
+  categoriasOrdem = novaOrdem;
+
+  input.value = '';
+  openCategoriasModal();
+}
+
+async function renomearCategoria(nomeAntigo) {
+  const novoNome = prompt(`Novo nome para "${nomeAntigo}":`, nomeAntigo);
+  if (!novoNome || novoNome.trim() === nomeAntigo) return;
+  const novo = novoNome.trim();
+
+  const rid = getRestaurantId();
+
+  // Atualiza todos os itens da categoria
+  const itensDaCategoria = cardapioItems.filter(i => i.categoria === nomeAntigo);
+  await Promise.all(itensDaCategoria.map(item =>
+    fetch(`${API_BASE}/api/v1/cardapio/${item.id}`, {
+      method: "PATCH",
+      headers: buildHeaders(),
+      body: JSON.stringify({ categoria: novo })
+    })
+  ));
+
+  // Atualiza a ordem
+  categoriasOrdem = categoriasOrdem.map(c => c === nomeAntigo ? novo : c);
+  await fetch(`${API_BASE}/api/v1/cardapio/${rid}/ordem-categorias`, {
+    method: "PATCH",
+    headers: buildHeaders(),
+    body: JSON.stringify({ ordem: categoriasOrdem })
+  });
+
+  await fetchCardapio();
+  openCategoriasModal();
+}
+
+async function deletarCategoria(nome) {
+  const itensDaCategoria = cardapioItems.filter(i => i.categoria === nome);
+  if (itensDaCategoria.length > 0) {
+    alert(`Não é possível excluir — existem ${itensDaCategoria.length} item(ns) nessa categoria. Mova ou exclua os itens primeiro.`);
+    return;
+  }
+
+  showConfirmModal(`Tem certeza que deseja excluir a categoria "${nome}"?`, async () => {
+    const rid = getRestaurantId();
+    categoriasOrdem = categoriasOrdem.filter(c => c !== nome);
+    await fetch(`${API_BASE}/api/v1/cardapio/${rid}/ordem-categorias`, {
+      method: "PATCH",
+      headers: buildHeaders(),
+      body: JSON.stringify({ ordem: categoriasOrdem })
+    });
+    openCategoriasModal();
   });
 }
 
