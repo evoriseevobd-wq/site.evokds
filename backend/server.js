@@ -2021,8 +2021,8 @@ app.get("/api/v1/cardapio/:restaurant_id", async (req, res) => {
 
   // Ordena os itens respeitando a ordem das categorias definida pelo admin
   const ordered = [...data].sort((a, b) => {
-    const ia = ordemCategorias.indexOf(a.categoria);
-    const ib = ordemCategorias.indexOf(b.categoria);
+    const ia = ordemCategorias.findIndex(c => (c.nome || c) === a.categoria);
+const ib = ordemCategorias.findIndex(c => (c.nome || c) === b.categoria);
     const posA = ia === -1 ? 9999 : ia;
     const posB = ib === -1 ? 9999 : ib;
     if (posA !== posB) return posA - posB;
