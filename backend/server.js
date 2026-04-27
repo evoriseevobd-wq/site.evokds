@@ -16,38 +16,34 @@ import Redis from "ioredis";
 dotenv.config();
 
 // ===== REDIS =====
+const redisOpts = {
+  tls: { rejectUnauthorized: false },
+  lazyConnect: true,
+  connectTimeout: 10000,
+  retryStrategy: (times) => Math.min(times * 500, 5000)
+};
+
 const redisConnection = new Redis(process.env.REDIS_URL, {
-  maxRetriesPerRequest: null,
-  tls: { rejectUnauthorized: false },
-  lazyConnect: true,
-  connectTimeout: 10000,
-  retryStrategy: (times) => Math.min(times * 500, 5000)
+  ...redisOpts,
+  maxRetriesPerRequest: null
 });
 
-const pubClient = new Redis(process.env.REDIS_URL, {
-  maxRetriesPerRequest: null,
-  tls: { rejectUnauthorized: false },
-  lazyConnect: true,
-  connectTimeout: 10000,
-  retryStrategy: (times) => Math.min(times * 500, 5000)
-});
+const pubClient = new Redis(process.env.REDIS_URL, redisOpts);
+const subClient = new Redis(process.env.REDIS_URL, redisOpts);
 
-const subClient = pubClient.duplicate();
 // ===== FILA DE IMPRESSÃO =====
 const printQueue = new Queue("impressao", { connection: redisConnection });
 
 // ===== CACHE IMPRESSORA =====
 const _impressoraCache = {};
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+const CACHE_TTL = 5 * 60 * 1000;
 
 async function getIntegracaoComCache(restaurant_id, tipo) {
   const key = `${restaurant_id}_${tipo}`;
   const agora = Date.now();
-  
   if (_impressoraCache[key] && agora - _impressoraCache[key].ts < CACHE_TTL) {
     return _impressoraCache[key].dados;
   }
-  
   const dados = await getIntegracao(restaurant_id, tipo);
   _impressoraCache[key] = { dados, ts: agora };
   return dados;
@@ -62,26 +58,19 @@ const httpServer = createServer(app);
 const ordersEmImpressao = new Set();
 
 const io = new Server(httpServer, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
+  cors: { origin: "*", methods: ["GET", "POST"] }
+});
+
+async function setupRedisAdapter() {
+  try {
+    await Promise.all([pubClient.connect(), subClient.connect()]);
+    io.adapter(createAdapter(pubClient, subClient));
+    console.log("✅ Socket.io Redis adapter conectado!");
+  } catch (err) {
+    console.error("❌ Redis adapter falhou:", err.message);
   }
-});
-
-pubClient.on("ready", () => {
-  io.adapter(createAdapter(pubClient, subClient));
-  console.log("✅ Socket.io Redis adapter conectado!");
-});
-
-pubClient.on("ready", () => {
-  io.adapter(createAdapter(pubClient, subClient));
-  console.log("✅ Socket.io Redis adapter conectado!");
-});
-
-pubClient.on("ready", () => {
-  io.adapter(createAdapter(pubClient, subClient));
-  console.log("✅ Socket.io Redis adapter conectado!");
-});
+}
+setupRedisAdapter();
 
 const PORT = process.env.PORT || 3001;
 const HOST = '0.0.0.0';
