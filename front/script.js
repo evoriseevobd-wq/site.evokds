@@ -526,9 +526,8 @@ function renderMesas() {
   document.head.appendChild(styleEl);
 
   const numMesas = parseInt(localStorage.getItem("fluxon_num_mesas") || "10");
-  const mesas = [];
-  for (let i = 1; i <= numMesas; i++) mesas.push({ tipo: "mesa", numero: i });
-  mesas.push({ tipo: "balcao", numero: null });
+  const mesas = [{ tipo: "balcao", numero: null }];
+for (let i = 1; i <= numMesas; i++) mesas.push({ tipo: "mesa", numero: i });
 
   content.innerHTML = `
     <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:16px; padding:8px 0;">
