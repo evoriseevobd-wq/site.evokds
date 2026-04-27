@@ -3050,7 +3050,7 @@ async function checkAndRefreshToken() {
 }
 
 // ===== INIT =====
-function init() {
+async function init() {
   const rid = getRestaurantId();
 
   if (!rid) {
@@ -3655,7 +3655,8 @@ if (unauthClose) unauthClose.addEventListener("click", () => closeBackdrop(unaut
 
 
 
-fetchOrders();
+await fetchOrders();
+showMesas();
 // Busca no board
 document.getElementById("search-order")?.addEventListener("input", function() {
   searchTerm = this.value.toLowerCase().trim();
