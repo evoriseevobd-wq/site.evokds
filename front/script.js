@@ -3062,6 +3062,7 @@ async function init() {
 
  loginScreen?.classList.add("hidden");
   board?.classList.remove("hidden");
+  board?.classList.add("hidden");
   checkAndRefreshToken(); // ← renova token se necessário
 
   restaurantPlan = localStorage.getItem("restaurant_plan") || "basic";
