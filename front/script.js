@@ -1141,46 +1141,57 @@ async function fetchOrders() {
   const rid = getRestaurantId();
   if (!rid || isFetching) return;
 
- isFetching = true;
-if (_fetchController) _fetchController.abort();
-_fetchController = new AbortController();
-try {
+  isFetching = true;
+  if (_fetchController) _fetchController.abort();
+  _fetchController = new AbortController();
+
+  try {
     const resp = await fetch(`${API_URL}/${rid}`, { signal: _fetchController.signal });
     if (!resp.ok) throw new Error("Erro ao buscar pedidos");
-    
+
     const data = await resp.json();
     const newOrders = Array.isArray(data) ? data : [];
 
     orders = newOrders.map((o) => ({
-  ...o,
-  _frontStatus: toFrontStatus(o.status),
-}));
+      ...o,
+      _frontStatus: toFrontStatus(o.status),
+    }));
 
-// Remove duplicatas por id
-orders = orders.filter((o, index, self) =>
-  index === self.findIndex(x => x.id === o.id)
-); 
-// Adiciona isso logo após:
-if (orders.some(o => !o.id)) {
-  console.warn("⚠️ fetchOrders: pedidos sem ID detectados, filtrando");
-  orders = orders.filter(o => !!o.id);
-}
-  
+    orders = orders.filter((o, index, self) =>
+      index === self.findIndex(x => x.id === o.id)
+    );
+
+    if (orders.some(o => !o.id)) {
+      console.warn("⚠️ fetchOrders: pedidos sem ID detectados, filtrando");
+      orders = orders.filter(o => !!o.id);
+    }
+
     if (!crmView?.classList.contains("hidden")) {
       // Não renderiza
     } else if (!resultsView?.classList.contains("hidden")) {
-      // Não renderiza (metrics já atualiza sozinho)
+      // Não renderiza
     }
- } catch (e) {
+
+  } catch (e) {
     if (e.name !== "AbortError") console.error("Polling Error:", e);
   } finally {
     isFetching = false;
     if (!modalBackdrop?.classList.contains("open") && !createModal?.classList.contains("open")) {
-      renderBoard();
+      const mesasView = document.getElementById("mesas-view");
+      if (mesasView && !mesasView.classList.contains("hidden")) {
+        renderMesas();
+      } else {
+        const jaNavegou = window._jaNavegou;
+        if (!jaNavegou) {
+          window._jaNavegou = true;
+          showMesas();
+        } else {
+          renderBoard();
+        }
+      }
     }
   }
-} // ← fecha fetchOrders
-
+}
 async function updateOrderStatus(orderId, newFrontStatus) {
   const backStatus = toBackStatus(newFrontStatus);
   try {
