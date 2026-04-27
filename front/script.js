@@ -2045,7 +2045,7 @@ async function imprimirResumosSelecionados() {
       return;
     }
 
-    await Promise.all(ids.map(orderId =>
+   await Promise.all(ids.map(orderId =>
       fetch(`${API_BASE}/api/v1/restaurante/${rid}/imprimir-pedido`, {
         method: 'POST',
         headers: buildHeaders(),
@@ -2055,14 +2055,6 @@ async function imprimirResumosSelecionados() {
         })
       })
     ));
-        method: 'POST',
-        headers: buildHeaders(),
-        body: JSON.stringify({ 
-          order_id: orderId,
-          printer_id_override: impressoraCaixa.printer_id
-        })
-      });
-    }
     console.log(`✅ ${ids.length} resumos impressos!`);
   } catch(e) {
     console.error('Erro ao imprimir resumos:', e);
