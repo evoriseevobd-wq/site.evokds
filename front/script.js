@@ -1160,8 +1160,13 @@ try {
 // Remove duplicatas por id
 orders = orders.filter((o, index, self) =>
   index === self.findIndex(x => x.id === o.id)
-);
-
+); 
+// Adiciona isso logo após:
+if (orders.some(o => !o.id)) {
+  console.warn("⚠️ fetchOrders: pedidos sem ID detectados, filtrando");
+  orders = orders.filter(o => !!o.id);
+}
+  
     if (!crmView?.classList.contains("hidden")) {
       // Não renderiza
     } else if (!resultsView?.classList.contains("hidden")) {
@@ -1190,8 +1195,7 @@ async function updateOrderStatus(orderId, newFrontStatus) {
 
     const idx = orders.findIndex((o) => o.id === orderId);
     if (idx !== -1) {
-      orders[idx].status = backStatus;
-      orders[idx]._frontStatus = newFrontStatus;
+      orders[idx] = { ...orders[idx], status: backStatus, _frontStatus: newFrontStatus };
     }
     renderBoard();
     
@@ -1488,7 +1492,7 @@ function toggleNoOrdersBalloons() {
 // ===== MODAL =====
 function openOrderModal(orderId) {
   const order = orders.find((o) => o.id === orderId);
-  if (!order) return;
+  if (!order) { console.warn("openOrderModal: pedido não encontrado", orderId); return; }
 
   activeOrderId = orderId;
 
@@ -2041,8 +2045,16 @@ async function imprimirResumosSelecionados() {
       return;
     }
 
-    for (const orderId of ids) {
-      await fetch(`${API_BASE}/api/v1/restaurante/${rid}/imprimir-pedido`, {
+    await Promise.all(ids.map(orderId =>
+      fetch(`${API_BASE}/api/v1/restaurante/${rid}/imprimir-pedido`, {
+        method: 'POST',
+        headers: buildHeaders(),
+        body: JSON.stringify({ 
+          order_id: orderId,
+          printer_id_override: impressoraCaixa.printer_id
+        })
+      })
+    ));
         method: 'POST',
         headers: buildHeaders(),
         body: JSON.stringify({ 
@@ -2155,20 +2167,19 @@ async function imprimirResumosSelecionados() {
       confirmBtn.textContent = "Finalizando...";
 
       try {
-        for (const o of pedidos) {
-          await fetch(`${API_BASE}/api/v1/pedidos/${o.id}/payment`, {
-            method: "PATCH",
-            headers: buildHeaders(),
-            body: JSON.stringify({ payment_method: paymentStr })
-          });
-          await fetch(`${API_URL}/${o.id}/status`, {
-            method: "PATCH",
-            headers: buildHeaders(),
-            body: JSON.stringify({ status: "finished" })
-          });
-          // Imprime resumo automaticamente ao finalizar
-try { await imprimirResumo(o.id); } catch(e) {}
-        }
+  await Promise.all(pedidos.map(async (o) => {
+    await fetch(`${API_BASE}/api/v1/pedidos/${o.id}/payment`, {
+      method: "PATCH",
+      headers: buildHeaders(),
+      body: JSON.stringify({ payment_method: paymentStr })
+    });
+    await fetch(`${API_URL}/${o.id}/status`, {
+      method: "PATCH",
+      headers: buildHeaders(),
+      body: JSON.stringify({ status: "finished" })
+    });
+    try { await imprimirResumo(o.id); } catch(e) {}
+  }));
         modal.remove();
         clearSelection();
         await fetchOrders();
@@ -3662,6 +3673,7 @@ socket.on("connect", () => {
 
 let _renderDebounce = null;
 socket.on("order_updated", (order) => {
+  if (!order || !order.id) return;
   const idx = orders.findIndex(o => o.id === order.id);
   if (idx !== -1) {
     orders[idx] = { ...order, _frontStatus: toFrontStatus(order.status) };
