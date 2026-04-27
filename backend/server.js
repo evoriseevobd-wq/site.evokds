@@ -2788,8 +2788,8 @@ const printWorker = new Worker("impressao", async (job) => {
 }, { 
   connection: redisConnection,
   concurrency: 3,
-  stalledInterval: 60000,
-  lockDuration: 60000
+  stalledInterval: 300000,
+  lockDuration: 300000
 });
 
 printWorker.on("completed", (job) => {
