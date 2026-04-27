@@ -2787,7 +2787,9 @@ const printWorker = new Worker("impressao", async (job) => {
   await printByCategory(order, apiKey, impressoras);
 }, { 
   connection: redisConnection,
-  concurrency: 3
+  concurrency: 3,
+  stalledInterval: 60000,
+  lockDuration: 60000
 });
 
 printWorker.on("completed", (job) => {
