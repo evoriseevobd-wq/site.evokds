@@ -672,9 +672,11 @@ function abrirDrawerMesa(key) {
       <div style="padding:22px 24px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(91,28,28,0.4);">
         <div style="flex:1;"></div>
         <h3 style="font-size:18px; font-weight:800; color:rgba(252,228,228,0.95); margin:0; text-align:center; flex:2;">${isBalcao ? "🍽️" : "🪑"} ${label}</h3>
-        <div style="flex:1; display:flex; justify-content:flex-end;">
-          <button class="icon-button" onclick="document.getElementById('mesa-drawer-modal').remove()">×</button>
-        </div>
+        <div style="flex:1; display:flex; justify-content:flex-end; gap:8px; align-items:center;">
+  <button class="icon-button" style="font-size:13px; padding:6px 10px; border-radius:8px; width:auto;" 
+    onclick="editarPedidoMesa('${key}')">✏️</button>
+  <button class="icon-button" onclick="document.getElementById('mesa-drawer-modal').remove()">×</button>
+</div>
       </div>
 
       ${ocupada ? `
@@ -693,7 +695,7 @@ function abrirDrawerMesa(key) {
           <div style="font-size:10px; font-weight:700; color:rgba(252,228,228,0.3); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:16px;">Itens da mesa</div>
           <div style="display:flex; flex-direction:column;">
             ${todosItens.map((it, i) => `
-              <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 0; ${i < todosItens.length - 1 ? 'border-bottom:1px solid rgba(91,28,28,0.3);' : ''}">
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-bottom:1px solid rgba(91,28,28,0.3);">
                 <div style="display:flex; align-items:center; gap:12px;">
                   <span style="font-size:12px; font-weight:800; color:rgba(252,228,228,0.25); min-width:24px;">×${it.qty}</span>
                   <span style="font-size:14px; font-weight:600; color:rgba(252,228,228,0.9);">${escapeHtml(it.nome)}</span>
