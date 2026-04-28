@@ -948,7 +948,7 @@ function editarPedidoMesa(key) {
     };
   }
 
- function setupSalvar() {
+function setupSalvar() {
   const btn = document.getElementById("ep-salvar");
   if (!btn) return;
   btn.addEventListener("click", async () => {
@@ -959,32 +959,30 @@ function editarPedidoMesa(key) {
     const clienteNome = document.getElementById("ep-cliente")?.value.trim() || pedido.client_name;
     const clienteTel = document.getElementById("ep-telefone")?.value.trim() || pedido.client_phone;
     const obs = document.getElementById("ep-obs")?.value.trim() || "";
-    const total = calcTotal();
 
-    const itensFmt = itens.map(it => ({
-      name: it.nome, nome: it.nome,
-      qty: it.qty, quantidade: it.qty,
-      price: it.price, preco: it.price
-    }));
+    // Calcula só os itens novos ou com qty aumentada
+    const itensOriginais = (pedido.itens || []);
+    const itensNovos = itens.filter(it => {
+      const orig = itensOriginais.find(o => (o.name || o.nome) === it.nome);
+      return !orig || it.qty > (orig.qty || orig.quantidade || 1);
+    }).map(it => {
+      const orig = itensOriginais.find(o => (o.name || o.nome) === it.nome);
+      const qtyNova = orig ? it.qty - (orig.qty || orig.quantidade || 1) : it.qty;
+      return { name: it.nome, nome: it.nome, qty: qtyNova, quantidade: qtyNova, price: it.price, preco: it.price };
+    });
+
+    const totalNovo = itensNovos.reduce((s, it) => s + it.price * it.qty, 0);
 
     try {
-      const resp = await fetch(`${API_BASE}/api/v1/pedidos`, {
-        method: "POST",
+      const resp = await fetch(`${API_BASE}/api/v1/pedidos/${pedido.id}/adicionar-itens`, {
+        method: "PATCH",
         headers: buildHeaders(),
         body: JSON.stringify({
-          restaurant_id: getRestaurantId(),
+          itens_novos: itensNovos,
+          total_adicional: totalNovo,
           client_name: clienteNome,
           client_phone: clienteTel || null,
-          itens: itensFmt,
-          notes: obs || null,
-          service_type: pedido.service_type || "local",
-          address: pedido.address || null,
-          payment_method: pedido.payment_method || null,
-          total_price: total,
-          origin: pedido.origin || "balcao",
-          table_number: pedido.table_number || null,
-          order_id: pedido.id,
-          status: toBackStatus(pedido._frontStatus)
+          notes: obs || null
         })
       });
       const data = await resp.json();
@@ -995,14 +993,8 @@ function editarPedidoMesa(key) {
         orders[idx] = { ...orders[idx], ...data.order, _frontStatus: pedido._frontStatus };
       }
 
-      // Só imprime se houver item novo ou qty aumentada
-      const itensOriginais = (pedido.itens || []);
-      const teveMudanca = itens.some(it => {
-        const orig = itensOriginais.find(o => (o.name || o.nome) === it.nome);
-        return !orig || it.qty > (orig.qty || orig.quantidade || 1);
-      });
-
-      if (teveMudanca) {
+      // Só imprime se tiver itens novos
+      if (itensNovos.length > 0) {
         const rid = getRestaurantId();
         try {
           await fetch(`${API_BASE}/api/v1/restaurante/${rid}/reimprimir-pedido`, {
@@ -1027,7 +1019,7 @@ function editarPedidoMesa(key) {
     }
   });
 }
-
+  
 document.body.appendChild(modal);
 modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
 renderModal();
