@@ -671,8 +671,8 @@ function abrirDrawerMesa(key) {
 
       <div style="padding:22px 24px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(91,28,28,0.4);">
         <div style="flex:1; display:flex; align-items:center;">
-  <button class="icon-button" style="font-size:13px; padding:6px 10px; border-radius:8px; width:auto;"
-    onclick="editarPedidoMesa('${key}')">✏️</button>
+ ${ocupada ? `<button class="icon-button" style="font-size:13px; padding:6px 10px; border-radius:8px; width:auto;"
+    onclick="editarPedidoMesa('${key}')">✏️</button>` : `<div style="width:30px;"></div>`}
 </div>
         <h3 style="font-size:18px; font-weight:800; color:rgba(252,228,228,0.95); margin:0; text-align:center; flex:2;">${isBalcao ? "🍽️" : "🪑"} ${label}</h3>
        <div style="flex:1; display:flex; justify-content:flex-end; align-items:center;">
