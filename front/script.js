@@ -1487,12 +1487,10 @@ async function fetchOrders() {
         renderMesas();
       } else {
         const jaNavegou = window._jaNavegou;
-        if (!jaNavegou) {
-          window._jaNavegou = true;
-          showMesas();
-        } else {
-          renderBoard();
-        }
+if (!jaNavegou) {
+  window._jaNavegou = true;
+  showMesas();
+}
       }
     }
   }
