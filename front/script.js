@@ -863,7 +863,7 @@ function abrirCriarPedidoMesa(key) {
   modal.innerHTML = `
     <div class="modal confirm-modal" style="max-width:480px;">
       <div class="modal-header">
-        <h3>+ Adicionar Itens — ${label}</h3>
+        <h3> Adicionar Itens — ${label}</h3>
         <button class="icon-button" onclick="document.getElementById('adicionar-itens-modal').remove()">×</button>
       </div>
       <div class="modal-body" style="gap:12px;">
