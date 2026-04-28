@@ -2399,7 +2399,7 @@ async function imprimirResumosSelecionados() {
     modal.innerHTML = `
       <div class="modal confirm-modal" style="display:flex; flex-direction:column; max-height:85vh;">
         <div class="modal-header" style="flex-shrink:0;">
-          <h3>💳 Cobrar Juntos</h3>
+          <h3>💳 Cobrar</h3>
         </div>
         <div class="modal-body" style="flex:1; overflow-y:auto; padding-bottom:8px;">
           
