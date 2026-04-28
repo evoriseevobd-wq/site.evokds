@@ -646,7 +646,6 @@ function abrirDrawerMesa(key) {
 
   const ocupada = pedidosAtivos.length > 0;
 
-  // Agrega todos os itens de todos os pedidos da mesa
   const todosItens = [];
   pedidosAtivos.forEach(o => {
     (Array.isArray(o.itens) ? o.itens : []).forEach(it => {
@@ -654,15 +653,14 @@ function abrirDrawerMesa(key) {
       const qty = it.qty || it.quantidade || 1;
       const price = parseFloat(it.price || it.preco || 0);
       const existente = todosItens.find(i => i.nome === nome);
-      if (existente) {
-        existente.qty += qty;
-      } else {
-        todosItens.push({ nome, qty, price });
-      }
+      if (existente) { existente.qty += qty; }
+      else { todosItens.push({ nome, qty, price }); }
     });
   });
 
   const totalMesa = pedidosAtivos.reduce((s, o) => s + parseFloat(o.total_price || 0), 0);
+  const clienteNome = pedidosAtivos[0]?.client_name || "";
+  const clienteTel = pedidosAtivos[0]?.client_phone || "";
 
   const modal = document.createElement("div");
   modal.id = "mesa-drawer-modal";
@@ -670,29 +668,39 @@ function abrirDrawerMesa(key) {
 
   modal.innerHTML = `
     <div class="modal confirm-modal" style="max-width:480px;">
-      <div class="modal-header">
-        <h3>${isBalcao ? "🍽️" : "🪑"} ${label}</h3>
-        <button class="icon-button" onclick="document.getElementById('mesa-drawer-modal').remove()">×</button>
+      <div class="modal-header" style="justify-content:center;">
+        <h3 style="text-align:center;">${isBalcao ? "🍽️" : "🪑"} ${label}</h3>
+        <button class="icon-button" style="position:absolute; right:16px;" onclick="document.getElementById('mesa-drawer-modal').remove()">×</button>
       </div>
       <div class="modal-body" style="gap:12px;">
 
         ${ocupada ? `
+          ${clienteNome ? `
+          <div style="background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:10px; padding:12px 14px; margin-bottom:4px;">
+            <div style="font-size:14px; font-weight:700; color:rgba(252,228,228,0.95);">${escapeHtml(clienteNome)}</div>
+            ${clienteTel ? `<div style="font-size:12px; color:rgba(252,228,228,0.4); margin-top:2px;">${escapeHtml(clienteTel)}</div>` : ''}
+          </div>
+          ` : ''}
+
           <div style="font-size:11px; font-weight:700; color:rgba(252,228,228,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Itens da mesa</div>
-          ${todosItens.map(it => `
-            <div style="
-              display:flex; justify-content:space-between; align-items:center;
-              padding:10px 14px; background:rgba(46,8,8,0.75);
-              border:1px solid rgba(91,28,28,0.85); border-radius:10px;
-            ">
-              <div style="font-size:14px; font-weight:600; color:rgba(252,228,228,0.95);">
-                ${escapeHtml(it.nome)} <span style="color:rgba(252,228,228,0.4); font-size:12px;">× ${it.qty}</span>
+
+          <div style="border:1px solid rgba(91,28,28,0.85); border-radius:10px; overflow:hidden;">
+            ${todosItens.map((it, i) => `
+              <div style="
+                display:flex; justify-content:space-between; align-items:center;
+                padding:10px 14px;
+                ${i < todosItens.length - 1 ? 'border-bottom:1px solid rgba(91,28,28,0.5);' : ''}
+              ">
+                <div style="font-size:14px; font-weight:600; color:rgba(252,228,228,0.95);">
+                  ${escapeHtml(it.nome)} <span style="color:rgba(252,228,228,0.4); font-size:12px;">× ${it.qty}</span>
+                </div>
+                ${it.price > 0 ? `<span style="color:rgba(251,191,36,1); font-weight:700; font-size:13px;">${formatCurrency(it.price * it.qty)}</span>` : ''}
               </div>
-              ${it.price > 0 ? `<span style="color:rgba(251,191,36,1); font-weight:700; font-size:13px;">${formatCurrency(it.price * it.qty)}</span>` : ''}
+            `).join('')}
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:rgba(46,8,8,0.6); border-top:1px solid rgba(91,28,28,0.5);">
+              <span style="font-size:13px; font-weight:700; color:rgba(252,228,228,0.6);">Total</span>
+              <span style="font-size:16px; font-weight:900; color:rgba(251,191,36,1);">${formatCurrency(totalMesa)}</span>
             </div>
-          `).join('')}
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; padding-top:12px; border-top:1px solid rgba(91,28,28,0.4);">
-            <span style="font-size:13px; font-weight:700; color:rgba(252,228,228,0.6);">Total</span>
-            <span style="font-size:16px; font-weight:900; color:rgba(251,191,36,1);">${formatCurrency(totalMesa)}</span>
           </div>
         ` : `
           <div style="text-align:center; padding:20px 0; color:rgba(252,228,228,0.4); font-size:14px;">
@@ -702,9 +710,12 @@ function abrirDrawerMesa(key) {
 
       </div>
       <div class="modal-actions" style="justify-content:space-between;">
-        <button class="ghost-button" onclick="document.getElementById('mesa-drawer-modal').remove()">Fechar</button>
+        ${ocupada ? `
+        <button class="ghost-button" style="border-color:rgba(239,68,68,0.5); color:rgba(239,68,68,0.8);"
+          onclick="document.getElementById('mesa-drawer-modal').remove(); cancelarPedidosMesa('${key}')">
+          Cancelar pedido
+        </button>
         <div style="display:flex; gap:10px;">
-          ${ocupada ? `
           <button class="ghost-button" onclick="document.getElementById('mesa-drawer-modal').remove(); abrirCriarPedidoMesa('${key}')">
             + Adicionar Itens
           </button>
@@ -715,18 +726,34 @@ function abrirDrawerMesa(key) {
             onclick="document.getElementById('mesa-drawer-modal').remove(); finalizarMesa('${key}')">
             💳 Finalizar Mesa
           </button>
-          ` : `
-          <button class="primary-button" onclick="document.getElementById('mesa-drawer-modal').remove(); abrirCriarPedidoMesa('${key}')">
-            Abrir Mesa
-          </button>
-          `}
         </div>
+        ` : `
+        <button class="primary-button" onclick="document.getElementById('mesa-drawer-modal').remove(); abrirCriarPedidoMesa('${key}')">
+          Abrir Mesa
+        </button>
+        `}
       </div>
     </div>
   `;
 
   document.body.appendChild(modal);
   modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+}
+
+function cancelarPedidosMesa(key) {
+  const isBalcao = key === "balcao";
+  const pedido = orders.find(o =>
+    ["recebido", "preparo", "pronto"].includes(o._frontStatus) &&
+    ["autoatendimento", "balcao"].includes(String(o.origin || "").toLowerCase()) &&
+    (isBalcao
+      ? (!o.table_number && o.service_type !== "delivery")
+      : String(o.table_number) === String(key))
+  );
+  if (!pedido) return;
+  showConfirmModal("Tem certeza que deseja cancelar o pedido desta mesa?", async () => {
+    await updateOrderStatus(pedido.id, "cancelado");
+    renderMesas();
+  });
 }
 
 function finalizarMesa(key) {
