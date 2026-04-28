@@ -667,72 +667,75 @@ function abrirDrawerMesa(key) {
   modal.className = "modal-backdrop open";
 
   modal.innerHTML = `
-    <div class="modal confirm-modal" style="max-width:480px;">
-      <div class="modal-header" style="justify-content:center;">
-        <h3 style="text-align:center;">${isBalcao ? "🍽️" : "🪑"} ${label}</h3>
-        <button class="icon-button" style="position:absolute; right:16px;" onclick="document.getElementById('mesa-drawer-modal').remove()">×</button>
+    <div class="modal confirm-modal" style="max-width:420px; padding:0; overflow:hidden;">
+
+      <div style="padding:22px 24px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(91,28,28,0.4);">
+        <div style="flex:1;"></div>
+        <h3 style="font-size:18px; font-weight:800; color:rgba(252,228,228,0.95); margin:0; text-align:center; flex:2;">${isBalcao ? "🍽️" : "🪑"} ${label}</h3>
+        <div style="flex:1; display:flex; justify-content:flex-end;">
+          <button class="icon-button" onclick="document.getElementById('mesa-drawer-modal').remove()">×</button>
+        </div>
       </div>
-      <div class="modal-body" style="gap:12px;">
 
-        ${ocupada ? `
+      ${ocupada ? `
+        <div style="padding:22px 24px 20px;">
           ${clienteNome ? `
-          <div style="background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:10px; padding:12px 14px; margin-bottom:4px;">
-            <div style="font-size:14px; font-weight:700; color:rgba(252,228,228,0.95);">${escapeHtml(clienteNome)}</div>
-            ${clienteTel ? `<div style="font-size:12px; color:rgba(252,228,228,0.4); margin-top:2px;">${escapeHtml(clienteTel)}</div>` : ''}
-          </div>
+            <div style="font-size:18px; font-weight:700; color:rgba(252,228,228,0.95); margin-bottom:6px;">${escapeHtml(clienteNome)}</div>
           ` : ''}
+          ${clienteTel ? `
+            <div style="font-size:13px; color:rgba(252,228,228,0.35);">${escapeHtml(clienteTel)}</div>
+          ` : ''}
+        </div>
 
-          <div style="font-size:11px; font-weight:700; color:rgba(252,228,228,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Itens da mesa</div>
+        <div style="height:1px; background:rgba(91,28,28,0.4); margin:0 24px;"></div>
 
-          <div style="border:1px solid rgba(91,28,28,0.85); border-radius:10px; overflow:hidden;">
+        <div style="padding:20px 24px 0;">
+          <div style="font-size:10px; font-weight:700; color:rgba(252,228,228,0.3); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:16px;">Itens da mesa</div>
+          <div style="display:flex; flex-direction:column;">
             ${todosItens.map((it, i) => `
-              <div style="
-                display:flex; justify-content:space-between; align-items:center;
-                padding:10px 14px;
-                ${i < todosItens.length - 1 ? 'border-bottom:1px solid rgba(91,28,28,0.5);' : ''}
-              ">
-                <div style="font-size:14px; font-weight:600; color:rgba(252,228,228,0.95);">
-                  ${escapeHtml(it.nome)} <span style="color:rgba(252,228,228,0.4); font-size:12px;">× ${it.qty}</span>
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 0; ${i < todosItens.length - 1 ? 'border-bottom:1px solid rgba(91,28,28,0.3);' : ''}">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <span style="font-size:12px; font-weight:800; color:rgba(252,228,228,0.25); min-width:24px;">×${it.qty}</span>
+                  <span style="font-size:14px; font-weight:600; color:rgba(252,228,228,0.9);">${escapeHtml(it.nome)}</span>
                 </div>
-                ${it.price > 0 ? `<span style="color:rgba(251,191,36,1); font-weight:700; font-size:13px;">${formatCurrency(it.price * it.qty)}</span>` : ''}
+                ${it.price > 0 ? `<span style="font-size:14px; font-weight:700; color:rgba(251,191,36,0.9);">${formatCurrency(it.price * it.qty)}</span>` : ''}
               </div>
             `).join('')}
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:rgba(46,8,8,0.6); border-top:1px solid rgba(91,28,28,0.5);">
-              <span style="font-size:13px; font-weight:700; color:rgba(252,228,228,0.6);">Total</span>
-              <span style="font-size:16px; font-weight:900; color:rgba(251,191,36,1);">${formatCurrency(totalMesa)}</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 0 28px;">
+              <span style="font-size:13px; font-weight:600; color:rgba(252,228,228,0.4);">Total</span>
+              <span style="font-size:20px; font-weight:900; color:rgba(251,191,36,1);">${formatCurrency(totalMesa)}</span>
             </div>
           </div>
-        ` : `
-          <div style="text-align:center; padding:20px 0; color:rgba(252,228,228,0.4); font-size:14px;">
-            ${label} está livre
-          </div>
-        `}
+        </div>
 
-      </div>
-      <div class="modal-actions" style="justify-content:space-between;">
-        ${ocupada ? `
-        <button class="ghost-button" style="border-color:rgba(239,68,68,0.5); color:rgba(239,68,68,0.8);"
-          onclick="document.getElementById('mesa-drawer-modal').remove(); cancelarPedidosMesa('${key}')">
-          Cancelar pedido
-        </button>
-        <div style="display:flex; gap:10px;">
-          <button class="ghost-button" onclick="document.getElementById('mesa-drawer-modal').remove(); abrirCriarPedidoMesa('${key}')">
-            + Adicionar Itens
+        <div style="height:1px; background:rgba(91,28,28,0.4); margin:0 24px;"></div>
+
+        <div style="padding:20px 24px 24px; display:flex; gap:10px;">
+          <button class="ghost-button" style="flex:1; font-size:12px; border-color:rgba(239,68,68,0.4); color:rgba(239,68,68,0.7);"
+            onclick="document.getElementById('mesa-drawer-modal').remove(); cancelarPedidosMesa('${key}')">
+            Cancelar
           </button>
-          <button style="
-            padding:10px 20px; border-radius:10px; border:1.5px solid rgba(34,197,94,0.5);
-            background:transparent; color:rgba(34,197,94,1); font-size:13px;
-            font-weight:700; cursor:pointer; font-family:inherit;"
+          <button class="ghost-button" style="flex:1; font-size:12px;"
+            onclick="document.getElementById('mesa-drawer-modal').remove(); abrirCriarPedidoMesa('${key}')">
+            + Adicionar
+          </button>
+          <button style="flex:1; padding:11px 8px; border-radius:10px; border:1.5px solid rgba(34,197,94,0.5); background:transparent; color:rgba(34,197,94,1); font-size:12px; font-weight:700; cursor:pointer; font-family:inherit;"
             onclick="document.getElementById('mesa-drawer-modal').remove(); finalizarMesa('${key}')">
-            💳 Finalizar Mesa
+            Finalizar
           </button>
         </div>
-        ` : `
-        <button class="primary-button" onclick="document.getElementById('mesa-drawer-modal').remove(); abrirCriarPedidoMesa('${key}')">
-          Abrir Mesa
-        </button>
-        `}
-      </div>
+
+      ` : `
+        <div style="padding:32px 24px; text-align:center; color:rgba(252,228,228,0.4); font-size:14px;">
+          ${label} está livre
+        </div>
+        <div style="padding:0 24px 24px;">
+          <button class="primary-button" style="width:100%;" onclick="document.getElementById('mesa-drawer-modal').remove(); abrirCriarPedidoMesa('${key}')">
+            Abrir Mesa
+          </button>
+        </div>
+      `}
+
     </div>
   `;
 
