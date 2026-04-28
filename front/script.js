@@ -670,11 +670,12 @@ function abrirDrawerMesa(key) {
     <div class="modal confirm-modal" style="max-width:420px; padding:0; overflow:hidden;">
 
       <div style="padding:22px 24px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(91,28,28,0.4);">
-        <div style="flex:1;"></div>
-        <h3 style="font-size:18px; font-weight:800; color:rgba(252,228,228,0.95); margin:0; text-align:center; flex:2;">${isBalcao ? "🍽️" : "🪑"} ${label}</h3>
-        <div style="flex:1; display:flex; justify-content:flex-end; gap:8px; align-items:center;">
-  <button class="icon-button" style="font-size:13px; padding:6px 10px; border-radius:8px; width:auto;" 
+        <div style="flex:1; display:flex; align-items:center;">
+  <button class="icon-button" style="font-size:13px; padding:6px 10px; border-radius:8px; width:auto;"
     onclick="editarPedidoMesa('${key}')">✏️</button>
+</div>
+        <h3 style="font-size:18px; font-weight:800; color:rgba(252,228,228,0.95); margin:0; text-align:center; flex:2;">${isBalcao ? "🍽️" : "🪑"} ${label}</h3>
+       <div style="flex:1; display:flex; justify-content:flex-end; align-items:center;">
   <button class="icon-button" onclick="document.getElementById('mesa-drawer-modal').remove()">×</button>
 </div>
       </div>
@@ -717,10 +718,6 @@ function abrirDrawerMesa(key) {
             onclick="document.getElementById('mesa-drawer-modal').remove(); cancelarPedidosMesa('${key}')">
             Cancelar
           </button>
-          <button class="ghost-button" style="flex:1; font-size:12px;"
-  onclick="editarPedidoMesa('${key}')">
-  ✏️ Editar
-</button>
 <button class="ghost-button" style="flex:1; font-size:12px;"
   onclick="document.getElementById('mesa-drawer-modal').remove(); abrirCriarPedidoMesa('${key}')">
   Adicionar
@@ -795,13 +792,12 @@ function editarPedidoMesa(key) {
       updateCreateDeliveryVisibility();
     }
 
-    itensPedido = (pedido.itens || []).map(it => ({
-      name: it.name || it.nome || "",
-      qty: it.qty || it.quantidade || 1,
-      price: parseFloat(it.price || it.preco || 0),
-      quantidade: it.qty || it.quantidade || 1
-    }));
-    renderItensSelecionados();
+    window._itensPedidoExterno = (pedido.itens || []).map(it => ({
+  name: it.name || it.nome || "",
+  qty: it.qty || it.quantidade || 1,
+  price: parseFloat(it.price || it.preco || 0),
+  quantidade: it.qty || it.quantidade || 1
+}));
 
     editingOrderId = pedido.id;
   }, 50);
@@ -3245,6 +3241,13 @@ if (totalPriceField) {
   const itensSelecionados = document.getElementById("itens-selecionados");
   const hiddenItems = document.getElementById("new-items");
   let itensPedido = [];
+
+// Carrega itens externos se vierem de editarPedidoMesa
+if (window._itensPedidoExterno) {
+  itensPedido = window._itensPedidoExterno;
+  window._itensPedidoExterno = null;
+  renderItensSelecionados();
+}
 
   function atualizarHiddenItems() {
     hiddenItems.value = JSON.stringify(itensPedido);
