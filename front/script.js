@@ -948,68 +948,89 @@ function editarPedidoMesa(key) {
     };
   }
 
-  function setupSalvar() {
-    const btn = document.getElementById("ep-salvar");
-    if (!btn) return;
-    btn.addEventListener("click", async () => {
-      if (!itens.length) { alert("Adicione pelo menos um item."); return; }
-      btn.disabled = true;
-      btn.textContent = "Salvando...";
+ function setupSalvar() {
+  const btn = document.getElementById("ep-salvar");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    if (!itens.length) { alert("Adicione pelo menos um item."); return; }
+    btn.disabled = true;
+    btn.textContent = "Salvando...";
 
-      const clienteNome = document.getElementById("ep-cliente")?.value.trim() || pedido.client_name;
-      const clienteTel = document.getElementById("ep-telefone")?.value.trim() || pedido.client_phone;
-      const obs = document.getElementById("ep-obs")?.value.trim() || "";
-      const total = calcTotal();
+    const clienteNome = document.getElementById("ep-cliente")?.value.trim() || pedido.client_name;
+    const clienteTel = document.getElementById("ep-telefone")?.value.trim() || pedido.client_phone;
+    const obs = document.getElementById("ep-obs")?.value.trim() || "";
+    const total = calcTotal();
 
-      const itensFmt = itens.map(it => ({
-        name: it.nome, nome: it.nome,
-        qty: it.qty, quantidade: it.qty,
-        price: it.price, preco: it.price
-      }));
+    const itensFmt = itens.map(it => ({
+      name: it.nome, nome: it.nome,
+      qty: it.qty, quantidade: it.qty,
+      price: it.price, preco: it.price
+    }));
 
-      try {
-        const resp = await fetch(`${API_BASE}/api/v1/pedidos`, {
-          method: "POST",
-          headers: buildHeaders(),
-          body: JSON.stringify({
-            restaurant_id: getRestaurantId(),
-            client_name: clienteNome,
-            client_phone: clienteTel || null,
-            itens: itensFmt,
-            notes: obs || null,
-            service_type: pedido.service_type || "local",
-            address: pedido.address || null,
-            payment_method: pedido.payment_method || null,
-            total_price: total,
-            origin: pedido.origin || "balcao",
-            table_number: pedido.table_number || null,
-            order_id: pedido.id,
-            status: toBackStatus(pedido._frontStatus)
-          })
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Erro ao salvar");
+    try {
+      const resp = await fetch(`${API_BASE}/api/v1/pedidos`, {
+        method: "POST",
+        headers: buildHeaders(),
+        body: JSON.stringify({
+          restaurant_id: getRestaurantId(),
+          client_name: clienteNome,
+          client_phone: clienteTel || null,
+          itens: itensFmt,
+          notes: obs || null,
+          service_type: pedido.service_type || "local",
+          address: pedido.address || null,
+          payment_method: pedido.payment_method || null,
+          total_price: total,
+          origin: pedido.origin || "balcao",
+          table_number: pedido.table_number || null,
+          order_id: pedido.id,
+          status: toBackStatus(pedido._frontStatus)
+        })
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Erro ao salvar");
 
-        const idx = orders.findIndex(o => o.id === pedido.id);
-        if (idx !== -1) {
-          orders[idx] = { ...orders[idx], ...data.order, _frontStatus: pedido._frontStatus };
-        }
-
-        modal.remove();
-        await fetchOrders();
-        renderMesas();
-        abrirDrawerMesa(key);
-      } catch(e) {
-        alert("Erro ao salvar: " + e.message);
-        btn.disabled = false;
-        btn.textContent = "Salvar alterações";
+      const idx = orders.findIndex(o => o.id === pedido.id);
+      if (idx !== -1) {
+        orders[idx] = { ...orders[idx], ...data.order, _frontStatus: pedido._frontStatus };
       }
-    });
-  }
 
-  document.body.appendChild(modal);
-  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
-  renderModal();
+      // Só imprime se houver item novo ou qty aumentada
+      const itensOriginais = (pedido.itens || []);
+      const teveMudanca = itens.some(it => {
+        const orig = itensOriginais.find(o => (o.name || o.nome) === it.nome);
+        return !orig || it.qty > (orig.qty || orig.quantidade || 1);
+      });
+
+      if (teveMudanca) {
+        const rid = getRestaurantId();
+        try {
+          await fetch(`${API_BASE}/api/v1/restaurante/${rid}/reimprimir-pedido`, {
+            method: "POST",
+            headers: buildHeaders(),
+            body: JSON.stringify({ order_id: pedido.id })
+          });
+          console.log("✅ Impressão disparada");
+        } catch(e) {
+          console.warn("Impressão falhou mas pedido foi salvo:", e.message);
+        }
+      }
+
+      modal.remove();
+      await fetchOrders();
+      renderMesas();
+      abrirDrawerMesa(key);
+    } catch(e) {
+      alert("Erro ao salvar: " + e.message);
+      btn.disabled = false;
+      btn.textContent = "Salvar alterações";
+    }
+  });
+}
+
+document.body.appendChild(modal);
+modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+renderModal();
 }
 
 function finalizarMesa(key) {
