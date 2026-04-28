@@ -764,6 +764,8 @@ function cancelarPedidosMesa(key) {
 
 function editarPedidoMesa(key) {
   const isBalcao = key === "balcao";
+  const label = isBalcao ? "Balcão" : `Mesa ${key}`;
+
   const pedido = orders.find(o =>
     ["recebido", "preparo", "pronto"].includes(o._frontStatus) &&
     ["autoatendimento", "balcao"].includes(String(o.origin || "").toLowerCase()) &&
@@ -775,32 +777,239 @@ function editarPedidoMesa(key) {
 
   document.getElementById("mesa-drawer-modal")?.remove();
 
-  setTimeout(() => {
-    openBackdrop(createModal);
-    isFetching = true;
-    setTimeout(() => { isFetching = false; }, 2000);
+  const existing = document.getElementById("editar-pedido-modal");
+  if (existing) existing.remove();
 
-    if (newCustomer) newCustomer.value = pedido.client_name || "";
-    if (newPhone) newPhone.value = pedido.client_phone || "";
-    if (newNotes) newNotes.value = pedido.notes || "";
+  let itens = (pedido.itens || []).map(it => ({
+    nome: it.name || it.nome || "",
+    qty: it.qty || it.quantidade || 1,
+    price: parseFloat(it.price || it.preco || 0),
+  }));
 
-    const totalField = document.getElementById("new-total-price");
-    if (totalField) totalField.value = pedido.total_price ? String(pedido.total_price).replace(".", ",") : "";
+  const modal = document.createElement("div");
+  modal.id = "editar-pedido-modal";
+  modal.className = "modal-backdrop open";
 
-    if (newDelivery) {
-      newDelivery.checked = false;
-      updateCreateDeliveryVisibility();
-    }
+  function calcTotal() {
+    return itens.reduce((s, it) => s + it.price * it.qty, 0);
+  }
 
-    window._itensPedidoExterno = (pedido.itens || []).map(it => ({
-  name: it.name || it.nome || "",
-  qty: it.qty || it.quantidade || 1,
-  price: parseFloat(it.price || it.preco || 0),
-  quantidade: it.qty || it.quantidade || 1
-}));
+  function renderModal() {
+    modal.innerHTML = `
+      <div class="modal confirm-modal" style="max-width:460px; padding:0; overflow:hidden; border-radius:14px;">
 
-    editingOrderId = pedido.id;
-  }, 50);
+        <!-- HEADER -->
+        <div style="padding:18px 20px 14px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(91,28,28,0.4);">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:30px; height:30px; background:rgba(180,60,40,0.35); border-radius:8px; display:flex; align-items:center; justify-content:center;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(224,112,96,1)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </div>
+            <div>
+              <p style="margin:0; font-size:11px; color:rgba(252,228,228,0.4); letter-spacing:0.05em; text-transform:uppercase;">Editar Pedido</p>
+              <p style="margin:0; font-size:15px; font-weight:700; color:rgba(252,228,228,0.95);">${isBalcao ? "🍽️" : "🪑"} ${label}</p>
+            </div>
+          </div>
+          <button onclick="document.getElementById('editar-pedido-modal').remove()" style="background:rgba(255,255,255,0.07); border:none; color:rgba(255,255,255,0.5); width:28px; height:28px; border-radius:7px; cursor:pointer; font-size:14px;">×</button>
+        </div>
+
+        <!-- BODY -->
+        <div style="padding:18px 20px; display:flex; flex-direction:column; gap:14px; max-height:70vh; overflow-y:auto;">
+
+          <!-- CLIENTE + TELEFONE -->
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-size:11px; color:rgba(252,228,228,0.4); text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:5px;">Cliente</label>
+              <input id="ep-cliente" type="text" value="${escapeHtml(pedido.client_name || "")}"
+                style="width:100%; background:rgba(255,255,255,0.06); border:0.5px solid rgba(255,255,255,0.12); border-radius:8px; padding:9px 12px; color:rgba(252,228,228,0.95); font-size:13px; box-sizing:border-box; outline:none; font-family:inherit;" />
+            </div>
+            <div style="flex:1;">
+              <label style="font-size:11px; color:rgba(252,228,228,0.4); text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:5px;">Telefone</label>
+              <input id="ep-telefone" type="text" value="${escapeHtml(pedido.client_phone || "")}"
+                style="width:100%; background:rgba(255,255,255,0.06); border:0.5px solid rgba(255,255,255,0.12); border-radius:8px; padding:9px 12px; color:rgba(252,228,228,0.95); font-size:13px; box-sizing:border-box; outline:none; font-family:inherit;" />
+            </div>
+          </div>
+
+          <!-- ITENS -->
+          <div>
+            <label style="font-size:11px; color:rgba(252,228,228,0.4); text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:8px;">Itens do pedido</label>
+
+            <div style="position:relative;">
+              <input id="ep-busca" type="text" autocomplete="off" placeholder="Buscar item no cardápio..."
+                style="width:100%; background:rgba(255,255,255,0.06); border:0.5px solid rgba(255,255,255,0.12); border-radius:8px; padding:9px 12px; color:rgba(252,228,228,0.95); font-size:13px; box-sizing:border-box; outline:none; font-family:inherit; margin-bottom:8px;" />
+              <div id="ep-dropdown" style="display:none; position:absolute; left:0; right:0; top:42px; z-index:9999;
+                background:rgba(30,6,6,0.98); border:1px solid rgba(91,28,28,0.85); border-radius:10px;
+                max-height:200px; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.6);"></div>
+            </div>
+
+            <div id="ep-lista" style="display:flex; flex-direction:column; gap:6px;"></div>
+          </div>
+
+          <!-- TOTAL -->
+          <div style="background:rgba(255,255,255,0.04); border-radius:9px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:13px; color:rgba(252,228,228,0.5);">Total</span>
+            <span id="ep-total" style="font-size:18px; font-weight:700; color:rgba(251,191,36,1);">R$ ${calcTotal().toFixed(2).replace(".", ",")}</span>
+          </div>
+
+          <!-- OBSERVAÇÕES -->
+          <div>
+            <label style="font-size:11px; color:rgba(252,228,228,0.4); text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:5px;">Observações</label>
+            <textarea id="ep-obs" rows="2" placeholder="Ex: sem cebola, bebida sem gelo..."
+              style="width:100%; background:rgba(255,255,255,0.06); border:0.5px solid rgba(255,255,255,0.12); border-radius:8px; padding:9px 12px; color:rgba(252,228,228,0.95); font-size:13px; box-sizing:border-box; resize:vertical; outline:none; font-family:inherit;">${escapeHtml(pedido.notes || "")}</textarea>
+          </div>
+
+        </div>
+
+        <!-- FOOTER -->
+        <div style="padding:14px 20px; display:flex; gap:10px; border-top:1px solid rgba(91,28,28,0.4);">
+          <button onclick="document.getElementById('editar-pedido-modal').remove()" style="flex:1; padding:10px; background:transparent; border:0.5px solid rgba(255,255,255,0.18); border-radius:9px; color:rgba(255,255,255,0.6); font-size:14px; cursor:pointer; font-family:inherit;">Cancelar</button>
+          <button id="ep-salvar" style="flex:2; padding:10px; background:rgba(185,48,48,0.9); border:none; border-radius:9px; color:#fff; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit;">Salvar alterações</button>
+        </div>
+
+      </div>
+    `;
+
+    renderItens();
+    setupBusca();
+    setupSalvar();
+  }
+
+  function renderItens() {
+    const lista = document.getElementById("ep-lista");
+    if (!lista) return;
+    lista.innerHTML = itens.map((it, i) => `
+      <div style="display:flex; align-items:center; justify-content:space-between;
+        background:rgba(255,255,255,0.05); border:0.5px solid rgba(255,255,255,0.09);
+        border-radius:9px; padding:10px 12px;">
+        <div style="flex:1;">
+          <p style="margin:0; font-size:13px; font-weight:600; color:rgba(252,228,228,0.95);">${escapeHtml(it.nome)}</p>
+          <p style="margin:2px 0 0; font-size:12px; color:rgba(251,191,36,0.9);">R$ ${(it.price * it.qty).toFixed(2).replace(".", ",")}</p>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <button onclick="window._epQty(${i}, -1)" style="width:24px; height:24px; border-radius:6px; background:rgba(255,255,255,0.08); border:0.5px solid rgba(255,255,255,0.15); color:#fff; font-size:14px; cursor:pointer; line-height:1; font-family:inherit;">−</button>
+          <span style="font-size:13px; min-width:16px; text-align:center; color:rgba(252,228,228,0.95);">${it.qty}</span>
+          <button onclick="window._epQty(${i}, 1)" style="width:24px; height:24px; border-radius:6px; background:rgba(255,255,255,0.08); border:0.5px solid rgba(255,255,255,0.15); color:#fff; font-size:14px; cursor:pointer; line-height:1; font-family:inherit;">+</button>
+          <button onclick="window._epRemover(${i})" style="width:24px; height:24px; border-radius:6px; background:rgba(180,40,40,0.3); border:0.5px solid rgba(180,40,40,0.4); color:rgba(224,112,96,1); font-size:13px; cursor:pointer; margin-left:4px; font-family:inherit;">×</button>
+        </div>
+      </div>
+    `).join("");
+    const totalEl = document.getElementById("ep-total");
+    if (totalEl) totalEl.textContent = `R$ ${calcTotal().toFixed(2).replace(".", ",")}`;
+  }
+
+  window._epQty = function(i, delta) {
+    itens[i].qty += delta;
+    if (itens[i].qty <= 0) itens.splice(i, 1);
+    renderItens();
+  };
+
+  window._epRemover = function(i) {
+    itens.splice(i, 1);
+    renderItens();
+  };
+
+  function setupBusca() {
+    let timer = null;
+    const input = document.getElementById("ep-busca");
+    const dropdown = document.getElementById("ep-dropdown");
+    if (!input || !dropdown) return;
+
+    input.addEventListener("input", () => {
+      clearTimeout(timer);
+      const q = input.value.trim();
+      if (!q) { dropdown.style.display = "none"; return; }
+      timer = setTimeout(async () => {
+        const rid = getRestaurantId();
+        try {
+          const qNorm = q.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+          const resp = await fetch(`${API_BASE}/api/v1/cardapio/${rid}/busca?q=${encodeURIComponent(qNorm)}`);
+          const resultado = await resp.json();
+          if (!resultado.length) { dropdown.style.display = "none"; return; }
+          dropdown.innerHTML = resultado.map(it => `
+            <div onclick="window._epAddItem(${JSON.stringify(it).replace(/"/g, "&quot;")})"
+              style="padding:10px 14px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; border-bottom:0.5px solid rgba(91,28,28,0.4);"
+              onmouseover="this.style.background='rgba(91,28,28,0.5)'"
+              onmouseout="this.style.background='transparent'">
+              <span style="color:rgba(252,228,228,0.95); font-size:13px; font-weight:600;">${escapeHtml(it.nome)}</span>
+              <span style="color:rgba(251,191,36,0.9); font-size:12px; font-weight:700;">${formatCurrency(it.preco)}</span>
+            </div>
+          `).join("");
+          dropdown.style.display = "block";
+        } catch(e) { dropdown.style.display = "none"; }
+      }, 250);
+    });
+
+    window._epAddItem = function(item) {
+      const existente = itens.find(i => i.nome === item.nome);
+      if (existente) { existente.qty++; }
+      else { itens.push({ nome: item.nome, qty: 1, price: parseFloat(item.preco || 0) }); }
+      input.value = "";
+      dropdown.style.display = "none";
+      renderItens();
+    };
+  }
+
+  function setupSalvar() {
+    const btn = document.getElementById("ep-salvar");
+    if (!btn) return;
+    btn.addEventListener("click", async () => {
+      if (!itens.length) { alert("Adicione pelo menos um item."); return; }
+      btn.disabled = true;
+      btn.textContent = "Salvando...";
+
+      const clienteNome = document.getElementById("ep-cliente")?.value.trim() || pedido.client_name;
+      const clienteTel = document.getElementById("ep-telefone")?.value.trim() || pedido.client_phone;
+      const obs = document.getElementById("ep-obs")?.value.trim() || "";
+      const total = calcTotal();
+
+      const itensFmt = itens.map(it => ({
+        name: it.nome, nome: it.nome,
+        qty: it.qty, quantidade: it.qty,
+        price: it.price, preco: it.price
+      }));
+
+      try {
+        const resp = await fetch(`${API_BASE}/api/v1/pedidos`, {
+          method: "POST",
+          headers: buildHeaders(),
+          body: JSON.stringify({
+            restaurant_id: getRestaurantId(),
+            client_name: clienteNome,
+            client_phone: clienteTel || null,
+            itens: itensFmt,
+            notes: obs || null,
+            service_type: pedido.service_type || "local",
+            address: pedido.address || null,
+            payment_method: pedido.payment_method || null,
+            total_price: total,
+            origin: pedido.origin || "balcao",
+            table_number: pedido.table_number || null,
+            order_id: pedido.id,
+            status: toBackStatus(pedido._frontStatus)
+          })
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "Erro ao salvar");
+
+        const idx = orders.findIndex(o => o.id === pedido.id);
+        if (idx !== -1) {
+          orders[idx] = { ...orders[idx], ...data.order, _frontStatus: pedido._frontStatus };
+        }
+
+        modal.remove();
+        await fetchOrders();
+        renderMesas();
+        abrirDrawerMesa(key);
+      } catch(e) {
+        alert("Erro ao salvar: " + e.message);
+        btn.disabled = false;
+        btn.textContent = "Salvar alterações";
+      }
+    });
+  }
+
+  document.body.appendChild(modal);
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+  renderModal();
 }
 
 function finalizarMesa(key) {
