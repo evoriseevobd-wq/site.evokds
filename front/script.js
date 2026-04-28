@@ -716,9 +716,13 @@ function abrirDrawerMesa(key) {
             Cancelar
           </button>
           <button class="ghost-button" style="flex:1; font-size:12px;"
-            onclick="document.getElementById('mesa-drawer-modal').remove(); abrirCriarPedidoMesa('${key}')">
-            + Adicionar
-          </button>
+  onclick="editarPedidoMesa('${key}')">
+  ✏️ Editar
+</button>
+<button class="ghost-button" style="flex:1; font-size:12px;"
+  onclick="document.getElementById('mesa-drawer-modal').remove(); abrirCriarPedidoMesa('${key}')">
+  Adicionar
+</button>
           <button style="flex:1; padding:11px 8px; border-radius:10px; border:1.5px solid rgba(34,197,94,0.5); background:transparent; color:rgba(34,197,94,1); font-size:12px; font-weight:700; cursor:pointer; font-family:inherit;"
             onclick="document.getElementById('mesa-drawer-modal').remove(); finalizarMesa('${key}')">
             Finalizar
@@ -757,6 +761,48 @@ function cancelarPedidosMesa(key) {
     await updateOrderStatus(pedido.id, "cancelado");
     renderMesas();
   });
+}
+
+function editarPedidoMesa(key) {
+  const isBalcao = key === "balcao";
+  const pedido = orders.find(o =>
+    ["recebido", "preparo", "pronto"].includes(o._frontStatus) &&
+    ["autoatendimento", "balcao"].includes(String(o.origin || "").toLowerCase()) &&
+    (isBalcao
+      ? (!o.table_number && o.service_type !== "delivery")
+      : String(o.table_number) === String(key))
+  );
+  if (!pedido) return;
+
+  document.getElementById("mesa-drawer-modal")?.remove();
+
+  setTimeout(() => {
+    openBackdrop(createModal);
+    isFetching = true;
+    setTimeout(() => { isFetching = false; }, 2000);
+
+    if (newCustomer) newCustomer.value = pedido.client_name || "";
+    if (newPhone) newPhone.value = pedido.client_phone || "";
+    if (newNotes) newNotes.value = pedido.notes || "";
+
+    const totalField = document.getElementById("new-total-price");
+    if (totalField) totalField.value = pedido.total_price ? String(pedido.total_price).replace(".", ",") : "";
+
+    if (newDelivery) {
+      newDelivery.checked = false;
+      updateCreateDeliveryVisibility();
+    }
+
+    itensPedido = (pedido.itens || []).map(it => ({
+      name: it.name || it.nome || "",
+      qty: it.qty || it.quantidade || 1,
+      price: parseFloat(it.price || it.preco || 0),
+      quantidade: it.qty || it.quantidade || 1
+    }));
+    renderItensSelecionados();
+
+    editingOrderId = pedido.id;
+  }, 50);
 }
 
 function finalizarMesa(key) {
@@ -944,8 +990,9 @@ function abrirCriarPedidoMesa(key) {
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || "Erro ao adicionar itens");
       modal.remove();
-      await fetchOrders();
-      renderMesas();
+await fetchOrders();
+renderMesas();
+abrirDrawerMesa(key);
     } catch(e) {
       alert("Erro ao adicionar itens: " + e.message);
       btn.disabled = false;
