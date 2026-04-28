@@ -1102,7 +1102,7 @@ function abrirCriarPedidoMesa(key) {
             background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none; font-family:inherit;" />
           <div id="add-itens-dropdown" style="display:none; position:absolute; left:0; right:0; top:48px; z-index:9999;
             background:rgba(30,6,6,0.98); border:1px solid rgba(91,28,28,0.85); border-radius:12px;
-            max-height:220px; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.6);"></div>
+            max-height:220px; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.6); scrollbar-width:none;"></div>
         </div>
 
         <div id="add-itens-lista" style="display:flex; flex-direction:column; gap:8px;"></div>
