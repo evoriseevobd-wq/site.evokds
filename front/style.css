@@ -1134,13 +1134,16 @@ body {
 }
 
 .card-value {
-  font-size: 42px;
+  font-size: 28px;
   font-weight: 900;
   color: var(--text);
   font-family: 'Space Grotesk', sans-serif;
   line-height: 1;
   margin-bottom: 8px;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .card-subtitle {
