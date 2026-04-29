@@ -1801,12 +1801,15 @@ body {
 }
 
 .card-value {
-  font-size: 36px;
+  font-size: 28px;
   font-weight: 800;
   color: rgba(252, 228, 228, 0.95);
   margin-bottom: 4px;
   font-family: 'Space Grotesk', sans-serif;
   line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .card-sublabel {
