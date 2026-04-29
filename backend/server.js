@@ -746,13 +746,15 @@ app.get("/orders/:restaurant_id", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
     const cutoff = new Date();
-cutoff.setHours(cutoff.getHours() - 12);
+    cutoff.setHours(cutoff.getHours() - 12);
+
     const { data, error } = await supabase
       .from("orders")
       .select("*")
       .eq("restaurant_id", restaurant_id)
-      .gte("created_at", cutoff.toISOString())
+      .or(`status.in.(pending,preparing,mounting,delivering),created_at.gte.${cutoff.toISOString()}`)
       .order("created_at", { ascending: true });
+
     if (error) return sendError(res, 500, "Erro ao listar pedidos");
     return res.json(data || []);
   } catch (err) {
