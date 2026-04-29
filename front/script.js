@@ -3,7 +3,7 @@ const GOOGLE_CLIENT_ID =
   "872848052437-nl3lru9m1jhmfobk0imbpb2o9uk47mqi.apps.googleusercontent.com";
 
 const API_BASE = "https://backend.evoriseai.com.br";
-const API_URL = `${API_BASE}/orders`;
+const API_URL = `${API_BASE}/api/v1/pedidos`;
 const AUTH_URL = `${API_BASE}/auth/google`;
 const CRM_URL = `${API_BASE}/crm`;
 const METRICS_URL = `${API_BASE}/api/v1/metrics`;
@@ -1443,7 +1443,7 @@ async function fetchOrders() {
   _fetchController = new AbortController();
 
   try {
-    const resp = await fetch(`${API_URL}/${rid}`, { signal: _fetchController.signal });
+    const resp = await fetch(`${API_URL}?restaurant_id=${rid}`, { signal: _fetchController.signal });
     if (!resp.ok) throw new Error("Erro ao buscar pedidos");
 
     const data = await resp.json();
@@ -1490,7 +1490,7 @@ if (!jaNavegou) {
 async function updateOrderStatus(orderId, newFrontStatus) {
   const backStatus = toBackStatus(newFrontStatus);
   try {
-    const resp = await fetch(`${API_URL}/${orderId}/status`, {  // 🔥 ADICIONA /status
+    const resp = await fetch(`${API_BASE}/api/v1/pedidos/${orderId}/status`, {
       method: "PATCH",
       headers: buildHeaders(),
       body: JSON.stringify({ status: backStatus }),
