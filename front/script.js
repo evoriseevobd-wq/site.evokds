@@ -2137,33 +2137,24 @@ const paymentStr = pagamentosValidos.length === 1
     });
   }
 
-  window.onValorInput = (idx, valor) => {
+ window.onValorInput = (idx, valor) => {
   const valorNum = parseFloat(valor) || 0;
   const maxValor = totalPedido - pagamentos.slice(0, idx).reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
-
   pagamentos[idx].valor = Math.min(valorNum, maxValor);
-
+  const sel = document.getElementById(`metodo-${idx}`);
+  if (sel) pagamentos[idx].metodo = sel.value;
   const restante = totalPedido - pagamentos.reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
-
-  if (restante > 0.009) {
-    if (idx === pagamentos.length - 1) {
-      // Era o último, abre novo campo
-      pagamentos.push({ metodo: "", valor: restante });
-      renderModal();
-      // Foca no select do novo campo
-      const novoSelect = document.getElementById(`metodo-${pagamentos.length - 1}`);
-      if (novoSelect) novoSelect.focus();
-    } else {
-      // Atualiza o último silenciosamente
-      pagamentos[pagamentos.length - 1].valor = restante;
-      const ultimoInput = document.getElementById(`valor-${pagamentos.length - 1}`);
-      if (ultimoInput) ultimoInput.value = restante.toFixed(2);
-    }
-  } else {
-    // Zerou — remove campos extras
+  if (restante > 0.009 && idx === pagamentos.length - 1) {
+    pagamentos.push({ metodo: "", valor: restante });
+    renderModal();
+    setTimeout(() => { document.getElementById(`metodo-${pagamentos.length - 1}`)?.focus(); }, 50);
+  } else if (restante <= 0.009 && pagamentos.length > idx + 1) {
     pagamentos = pagamentos.slice(0, idx + 1);
-    pagamentos[idx].valor = maxValor;
-    if (pagamentos.length > 1) renderModal();
+    renderModal();
+  } else if (idx < pagamentos.length - 1) {
+    pagamentos[pagamentos.length - 1].valor = restante;
+    const ultimoInput = document.getElementById(`valor-${pagamentos.length - 1}`);
+    if (ultimoInput) ultimoInput.value = restante.toFixed(2);
   }
 };
 
@@ -2496,26 +2487,26 @@ const paymentStr = pagamentosValidos.length === 1
     });
   }
 
-  window.onValorInputJuntos = (idx, valor) => {
-    const valorNum = parseFloat(valor) || 0;
-    const maxValor = totalGeral - pagamentos.slice(0, idx).reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
-    pagamentos[idx].valor = Math.min(valorNum, maxValor);
-    const restante = totalGeral - pagamentos.reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
-    if (restante > 0.009) {
-      if (idx === pagamentos.length - 1) {
-        pagamentos.push({ metodo: "", valor: restante });
-        renderModal();
-      } else {
-        pagamentos[pagamentos.length - 1].valor = restante;
-        const ultimoInput = document.getElementById(`valor-${pagamentos.length - 1}`);
-        if (ultimoInput) ultimoInput.value = restante.toFixed(2);
-      }
-    } else {
-      pagamentos = pagamentos.slice(0, idx + 1);
-      pagamentos[idx].valor = maxValor;
-      if (pagamentos.length > 1) renderModal();
-    }
-  };
+ window.onValorInputJuntos = (idx, valor) => {
+  const valorNum = parseFloat(valor) || 0;
+  const maxValor = totalGeral - pagamentos.slice(0, idx).reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
+  pagamentos[idx].valor = Math.min(valorNum, maxValor);
+  const sel = document.getElementById(`metodo-${idx}`);
+  if (sel) pagamentos[idx].metodo = sel.value;
+  const restante = totalGeral - pagamentos.reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
+  if (restante > 0.009 && idx === pagamentos.length - 1) {
+    pagamentos.push({ metodo: "", valor: restante });
+    renderModal();
+    setTimeout(() => { document.getElementById(`metodo-${pagamentos.length - 1}`)?.focus(); }, 50);
+  } else if (restante <= 0.009 && pagamentos.length > idx + 1) {
+    pagamentos = pagamentos.slice(0, idx + 1);
+    renderModal();
+  } else if (idx < pagamentos.length - 1) {
+    pagamentos[pagamentos.length - 1].valor = restante;
+    const ultimoInput = document.getElementById(`valor-${pagamentos.length - 1}`);
+    if (ultimoInput) ultimoInput.value = restante.toFixed(2);
+  }
+};
 
   window.removerPagamentoJuntos = (idx) => {
     pagamentos.splice(idx, 1);
