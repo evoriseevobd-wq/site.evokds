@@ -1478,8 +1478,7 @@ async function fetchOrders() {
       if (mesasView && !mesasView.classList.contains("hidden")) {
         renderMesas();
       } else {
-        const jaNavegou = window._jaNavegou;
-if (!jaNavegou) {
+        if (!window._jaNavegou) {
   window._jaNavegou = true;
   showMesas();
 }
@@ -2791,10 +2790,14 @@ async function saveNewOrder() {
   const totalPriceFormatted = document.getElementById("new-total-price")?.value || '0';
   const total_price = parseFloat(totalPriceFormatted.replace(/\./g, '').replace(',', '.')) || 0;
 
-  if (!rid || !client) { alert("Preencha o nome do cliente."); isSavingOrder = false; if (saveCreateBtn) { saveCreateBtn.disabled = false; saveCreateBtn.textContent = "Salvar"; } return; }
-  if (!itens || itens.length === 0) { alert("Preencha os itens do pedido."); isSavingOrder = false; if (saveCreateBtn) { saveCreateBtn.disabled = false; saveCreateBtn.textContent = "Salvar"; } return; }
-  if (isDelivery && !address) { alert("Endereço é obrigatório para delivery."); isSavingOrder = false; if (saveCreateBtn) { saveCreateBtn.disabled = false; saveCreateBtn.textContent = "Salvar"; } return; }
-  if (isDelivery && !payment_method) { alert("Forma de pagamento é obrigatória para delivery."); isSavingOrder = false; if (saveCreateBtn) { saveCreateBtn.disabled = false; saveCreateBtn.textContent = "Salvar"; } return; }
+ function resetSaveBtn() {
+  isSavingOrder = false;
+  if (saveCreateBtn) { saveCreateBtn.disabled = false; saveCreateBtn.textContent = "Salvar"; }
+}
+if (!rid || !client) { alert("Preencha o nome do cliente."); resetSaveBtn(); return; }
+if (!itens || itens.length === 0) { alert("Preencha os itens do pedido."); resetSaveBtn(); return; }
+if (isDelivery && !address) { alert("Endereço é obrigatório para delivery."); resetSaveBtn(); return; }
+if (isDelivery && !payment_method) { alert("Forma de pagamento é obrigatória para delivery."); resetSaveBtn(); return; }
 
   try {
    const orderAtual = editOrderId ? orders.find(o => o.id === editOrderId) : null;
@@ -3834,13 +3837,11 @@ async function abrirModalVariacaoAdmin(item, opcoes) {
 });
 
   // Limpa itens ao fechar o modal
-  const origClose = closeCreateModal;
-  closeCreateModal = function() {
-    itensPedido = [];
-    renderItensSelecionados();
-    if (searchInput) searchInput.value = '';
-    origClose();
-  };
+ function resetModalItens() {
+  itensPedido = [];
+  renderItensSelecionados();
+  if (searchInput) searchInput.value = '';
+}
 
 // Event listeners das tabs
 if (tabAtivos) tabAtivos.addEventListener("click", () => changeView("ativos"));
@@ -4824,6 +4825,7 @@ function setupAutoatendimentoTabs() {
 }
 
 async function fetchCardapio() {
+  _categoriasCache = null;
   const rid = getRestaurantId();
   if (!rid) {
     console.error("❌ restaurant_id não encontrado ao carregar cardápio");
