@@ -1006,19 +1006,20 @@ if (status === "finished") {
 
       const temIncremento = Object.values(incrementos).some(v => v > 0);
       if (temIncremento) {
-        await supabase.rpc("incrementar_caixa", {
-          p_caixa_id: caixaAberto.id,
-          p_valor_pix: incrementos.valor_pix,
-          p_qtd_pix: incrementos.qtd_pix,
-          p_valor_credito: incrementos.valor_credito,
-          p_qtd_credito: incrementos.qtd_credito,
-          p_valor_debito: incrementos.valor_debito,
-          p_qtd_debito: incrementos.qtd_debito,
-          p_valor_dinheiro: incrementos.valor_dinheiro,
-          p_qtd_dinheiro: incrementos.qtd_dinheiro,
-          p_valor_maquininha: incrementos.valor_maquininha,
-          p_qtd_maquininha: incrementos.qtd_maquininha
-        });
+       await supabase.rpc("incrementar_caixa", {
+  p_caixa_id: caixaAberto.id,
+  p_valor_pix: incrementos.valor_pix,
+  p_qtd_pix: incrementos.qtd_pix,
+  p_valor_credito: incrementos.valor_credito,
+  p_qtd_credito: incrementos.qtd_credito,
+  p_valor_debito: incrementos.valor_debito,
+  p_qtd_debito: incrementos.qtd_debito,
+  p_valor_dinheiro: incrementos.valor_dinheiro,
+  p_qtd_dinheiro: incrementos.qtd_dinheiro,
+  p_valor_maquininha: incrementos.valor_maquininha,
+  p_qtd_maquininha: incrementos.qtd_maquininha,
+  p_total_pedidos: 1
+});
         console.log(`💰 Caixa atualizado atomicamente — Pedido #${data.order_number}`);
       }
     }
@@ -3808,7 +3809,7 @@ app.post("/api/v1/caixa/:restaurant_id/abrir", async (req, res) => {
 app.post("/api/v1/caixa/:restaurant_id/fechar", async (req, res) => {
   try {
     const { restaurant_id } = req.params;
-    const { valor_informado } = req.body;
+    const { valor_informado, obs } = req.body;
 
     const { data: caixa, error } = await supabase
       .from("caixa")
@@ -3853,6 +3854,8 @@ app.post("/api/v1/caixa/:restaurant_id/fechar", async (req, res) => {
           total_pedidos: (caixa.qtd_pix || 0) + (caixa.qtd_debito || 0) + (caixa.qtd_dinheiro || 0) + (caixa.qtd_credito || 0) + (caixa.qtd_maquininha || 0),
           total_esperado_caixa: caixa.fundo_inicial + caixa.valor_dinheiro,
           valor_informado: valor_informado || null,
+obs: obs || null,
+total_pedidos: caixa.total_pedidos || 0,
           aberto_em: caixa.created_at,
 fechado_em: new Date().toISOString(),
 horario_abertura: new Date(caixa.created_at).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" }),
