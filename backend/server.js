@@ -3801,9 +3801,25 @@ app.post("/api/v1/caixa/:restaurant_id/fechar", async (req, res) => {
 
     if (error || !caixa) return sendError(res, 404, "Nenhum caixa aberto");
 
+    const fechadoEm = new Date().toISOString();
+
+    const formatarHora = (data) => {
+      if (!data) return null;
+
+      return new Date(data).toLocaleTimeString("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    };
+
     const { error: updateError } = await supabase
       .from("caixa")
-      .update({ status: "fechado", fechado_at: new Date().toISOString(), valor_informado })
+      .update({
+        status: "fechado",
+        fechado_at: fechadoEm,
+        valor_informado
+      })
       .eq("id", caixa.id);
 
     if (updateError) return sendError(res, 500, "Erro ao fechar caixa");
@@ -3811,8 +3827,15 @@ app.post("/api/v1/caixa/:restaurant_id/fechar", async (req, res) => {
     // Dispara webhook de fechamento
     const webhookConfig = await getIntegracao(restaurant_id, "webhook_fechamento");
     const webhookUrl = webhookConfig?.webhook_url;
+
     if (webhookUrl) {
-      const totalMovimentado = caixa.valor_dinheiro + caixa.valor_pix + caixa.valor_credito + caixa.valor_debito + caixa.valor_maquininha;
+      const totalMovimentado =
+        (caixa.valor_dinheiro || 0) +
+        (caixa.valor_pix || 0) +
+        (caixa.valor_credito || 0) +
+        (caixa.valor_debito || 0) +
+        (caixa.valor_maquininha || 0);
+
       fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -3821,6 +3844,7 @@ app.post("/api/v1/caixa/:restaurant_id/fechar", async (req, res) => {
           operador: caixa.operador,
           turno: caixa.turno,
           fundo_inicial: caixa.fundo_inicial,
+
           valor_dinheiro: caixa.valor_dinheiro,
           qtd_dinheiro: caixa.qtd_dinheiro,
           valor_pix: caixa.valor_pix,
@@ -3831,11 +3855,15 @@ app.post("/api/v1/caixa/:restaurant_id/fechar", async (req, res) => {
           qtd_debito: caixa.qtd_debito,
           valor_maquininha: caixa.valor_maquininha,
           qtd_maquininha: caixa.qtd_maquininha,
+
           total_movimentado: totalMovimentado,
-          total_esperado_caixa: caixa.fundo_inicial + caixa.valor_dinheiro,
+          total_esperado_caixa: (caixa.fundo_inicial || 0) + (caixa.valor_dinheiro || 0),
           valor_informado: valor_informado || null,
+
           aberto_em: caixa.created_at,
-          fechado_em: new Date().toISOString()
+          fechado_em: fechadoEm,
+          horario_abertura: formatarHora(caixa.created_at),
+          horario_fechamento: formatarHora(fechadoEm)
         })
       }).catch(e => console.error("Erro webhook fechamento:", e));
     }
