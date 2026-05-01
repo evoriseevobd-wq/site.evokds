@@ -2098,9 +2098,10 @@ function showPaymentModal(orderId) {
       }
       pagamentos[pagamentos.length - 1].valor = calcRestante();
 
-      const paymentStr = pagamentos.length === 1
-        ? pagamentos[0].metodo
-        : pagamentos.map(p => `${p.metodo} R$${parseFloat(p.valor).toFixed(2)}`).join(' + ');
+      const pagamentosValidos = pagamentos.filter(p => parseFloat(p.valor) > 0);
+const paymentStr = pagamentosValidos.length === 1
+  ? pagamentosValidos[0].metodo
+  : pagamentosValidos.map(p => `${p.metodo} R$${parseFloat(p.valor).toFixed(2)}`).join(' + ');
 
       const confirmBtn = document.getElementById("payment-confirm");
       confirmBtn.disabled = true;
@@ -6733,11 +6734,7 @@ async function exportarFechamentoPDF() {
     </body></html>
   `;
 
-const win = window.open("", "_blank");
-  if (win) {
-    win.document.write(html);
-    win.document.close();
-  }
+// PDF desativado — relatório enviado via webhook/n8n
 
   if (d.webhook_fechamento) {
     try {
