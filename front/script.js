@@ -2096,9 +2096,7 @@ function showPaymentModal(orderId) {
         if (!metodo) { alert(`Selecione o método do Pagamento ${i + 1}`); return; }
         pagamentos[i].metodo = metodo;
       }
-      pagamentos[pagamentos.length - 1].valor = calcRestante();
-
-      const pagamentosValidos = pagamentos.filter(p => parseFloat(p.valor) > 0);
+     const pagamentosValidos = pagamentos.filter(p => parseFloat(p.valor) > 0 && p.metodo);
 const paymentStr = pagamentosValidos.length === 1
   ? pagamentosValidos[0].metodo
   : pagamentosValidos.map(p => `${p.metodo} R$${parseFloat(p.valor).toFixed(2)}`).join(' + ');
@@ -2454,11 +2452,10 @@ async function imprimirResumosSelecionados() {
         if (!metodo) { alert(`Selecione o método do Pagamento ${i + 1}`); return; }
         pagamentos[i].metodo = metodo;
       }
-      pagamentos[pagamentos.length - 1].valor = calcRestante();
-
-      const paymentStr = pagamentos.length === 1
-        ? pagamentos[0].metodo
-        : pagamentos.map(p => `${p.metodo} R$${parseFloat(p.valor).toFixed(2)}`).join(' + ');
+      const pagamentosValidos = pagamentos.filter(p => parseFloat(p.valor) > 0 && p.metodo);
+const paymentStr = pagamentosValidos.length === 1
+  ? pagamentosValidos[0].metodo
+  : pagamentosValidos.map(p => `${p.metodo} R$${parseFloat(p.valor).toFixed(2)}`).join(' + ');
 
       const confirmBtn = document.getElementById("payment-confirm");
       confirmBtn.disabled = true;
