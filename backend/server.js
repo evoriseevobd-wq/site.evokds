@@ -968,7 +968,7 @@ if (status === "finished") {
   try {
     const { data: caixaAberto } = await supabase
       .from("caixa")
-      .select("*")
+      .select("id")
       .eq("restaurant_id", data.restaurant_id)
       .eq("status", "aberto")
       .single();
@@ -977,31 +977,49 @@ if (status === "finished") {
       const paymentStr = String(data.payment_method || "").toLowerCase();
       const total = parseFloat(data.total_price || 0);
 
-      // Parse do split de pagamento ex: "pix R$15.00 + dinheiro R$4.00"
-      const updateCaixa = {};
-      
+      const incrementos = {
+        valor_pix: 0, qtd_pix: 0,
+        valor_credito: 0, qtd_credito: 0,
+        valor_debito: 0, qtd_debito: 0,
+        valor_dinheiro: 0, qtd_dinheiro: 0,
+        valor_maquininha: 0, qtd_maquininha: 0
+      };
+
       if (paymentStr.includes("+")) {
         const partes = paymentStr.split("+").map(p => p.trim());
         partes.forEach(parte => {
           const valorMatch = parte.match(/r?\$?([\d.,]+)/i);
           const valor = valorMatch ? parseFloat(valorMatch[1].replace(",", ".")) : 0;
-          if (parte.includes("pix"))        { updateCaixa.valor_pix       = (caixaAberto.valor_pix       || 0) + valor; updateCaixa.qtd_pix       = (caixaAberto.qtd_pix       || 0) + 1; }
-          if (parte.includes("credito") || parte.includes("crédito")) { updateCaixa.valor_credito   = (caixaAberto.valor_credito   || 0) + valor; updateCaixa.qtd_credito   = (caixaAberto.qtd_credito   || 0) + 1; }
-          if (parte.includes("debito")  || parte.includes("débito"))  { updateCaixa.valor_debito    = (caixaAberto.valor_debito    || 0) + valor; updateCaixa.qtd_debito    = (caixaAberto.qtd_debito    || 0) + 1; }
-          if (parte.includes("dinheiro"))   { updateCaixa.valor_dinheiro  = (caixaAberto.valor_dinheiro  || 0) + valor; updateCaixa.qtd_dinheiro  = (caixaAberto.qtd_dinheiro  || 0) + 1; }
-          if (parte.includes("maquininha")) { updateCaixa.valor_maquininha= (caixaAberto.valor_maquininha|| 0) + valor; updateCaixa.qtd_maquininha= (caixaAberto.qtd_maquininha|| 0) + 1; }
+          if (parte.includes("pix"))                                        { incrementos.valor_pix        += valor; incrementos.qtd_pix        += 1; }
+          if (parte.includes("credito") || parte.includes("crédito"))       { incrementos.valor_credito    += valor; incrementos.qtd_credito    += 1; }
+          if (parte.includes("debito")  || parte.includes("débito"))        { incrementos.valor_debito     += valor; incrementos.qtd_debito     += 1; }
+          if (parte.includes("dinheiro"))                                    { incrementos.valor_dinheiro   += valor; incrementos.qtd_dinheiro   += 1; }
+          if (parte.includes("maquininha"))                                  { incrementos.valor_maquininha += valor; incrementos.qtd_maquininha += 1; }
         });
       } else {
-        if (paymentStr.includes("pix"))        { updateCaixa.valor_pix        = (caixaAberto.valor_pix        || 0) + total; updateCaixa.qtd_pix        = (caixaAberto.qtd_pix        || 0) + 1; }
-        if (paymentStr.includes("credito") || paymentStr.includes("crédito")) { updateCaixa.valor_credito    = (caixaAberto.valor_credito    || 0) + total; updateCaixa.qtd_credito    = (caixaAberto.qtd_credito    || 0) + 1; }
-        if (paymentStr.includes("debito")  || paymentStr.includes("débito"))  { updateCaixa.valor_debito     = (caixaAberto.valor_debito     || 0) + total; updateCaixa.qtd_debito     = (caixaAberto.qtd_debito     || 0) + 1; }
-        if (paymentStr.includes("dinheiro"))   { updateCaixa.valor_dinheiro   = (caixaAberto.valor_dinheiro   || 0) + total; updateCaixa.qtd_dinheiro   = (caixaAberto.qtd_dinheiro   || 0) + 1; }
-        if (paymentStr.includes("maquininha")) { updateCaixa.valor_maquininha = (caixaAberto.valor_maquininha || 0) + total; updateCaixa.qtd_maquininha = (caixaAberto.qtd_maquininha || 0) + 1; }
+        if (paymentStr.includes("pix"))                                      { incrementos.valor_pix        += total; incrementos.qtd_pix        += 1; }
+        if (paymentStr.includes("credito") || paymentStr.includes("crédito")){ incrementos.valor_credito    += total; incrementos.qtd_credito    += 1; }
+        if (paymentStr.includes("debito")  || paymentStr.includes("débito")) { incrementos.valor_debito     += total; incrementos.qtd_debito     += 1; }
+        if (paymentStr.includes("dinheiro"))                                  { incrementos.valor_dinheiro   += total; incrementos.qtd_dinheiro   += 1; }
+        if (paymentStr.includes("maquininha"))                                { incrementos.valor_maquininha += total; incrementos.qtd_maquininha += 1; }
       }
 
-      if (Object.keys(updateCaixa).length > 0) {
-        await supabase.from("caixa").update(updateCaixa).eq("id", caixaAberto.id);
-        console.log(`💰 Caixa atualizado — Pedido #${data.order_number}`);
+      const temIncremento = Object.values(incrementos).some(v => v > 0);
+      if (temIncremento) {
+        await supabase.rpc("incrementar_caixa", {
+          p_caixa_id: caixaAberto.id,
+          p_valor_pix: incrementos.valor_pix,
+          p_qtd_pix: incrementos.qtd_pix,
+          p_valor_credito: incrementos.valor_credito,
+          p_qtd_credito: incrementos.qtd_credito,
+          p_valor_debito: incrementos.valor_debito,
+          p_qtd_debito: incrementos.qtd_debito,
+          p_valor_dinheiro: incrementos.valor_dinheiro,
+          p_qtd_dinheiro: incrementos.qtd_dinheiro,
+          p_valor_maquininha: incrementos.valor_maquininha,
+          p_qtd_maquininha: incrementos.qtd_maquininha
+        });
+        console.log(`💰 Caixa atualizado atomicamente — Pedido #${data.order_number}`);
       }
     }
   } catch (caixaErr) {
