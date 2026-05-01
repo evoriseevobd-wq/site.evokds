@@ -3853,7 +3853,9 @@ app.post("/api/v1/caixa/:restaurant_id/fechar", async (req, res) => {
           total_esperado_caixa: caixa.fundo_inicial + caixa.valor_dinheiro,
           valor_informado: valor_informado || null,
           aberto_em: caixa.created_at,
-          fechado_em: new Date().toISOString()
+fechado_em: new Date().toISOString(),
+horario_abertura: new Date(caixa.created_at).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" }),
+horario_fechamento: new Date().toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" })
         })
       }).catch(e => console.error("Erro webhook fechamento:", e));
     }
