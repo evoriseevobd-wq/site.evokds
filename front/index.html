@@ -987,9 +987,6 @@
 </div>
       
     </div>
-</div>
-      
-    </div>
   </div>
 </main>
 <!-- MODAL DE PEDIDO -->
@@ -1265,30 +1262,30 @@
   </div>
 
   <!-- Seu JavaScript -->
-  <script src="script.js"></script>
-
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js');
-  }
-</script>
-
-</body>
 <!-- CROP MODAL -->
-<div class="crop-modal-backdrop hidden" id="crop-modal-backdrop">
-  <div class="crop-modal-box">
-    <div class="crop-modal-header">
-      <span class="crop-modal-title">✂️ Recortar imagem</span>
-      <button class="crop-modal-close" onclick="cancelCrop()">×</button>
-    </div>
-    <div class="crop-img-wrap">
-      <img id="crop-image" src="" alt="crop" />
-    </div>
-    <div class="crop-modal-footer">
-      <button class="crop-btn-cancel" onclick="cancelCrop()">Cancelar</button>
-      <button class="crop-btn-confirm" onclick="confirmCrop()">Usar esta imagem</button>
+  <div class="crop-modal-backdrop hidden" id="crop-modal-backdrop">
+    <div class="crop-modal-box">
+      <div class="crop-modal-header">
+        <span class="crop-modal-title">✂️ Recortar imagem</span>
+        <button class="crop-modal-close" onclick="cancelCrop()">×</button>
+      </div>
+      <div class="crop-img-wrap">
+        <img id="crop-image" src="" alt="crop" />
+      </div>
+      <div class="crop-modal-footer">
+        <button class="crop-btn-cancel" onclick="cancelCrop()">Cancelar</button>
+        <button class="crop-btn-confirm" onclick="confirmCrop()">Usar esta imagem</button>
+      </div>
     </div>
   </div>
-</div>
+
+  <script src="script.js"></script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
+
 </body>
 </html>
