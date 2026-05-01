@@ -3801,7 +3801,7 @@ app.post("/api/v1/caixa/:restaurant_id/fechar", async (req, res) => {
 
     if (error || !caixa) return sendError(res, 404, "Nenhum caixa aberto");
 
-    const fechado_at = new Date().toISOString();
+    const fechadoEm = new Date().toISOString();
 
     const formatarHora = (data) => {
       if (!data) return null;
@@ -3817,7 +3817,7 @@ app.post("/api/v1/caixa/:restaurant_id/fechar", async (req, res) => {
       .from("caixa")
       .update({
         status: "fechado",
-        fechado_at: fechado_at,
+         fechado_at: fechadoEm,
         valor_informado
       })
       .eq("id", caixa.id);
@@ -3860,10 +3860,10 @@ app.post("/api/v1/caixa/:restaurant_id/fechar", async (req, res) => {
           total_esperado_caixa: (caixa.fundo_inicial || 0) + (caixa.valor_dinheiro || 0),
           valor_informado: valor_informado || null,
 
-          aberto_em: created_at,
-          fechado_em: fechado_at,
-          horario_abertura: formatarHora(created_at),
-          horario_fechamento: formatarHora(fechado_at)
+         aberto_em: caixa.created_at,
+          fechado_em: fechadoEm,
+          horario_abertura: formatarHora(caixa.created_at),
+          horario_fechamento: formatarHora(fechadoEm)
         })
       }).catch(e => console.error("Erro webhook fechamento:", e));
     }
