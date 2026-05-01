@@ -3817,7 +3817,7 @@ app.post("/api/v1/caixa/:restaurant_id/fechar", async (req, res) => {
       .from("caixa")
       .update({
         status: "fechado",
-         fechado_at: fechadoEm,
+        fechado_at: fechadoEm,
         valor_informado
       })
       .eq("id", caixa.id);
@@ -3860,7 +3860,7 @@ app.post("/api/v1/caixa/:restaurant_id/fechar", async (req, res) => {
           total_esperado_caixa: (caixa.fundo_inicial || 0) + (caixa.valor_dinheiro || 0),
           valor_informado: valor_informado || null,
 
-         aberto_em: caixa.created_at,
+          aberto_em: caixa.created_at,
           fechado_em: fechadoEm,
           horario_abertura: formatarHora(caixa.created_at),
           horario_fechamento: formatarHora(fechadoEm)
