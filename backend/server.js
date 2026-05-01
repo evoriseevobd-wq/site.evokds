@@ -3850,6 +3850,7 @@ app.post("/api/v1/caixa/:restaurant_id/fechar", async (req, res) => {
           valor_maquininha: caixa.valor_maquininha,
           qtd_maquininha: caixa.qtd_maquininha,
           total_movimentado: totalMovimentado,
+          total_pedidos: (caixa.qtd_pix || 0) + (caixa.qtd_debito || 0) + (caixa.qtd_dinheiro || 0) + (caixa.qtd_credito || 0) + (caixa.qtd_maquininha || 0),
           total_esperado_caixa: caixa.fundo_inicial + caixa.valor_dinheiro,
           valor_informado: valor_informado || null,
           aberto_em: caixa.created_at,
