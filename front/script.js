@@ -3995,9 +3995,24 @@ socket.on("order_updated", (order) => {
     clearTimeout(_renderDebounce);
     _renderDebounce = setTimeout(() => renderBoard(), 500);
   }
-  // Atualiza tela de mesas em tempo real
+ // Atualiza tela de mesas em tempo real
   if (!document.getElementById("mesas-view")?.classList.contains("hidden")) {
     renderMesas();
+  }
+
+  // Atualiza caixa em tempo real se estiver aberto e pedido foi finalizado
+  if (order.status === "finished") {
+    const modalCaixa = document.getElementById("caixa-modal");
+    if (modalCaixa) {
+      const scrollTop = modalCaixa.querySelector('.modal')?.scrollTop || 0;
+      showCaixa();
+      setTimeout(() => {
+        const novoModal = document.getElementById("caixa-modal");
+        if (novoModal?.querySelector('.modal')) {
+          novoModal.querySelector('.modal').scrollTop = scrollTop;
+        }
+      }, 300);
+    }
   }
 });
 
@@ -4019,6 +4034,8 @@ setInterval(() => {
   });
 }, 60000);
 
+
+  
 renderBoard();
 }
 // ========================================
