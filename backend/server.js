@@ -3832,9 +3832,17 @@ io.to(restaurant_id).emit("caixa_atualizado", { status: "fechado" });
     // Dispara webhook de fechamento
     const webhookConfig = await getIntegracao(restaurant_id, "webhook_fechamento");
     const webhookUrl = webhookConfig?.webhook_url;
-    if (webhookUrl) {
-      const totalMovimentado = caixa.valor_dinheiro + caixa.valor_pix + caixa.valor_credito + caixa.valor_debito + caixa.valor_maquininha;
-      fetch(webhookUrl, {
+   if (webhookUrl) {
+  const totalMovimentado = caixa.valor_dinheiro + caixa.valor_pix + caixa.valor_credito + caixa.valor_debito + caixa.valor_maquininha;
+  
+  // Busca métricas do dia para enriquecer o webhook
+  let metricas = {};
+  try {
+    const metResp = await fetch(`http://localhost:${PORT}/api/v1/metrics/${restaurant_id}/resumo-dia`);
+    if (metResp.ok) metricas = await metResp.json();
+  } catch(e) { console.warn("⚠️ Não foi possível buscar métricas:", e.message); }
+
+  fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -3853,15 +3861,18 @@ io.to(restaurant_id).emit("caixa_atualizado", { status: "fechado" });
           valor_maquininha: caixa.valor_maquininha,
           qtd_maquininha: caixa.qtd_maquininha,
           total_movimentado: totalMovimentado,
-          total_pedidos: (caixa.qtd_pix || 0) + (caixa.qtd_debito || 0) + (caixa.qtd_dinheiro || 0) + (caixa.qtd_credito || 0) + (caixa.qtd_maquininha || 0),
-          total_esperado_caixa: caixa.fundo_inicial + caixa.valor_dinheiro,
+          total_pedidos: caixa.total_pedidos || 0,
+          total_esperado_caixa: caixa.fundo_inicial + (caixa.valor_dinheiro || 0),
           valor_informado: valor_informado || null,
-obs: obs || null,
-total_pedidos: caixa.total_pedidos || 0,
+          obs: obs || null,
+          ticket_medio: metricas.ticket_medio || 0,
+          delivery: metricas.delivery || 0,
+          local: metricas.local || 0,
+          cancelados: metricas.cancelados || 0,
           aberto_em: caixa.created_at,
-fechado_em: new Date().toISOString(),
-horario_abertura: new Date(caixa.created_at).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" }),
-horario_fechamento: new Date().toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" })
+          fechado_em: new Date().toISOString(),
+          horario_abertura: new Date(caixa.created_at).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" }),
+          horario_fechamento: new Date().toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" })
         })
       }).catch(e => console.error("Erro webhook fechamento:", e));
     }
