@@ -1881,17 +1881,22 @@ app.get("/api/v1/metrics/:restaurant_id/resumo-dia", async (req, res) => {
       .single();
 
     // ✅ Busca caixa aberto para usar como filtro de início
-    const { data: caixaAberto } = await supabase
-      .from("caixa")
-      .select("created_at")
-      .eq("restaurant_id", restaurant_id)
-      .eq("status", "aberto")
-      .single();
+ const hoje = new Date();
+hoje.setHours(0, 0, 0, 0);
 
-    // Se tiver caixa aberto, filtra desde a abertura. Senão, desde meia-noite
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const inicioPeriodo = caixaAberto?.created_at ? new Date(caixaAberto.created_at) : hoje;
+let inicioPeriodo = hoje;
+
+if (req.query.desde) {
+  inicioPeriodo = new Date(req.query.desde);
+} else {
+  const { data: caixaAberto } = await supabase
+    .from("caixa")
+    .select("created_at")
+    .eq("restaurant_id", restaurant_id)
+    .eq("status", "aberto")
+    .single();
+  if (caixaAberto?.created_at) inicioPeriodo = new Date(caixaAberto.created_at);
+}
 
     const amanha = new Date(hoje);
     amanha.setDate(amanha.getDate() + 1);
@@ -3838,7 +3843,7 @@ io.to(restaurant_id).emit("caixa_atualizado", { status: "fechado" });
   // Busca métricas do dia para enriquecer o webhook
   let metricas = {};
   try {
-    const metResp = await fetch(`http://localhost:${PORT}/api/v1/metrics/${restaurant_id}/resumo-dia`);
+  const metResp = await fetch(`http://localhost:${PORT}/api/v1/metrics/${restaurant_id}/resumo-dia?desde=${encodeURIComponent(caixa.created_at)}`);
     if (metResp.ok) metricas = await metResp.json();
   } catch(e) { console.warn("⚠️ Não foi possível buscar métricas:", e.message); }
 
