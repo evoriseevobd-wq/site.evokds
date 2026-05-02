@@ -1056,8 +1056,7 @@ function abrirCriarPedidoMesa(key) {
 
  // Se mesa livre → abre modal simplificado sem delivery
   if (pedidosAtivos.length === 0) {
-    window._mesaAtual = isBalcao ? null : key;
-    openCreateModal();
+    openCreateModal(null, isBalcao ? null : key);
     // Esconde o campo de delivery pois é pedido de mesa
     setTimeout(() => {
       const deliveryWrap = document.getElementById("delivery-address-wrap");
@@ -1473,17 +1472,17 @@ async function fetchOrders() {
     if (e.name !== "AbortError") console.error("Polling Error:", e);
   } finally {
     isFetching = false;
-    if (!modalBackdrop?.classList.contains("open") && !createModal?.classList.contains("open")) {
-      const mesasView = document.getElementById("mesas-view");
-      if (mesasView && !mesasView.classList.contains("hidden")) {
-        renderMesas();
-      } else {
-        if (!window._jaNavegou) {
-  window._jaNavegou = true;
-  showMesas();
-}
-      }
+    if (!window._editandoPedido && !modalBackdrop?.classList.contains("open") && !createModal?.classList.contains("open")) {
+  const mesasView = document.getElementById("mesas-view");
+  if (mesasView && !mesasView.classList.contains("hidden")) {
+    renderMesas();
+  } else {
+    if (!window._jaNavegou) {
+      window._jaNavegou = true;
+      showMesas();
     }
+  }
+}
   }
 }
 async function updateOrderStatus(orderId, newFrontStatus) {
@@ -2672,15 +2671,18 @@ function updateCreateDeliveryVisibility() {
   paymentWrap?.classList.toggle("hidden", !isDelivery);
 }
 
-function openCreateModal(e) {
+function openCreateModal(e, mesa) {
   if (e) { e.stopPropagation(); e.preventDefault(); }
   closeDrawer();
-  editingOrderId = null; // ← limpa o ID de edição
+  editingOrderId = null;
   saveCreateBtn.dataset.editOrderId = "";
+  saveCreateBtn.dataset.mesa = mesa || "";
   openBackdrop(createModal);
   updateCreateDeliveryVisibility();
 }
+
 function closeCreateModal() {
+  window._editandoPedido = false;
   closeBackdrop(createModal);
   if (newCustomer) newCustomer.value = "";
   if (newPhone) newPhone.value = "";
@@ -2813,7 +2815,7 @@ const body = {
   payment_method: isDelivery ? payment_method : null,
   total_price,
   origin: orderAtual?.origin || "balcao",
-  table_number: orderAtual?.table_number || window._mesaAtual || null,
+  table_number: orderAtual?.table_number || saveCreateBtn.dataset.mesa || null,
   ...(editOrderId ? { 
     order_id: editOrderId,
     status: toBackStatus(orderAtual?._frontStatus || "recebido")
@@ -3387,9 +3389,9 @@ if (modalEditBtn) modalEditBtn.addEventListener("click", (e) => {
   closeOrderModal();
 
   setTimeout(() => {
+    window._editandoPedido = true;
     openBackdrop(createModal);
-    isFetching = true;
-    setTimeout(() => { isFetching = false; }, 2000);
+
 
     if (newCustomer) newCustomer.value = order.client_name || "";
     if (newPhone) newPhone.value = order.client_phone || "";
@@ -3989,7 +3991,7 @@ socket.on("order_updated", (order) => {
       orders.push({ ...order, _frontStatus: toFrontStatus(order.status) });
     }
   }
-  if (!modalBackdrop?.classList.contains("open") && !createModal?.classList.contains("open")) {
+  if (!window._editandoPedido && !modalBackdrop?.classList.contains("open") && !createModal?.classList.contains("open")) {
     clearTimeout(_renderDebounce);
     _renderDebounce = setTimeout(() => renderBoard(), 500);
   }
