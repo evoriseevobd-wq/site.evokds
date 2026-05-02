@@ -3454,6 +3454,15 @@ if (totalPriceField) {
   const hiddenItems = document.getElementById("new-items");
   let itensPedido = [];
 
+const _closeCreateModalOriginal = closeCreateModal;
+closeCreateModal = function() {
+  itensPedido = [];
+  renderItensSelecionados();
+  const si = document.getElementById("new-items-search");
+  if (si) si.value = '';
+  _closeCreateModalOriginal();
+};
+  
 // Carrega itens externos se vierem de editarPedidoMesa
 if (window._itensPedidoExterno) {
   itensPedido = window._itensPedidoExterno;
