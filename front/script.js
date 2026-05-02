@@ -748,18 +748,18 @@ function abrirDrawerMesa(key) {
 
 function cancelarPedidosMesa(key) {
   const isBalcao = key === "balcao";
-  const pedido = orders.find(o =>
-    ["recebido", "preparo", "pronto"].includes(o._frontStatus) &&
-    ["autoatendimento", "balcao"].includes(String(o.origin || "").toLowerCase()) &&
-    (isBalcao
-      ? (!o.table_number && o.service_type !== "delivery")
-      : String(o.table_number) === String(key))
-  );
-  if (!pedido) return;
-  showConfirmModal("Tem certeza que deseja cancelar o pedido desta mesa?", async () => {
-    await updateOrderStatus(pedido.id, "cancelado");
-    renderMesas();
-  });
+  const pedidosAtivos = orders.filter(o =>
+  ["recebido", "preparo", "pronto"].includes(o._frontStatus) &&
+  ["autoatendimento", "balcao"].includes(String(o.origin || "").toLowerCase()) &&
+  (isBalcao
+    ? (!o.table_number && o.service_type !== "delivery")
+    : String(o.table_number) === String(key))
+);
+if (pedidosAtivos.length === 0) return;
+showConfirmModal("Tem certeza que deseja cancelar o(s) pedido(s) desta mesa?", async () => {
+  await Promise.all(pedidosAtivos.map(p => updateOrderStatus(p.id, "cancelado")));
+  renderMesas();
+});
 }
 
 function editarPedidoMesa(key) {
@@ -2605,33 +2605,37 @@ function startAutoTimer(orderId, createdAt) {
     const el = document.getElementById(`timer-${orderId}`);
     if (!el) { clearInterval(_autoTimers[orderId]); delete _autoTimers[orderId]; return; }
 
-    if (remaining <= 0) {
-      clearInterval(_autoTimers[orderId]);
-      delete _autoTimers[orderId];
-      el.textContent = "⏰ 0:00";
-      el.style.color = "rgba(239,68,68,1)";
+   if (remaining <= 0) {
+  clearInterval(_autoTimers[orderId]);
+  delete _autoTimers[orderId];
+  el.textContent = "⏰ 0:00";
+  el.style.color = "rgba(239,68,68,1)";
 
-      const currentOrder = orders.find(o => o.id === orderId);
-      if (!currentOrder) return;
+  const currentOrder = orders.find(o => o.id === orderId);
+  if (!currentOrder) return;
 
-      if (currentOrder._frontStatus === "recebido") {
-        tocarBip();
-        if (currentOrder.table_number) {
-          orders.filter(o => o.table_number === currentOrder.table_number && o._frontStatus === "recebido")
-            .forEach(p => updateOrderStatus(p.id, 'preparo'));
-        } else {
-          updateOrderStatus(orderId, 'preparo');
-        }
-      } else if (currentOrder._frontStatus === "preparo") {
-        tocarBip();
-        updateOrderStatus(orderId, 'pronto');
-      } else if (currentOrder._frontStatus === "pronto") {
-        tocarBip();
-        const isDelivery = String(currentOrder.service_type || "").toLowerCase() === "delivery";
-        updateOrderStatus(orderId, isDelivery ? "caminho" : "finalizado");
-      }
-      return;
+  // Verifica se o pedido ainda está no status esperado antes de avançar
+  const statusesAtivos = ["recebido", "preparo", "pronto"];
+  if (!statusesAtivos.includes(currentOrder._frontStatus)) return;
+
+  if (currentOrder._frontStatus === "recebido") {
+    tocarBip();
+    if (currentOrder.table_number) {
+      orders.filter(o => o.table_number === currentOrder.table_number && o._frontStatus === "recebido")
+        .forEach(p => updateOrderStatus(p.id, 'preparo'));
+    } else {
+      updateOrderStatus(orderId, 'preparo');
     }
+  } else if (currentOrder._frontStatus === "preparo") {
+    tocarBip();
+    updateOrderStatus(orderId, 'pronto');
+  } else if (currentOrder._frontStatus === "pronto") {
+    tocarBip();
+    const isDelivery = String(currentOrder.service_type || "").toLowerCase() === "delivery";
+    updateOrderStatus(orderId, isDelivery ? "caminho" : "finalizado");
+  }
+  return;
+}
 
     const mins = Math.floor(remaining / 60000);
     const secs = Math.floor((remaining % 60000) / 1000);
@@ -3968,7 +3972,6 @@ document.getElementById("search-order")?.addEventListener("input", function() {
   renderBoard();
 });
   
-// Conecta WebSocket
 socket = io(API_BASE, { transports: ["websocket"] });
 
 socket.on("connect", () => {
@@ -3979,6 +3982,29 @@ socket.on("connect", () => {
   }
 });
 
+socket.on("caixa_atualizado", (data) => {
+  const modalCaixa = document.getElementById("caixa-modal");
+  if (!modalCaixa) return;
+
+  if (data.status === "fechado") {
+    _caixaAberto = null;
+    modalCaixa.remove();
+    return;
+  }
+
+  if (data.status === "aberto") {
+    _caixaAberto = data.caixa;
+    const scrollTop = modalCaixa.querySelector('.modal')?.scrollTop || 0;
+    showCaixa();
+    setTimeout(() => {
+      const novoModal = document.getElementById("caixa-modal");
+      if (novoModal?.querySelector('.modal')) {
+        novoModal.querySelector('.modal').scrollTop = scrollTop;
+      }
+    }, 300);
+  }
+});
+  
 let _renderDebounce = null;
 socket.on("order_updated", (order) => {
   if (!order || !order.id) return;
@@ -3995,10 +4021,11 @@ socket.on("order_updated", (order) => {
     clearTimeout(_renderDebounce);
     _renderDebounce = setTimeout(() => renderBoard(), 500);
   }
- // Atualiza tela de mesas em tempo real
-  if (!document.getElementById("mesas-view")?.classList.contains("hidden")) {
-    renderMesas();
-  }
+// Atualiza tela de mesas em tempo real só se o pedido for de mesa
+const ehPedidoMesa = order.origin === "autoatendimento" || order.origin === "balcao";
+if (ehPedidoMesa && !document.getElementById("mesas-view")?.classList.contains("hidden")) {
+  renderMesas();
+}
 
   // Atualiza caixa em tempo real se estiver aberto e pedido foi finalizado
   if (order.status === "finished") {
@@ -6190,18 +6217,7 @@ let _caixaState = {
   obs: ""
 };
 
-function _salvarCaixaState() {
-  localStorage.setItem("fluxon_caixa", JSON.stringify(_caixaState));
-}
-
-function _carregarCaixaState() {
-  try {
-    const s = localStorage.getItem("fluxon_caixa");
-    if (s) _caixaState = JSON.parse(s);
-  } catch (e) {}
-}
-
-_carregarCaixaState();
+let _caixaAberto = null; // guarda o caixa atual vindo do banco
 
 // ---------- UTILITÁRIOS ----------
 function _fmtCurrency(v) {
@@ -6336,15 +6352,21 @@ async function _confirmarAbertura() {
 
 // ---------- TELA 2: CAIXA ABERTO (hub principal) ----------
 async function showCaixa() {
-  _carregarCaixaState();
+  const rid = getRestaurantId();
+  if (!rid) return;
 
-  if (!_caixaState.aberto) {
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/caixa/${rid}/aberto`);
+    const data = await resp.json();
+    if (!data.aberto || !data.caixa) {
+      showAberturaCaixa();
+      return;
+    }
+    _caixaAberto = data.caixa;
+  } catch(e) {
     showAberturaCaixa();
     return;
   }
-
-  const rid = getRestaurantId();
-  if (!rid) return;
 
   let d;
   try {
@@ -6381,12 +6403,12 @@ async function showCaixa() {
         <div style="${_sectionStyle()} display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
           <div>
             <div style="font-size:10px; font-weight:700; color:rgba(34,197,94,0.8); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Turno aberto</div>
-            <div style="font-size:15px; font-weight:700; color:rgba(252,228,228,0.95);">${_caixaState.operador}</div>
-            <div style="font-size:12px; color:rgba(252,228,228,0.4); margin-top:2px;">${_caixaState.turno} · ${_fmtDuracao(_caixaState.horaAbertura)} em andamento</div>
+            <div style="font-size:15px; font-weight:700; color:rgba(252,228,228,0.95);">${_caixaAberto.operador}</div>
+            <div style="font-size:12px; color:rgba(252,228,228,0.4); margin-top:2px;">${_caixaAberto.turno} · ${_fmtDuracao(_caixaAberto.created_at)} em andamento</div>
           </div>
           <div style="text-align:right;">
             <div style="font-size:10px; color:rgba(252,228,228,0.4); margin-bottom:2px;">Fundo inicial</div>
-            <div style="font-size:18px; font-weight:900; color:rgba(251,191,36,1); font-family:'Space Grotesk',sans-serif;">${_fmtCurrency(_caixaState.fundoInicial)}</div>
+            <div style="font-size:18px; font-weight:900; color:rgba(251,191,36,1); font-family:'Space Grotesk',sans-serif;">${_fmtCurrency(_caixaAberto.fundo_inicial)}</div>
           </div>
         </div>
 
@@ -6489,7 +6511,7 @@ async function _showFechamentoCaixa() {
     const pagDinheiro = d.por_pagamento["dinheiro"] || d.por_pagamento["Dinheiro"] || null;
     return pagDinheiro ? pagDinheiro.valor : 0;
   })();
-  const dinheiroEsperado = _caixaState.fundoInicial + dinheiroEntradas;
+  const dinheiroEsperado = (_caixaAberto.fundo_inicial || 0) + dinheiroEntradas;
 
   const existing = document.getElementById("caixa-modal");
   if (existing) existing.remove();
@@ -6503,7 +6525,7 @@ async function _showFechamentoCaixa() {
         <div>
           <h3 style="margin:0;">Fechar Caixa</h3>
           <p style="color:var(--muted); font-size:12px; margin:4px 0 0 0;">
-            ${_caixaState.operador} · Turno ${_caixaState.turno} · ${_fmtDuracao(_caixaState.horaAbertura)}
+            ${_caixaAberto.operador} · Turno ${_caixaAberto.turno} · ${_fmtDuracao(_caixaAberto.created_at)}
           </p>
         </div>
         <button class="icon-button" onclick="showCaixa()">←</button>
@@ -6527,7 +6549,7 @@ async function _showFechamentoCaixa() {
           ${_sectionTitle("🔍", "Conferência de Caixa")}
           <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(91,28,28,0.4);">
             <span style="font-size:13px; color:rgba(252,228,228,0.6);">Fundo inicial</span>
-            <span style="font-size:13px; font-weight:700; color:rgba(252,228,228,0.9);">${_fmtCurrency(_caixaState.fundoInicial)}</span>
+            <span style="font-size:13px; font-weight:700; color:rgba(252,228,228,0.9);">${_fmtCurrency(_caixaAberto.fundo_inicial || 0)}</span>
           </div>
           <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(91,28,28,0.4);">
             <span style="font-size:13px; color:rgba(252,228,228,0.6);">Entradas em dinheiro</span>
@@ -6555,7 +6577,7 @@ async function _showFechamentoCaixa() {
         <div style="${_sectionStyle()}">
           ${_sectionTitle("📝", "Observações do Caixeiro")}
           <textarea id="cx-obs" rows="3" placeholder="Ex: falta de troco às 14h, sistema lento no pico, cliente reclamou do pedido #42..."
-            style="width:100%; background:rgba(255,255,255,0.06); border:1px solid rgba(91,28,28,0.85); border-radius:10px; padding:10px 14px; color:rgba(252,228,228,0.95); font-size:13px; outline:none; resize:none; line-height:1.5;">${_caixaState.obs || ""}</textarea>
+            style="width:100%; background:rgba(255,255,255,0.06); border:1px solid rgba(91,28,28,0.85); border-radius:10px; padding:10px 14px; color:rgba(252,228,228,0.95); font-size:13px; outline:none; resize:none; line-height:1.5;">${""}</textarea>
         </div>
 
       </div>
@@ -6598,9 +6620,6 @@ function _atualizarDiferenca(esperado) {
 async function _confirmarFechamento() {
   const obs = (document.getElementById("cx-obs")?.value || "").trim();
   const contado = parseFloat(document.getElementById("cx-contado")?.value) || 0;
-  _caixaState.obs = obs;
-  _caixaState.contado = contado;
-  _salvarCaixaState();
 
   const rid = getRestaurantId();
   try {
@@ -6617,8 +6636,7 @@ async function _confirmarFechamento() {
   }
 
   await exportarFechamentoPDF();
-  _caixaState = { aberto: false, operador: "", turno: "", horaAbertura: null, fundoInicial: 0, obs: "" };
-  _salvarCaixaState();
+  _caixaAberto = null;
   const modal = document.getElementById("caixa-modal");
   if (modal) modal.remove();
 }
@@ -6643,8 +6661,9 @@ async function exportarFechamentoPDF() {
     const p = d.por_pagamento["dinheiro"] || d.por_pagamento["Dinheiro"] || null;
     return p ? p.valor : 0;
   })();
-  const esperado = _caixaState.fundoInicial + dinheiroEntradas;
-  const contado = _caixaState.contado || 0;
+  const esperado = (_caixaAberto?.fundo_inicial || 0) + dinheiroEntradas;
+  const contado = parseFloat(document.getElementById("cx-contado")?.value) || 0;
+  
   const diff = contado - esperado;
   const diffStr = Math.abs(diff) < 0.01
     ? "Caixa conferido — sem diferença"
@@ -6653,12 +6672,11 @@ async function exportarFechamentoPDF() {
       : `Falta: R$ ${Math.abs(diff).toFixed(2).replace(".", ",")}`;
   const diffColor = Math.abs(diff) < 0.01 ? "#16a34a" : diff > 0 ? "#2563eb" : "#dc2626";
 
-  const horaAbertura = _caixaState.horaAbertura
-    ? new Date(_caixaState.horaAbertura).toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" })
+  const horaAbertura = _caixaAberto?.created_at
+    ? new Date(_caixaAberto.created_at).toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit", timeZone:"America/Sao_Paulo" })
     : "—";
-  const horaFechamento = new Date().toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" });
-  const duracao = _caixaState.horaAbertura ? _fmtDuracao(_caixaState.horaAbertura) : "—";
-
+  const horaFechamento = new Date().toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit", timeZone:"America/Sao_Paulo" });
+  const duracao = _caixaAberto?.created_at ? _fmtDuracao(_caixaAberto.created_at) : "—";
   const html = `
     <html><head><title>Fechamento de Caixa - ${dataStr}</title>
     <style>
@@ -6696,8 +6714,8 @@ async function exportarFechamentoPDF() {
       </div>
 
       <div class="turno-info">
-        <div><div class="lbl">Operador</div><div class="val">${_caixaState.operador || "—"}</div></div>
-        <div><div class="lbl">Turno</div><div class="val">${_caixaState.turno || "—"}</div></div>
+        <div><div class="lbl">Operador</div><div class="val">${_caixaAberto?.operador || "—"}</div></div>
+        <div><div class="lbl">Turno</div><div class="val">${_caixaAberto?.turno || "—"}</div></div>
         <div><div class="lbl">Abertura</div><div class="val">${horaAbertura}</div></div>
         <div><div class="lbl">Fechamento</div><div class="val">${horaFechamento}</div></div>
         <div><div class="lbl">Duração</div><div class="val">${duracao}</div></div>
@@ -6723,7 +6741,7 @@ async function exportarFechamentoPDF() {
 
       <h2>Conferência de Caixa</h2>
       <div class="conferencia">
-        <div class="conf-row"><span>Fundo inicial</span><span>${_fmtCurrency(_caixaState.fundoInicial)}</span></div>
+        <div class="conf-row"><span>Fundo inicial</span><span>${_fmtCurrency(_caixaAberto?.fundo_inicial || 0)}</span></div>
         <div class="conf-row"><span>Entradas em dinheiro</span><span>${_fmtCurrency(dinheiroEntradas)}</span></div>
         <div class="conf-row"><span>Esperado na gaveta</span><span><strong>${_fmtCurrency(esperado)}</strong></span></div>
         <div class="conf-row"><span>Dinheiro contado</span><span><strong>${_fmtCurrency(contado)}</strong></span></div>
@@ -6739,10 +6757,10 @@ async function exportarFechamentoPDF() {
         </tbody>
       </table>` : ""}
 
-      ${_caixaState.obs ? `
+      ${obs ? `
       <div class="obs-box">
         <div class="lbl">Observações do Caixeiro</div>
-        <p>${_caixaState.obs.replace(/\n/g, "<br>")}</p>
+        <p>${obs.replace(/\n/g, "<br>")}</p>
       </div>` : ""}
 
       <div class="footer">
@@ -6762,16 +6780,16 @@ async function exportarFechamentoPDF() {
         headers: buildHeaders(),
         body: JSON.stringify({
           html_base64: htmlBase64,
-          operador: _caixaState.operador,
-          turno: _caixaState.turno,
-          fundo_inicial: _caixaState.fundoInicial,
+          operador: _caixaAberto?.operador || "",
+          turno: _caixaAberto?.turno || "",
+          fundo_inicial: _caixaAberto?.fundo_inicial || 0,
           faturamento: d.faturamento,
           total_pedidos: d.total_pedidos,
           por_pagamento: d.por_pagamento,
           esperado: esperado,
           contado: contado,
           diferenca: diffStr,
-          obs: _caixaState.obs || ""
+          obs: obs || ""
         })
       });
     } catch(e) {
