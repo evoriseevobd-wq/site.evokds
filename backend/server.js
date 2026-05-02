@@ -3799,7 +3799,8 @@ app.post("/api/v1/caixa/:restaurant_id/abrir", async (req, res) => {
       .select().single();
 
     if (error) return sendError(res, 500, "Erro ao abrir caixa");
-    return res.status(201).json({ success: true, caixa: data });
+io.to(restaurant_id).emit("caixa_atualizado", { status: "aberto", caixa: data });
+return res.status(201).json({ success: true, caixa: data });
   } catch (err) {
     return sendError(res, 500, err.message);
   }
@@ -3825,7 +3826,8 @@ app.post("/api/v1/caixa/:restaurant_id/fechar", async (req, res) => {
       .update({ status: "fechado", fechado_at: new Date().toISOString(), valor_informado })
       .eq("id", caixa.id);
 
-    if (updateError) return sendError(res, 500, "Erro ao fechar caixa");
+   if (updateError) return sendError(res, 500, "Erro ao fechar caixa");
+io.to(restaurant_id).emit("caixa_atualizado", { status: "fechado" });
 
     // Dispara webhook de fechamento
     const webhookConfig = await getIntegracao(restaurant_id, "webhook_fechamento");
