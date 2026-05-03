@@ -121,8 +121,7 @@ const googleBtnContainer = document.getElementById("googleLoginBtn");
 let currentView = "ativos";
 let orders = [];
 let activeOrderId = null;
-let isFetching = false;
-var _fetchController = null;
+let _fetchController = null;
 let editingOrderId = null;
 let socket = null;
 let searchTerm = "";
@@ -370,7 +369,7 @@ function showUpgradeModal(requiredPlan, featureName) {
 // ===== NAVIGATION =====
 function changeView(v) {
   currentView = v;
-  
+  clearSelection();
   tabAtivos?.classList.toggle("active", v === "ativos");
   tabFinalizados?.classList.toggle("active", v === "finalizados");
   tabCancelados?.classList.toggle("active", v === "cancelados");
@@ -1042,7 +1041,7 @@ function finalizarMesa(key) {
   cobrarJuntos();
 }
 
-function abrirCriarPedidoMesa(key) {
+async function abrirCriarPedidoMesa(key) {
   const isBalcao = key === "balcao";
   const label = isBalcao ? "Balcão" : `Mesa ${key}`;
 
@@ -1055,7 +1054,14 @@ function abrirCriarPedidoMesa(key) {
   );
 
  // Se mesa livre → abre modal simplificado sem delivery
-  if (pedidosAtivos.length === 0) {
+ if (pedidosAtivos.length === 0) {
+    const resp = await fetch(`${API_BASE}/api/v1/pedidos-mesa?restaurant_id=${getRestaurantId()}&mesa=${key}`);
+    const check = await resp.json();
+    if (check.pedido) {
+      await fetchOrders();
+      abrirDrawerMesa(key);
+      return;
+    }
     openCreateModal(null, isBalcao ? null : key);
     // Esconde o campo de delivery pois é pedido de mesa
     setTimeout(() => {
@@ -1435,9 +1441,7 @@ document.getElementById("btn-salvar-webhook-fechamento")?.addEventListener("clic
 // ===== CORE LOGIC =====
 async function fetchOrders() {
   const rid = getRestaurantId();
-  if (!rid || isFetching) return;
-
-  isFetching = true;
+  if (!rid) return;
   if (_fetchController) _fetchController.abort();
   _fetchController = new AbortController();
 
@@ -1471,11 +1475,12 @@ async function fetchOrders() {
   } catch (e) {
     if (e.name !== "AbortError") console.error("Polling Error:", e);
   } finally {
-    isFetching = false;
-    if (!window._editandoPedido && !modalBackdrop?.classList.contains("open") && !createModal?.classList.contains("open")) {
+  if (!window._editandoPedido && !modalBackdrop?.classList.contains("open") && !createModal?.classList.contains("open")) {
   const mesasView = document.getElementById("mesas-view");
   if (mesasView && !mesasView.classList.contains("hidden")) {
     renderMesas();
+  } else if (!board?.classList.contains("hidden")) {
+    renderBoard();
   } else {
     if (!window._jaNavegou) {
       window._jaNavegou = true;
@@ -1783,10 +1788,13 @@ function toggleNoOrdersBalloons() {
 
 // Restaura checkboxes após re-render
   if (typeof selectedOrderIds !== "undefined") {
-    selectedOrderIds.forEach(id => {
-      const cb = document.querySelector(`.card-checkbox[data-id="${id}"]`);
-      if (cb) cb.checked = true;
-    });
+    const idsParaRemover = [];
+selectedOrderIds.forEach(id => {
+  const cb = document.querySelector(`.card-checkbox[data-id="${id}"]`);
+  if (cb) cb.checked = true;
+  else idsParaRemover.push(id);
+});
+idsParaRemover.forEach(id => selectedOrderIds.delete(id));
     if (selectedOrderIds.size > 0) updateSelectionBar();
   }
 }
@@ -3851,13 +3859,6 @@ async function abrirModalVariacaoAdmin(item, opcoes) {
   });
 });
 
-  // Limpa itens ao fechar o modal
- function resetModalItens() {
-  itensPedido = [];
-  renderItensSelecionados();
-  if (searchInput) searchInput.value = '';
-}
-
 // Event listeners das tabs
 if (tabAtivos) tabAtivos.addEventListener("click", () => changeView("ativos"));
 if (tabFinalizados) tabFinalizados.addEventListener("click", () => changeView("finalizados"));
@@ -3961,11 +3962,6 @@ document.getElementById("btn-salvar-marketplace")?.addEventListener("click", sal
 if (logoutBtn) logoutBtn.addEventListener("click", logout);
 if (unauthClose) unauthClose.addEventListener("click", () => closeBackdrop(unauthorizedModal));
 
-
-
-showMesas();
-fetchOrders();
-  
 // Busca no board
 document.getElementById("search-order")?.addEventListener("input", function() {
   searchTerm = this.value.toLowerCase().trim();
@@ -4012,10 +4008,9 @@ socket.on("order_updated", (order) => {
   if (idx !== -1) {
     orders[idx] = { ...order, _frontStatus: toFrontStatus(order.status) };
   } else {
-    const jaExiste = orders.some(o => o.id === order.id);
-    if (!jaExiste) {
-      orders.push({ ...order, _frontStatus: toFrontStatus(order.status) });
-    }
+    if (idx === -1) {
+  orders.push({ ...order, _frontStatus: toFrontStatus(order.status) });
+}
   }
   if (!window._editandoPedido && !modalBackdrop?.classList.contains("open") && !createModal?.classList.contains("open")) {
     clearTimeout(_renderDebounce);
@@ -4024,7 +4019,8 @@ socket.on("order_updated", (order) => {
 // Atualiza tela de mesas em tempo real só se o pedido for de mesa
 const ehPedidoMesa = order.origin === "autoatendimento" || order.origin === "balcao";
 if (ehPedidoMesa && !document.getElementById("mesas-view")?.classList.contains("hidden")) {
-  renderMesas();
+  clearTimeout(window._renderMesasDebounce);
+  window._renderMesasDebounce = setTimeout(() => renderMesas(), 300);
 }
 
   // Atualiza caixa em tempo real se estiver aberto e pedido foi finalizado
@@ -4061,8 +4057,15 @@ setInterval(() => {
   });
 }, 60000);
 
+fetchOrders();
 
-  
+// Polling de segurança — fallback se WebSocket cair
+setInterval(() => {
+  if (!socket?.connected) {
+    fetchOrders();
+  }
+}, 30000);
+
 renderBoard();
 }
 // ========================================
@@ -4819,7 +4822,6 @@ renderComparison("delta-retorno",    data.comparison?.taxa_retorno?.growth  || 0
 renderComparison("delta-frequencia", data.comparison?.frequencia?.growth    || 0);
   safeSetText("card-plan-price", formatCurrency(restaurantPlanPrice));
   
-// Gráficos
  // Gráficos
   console.log("🎨 Renderizando gráficos...");
   renderAllCharts(data);
@@ -6208,14 +6210,6 @@ async function salvarFiscal() {
 // Substitua as funções showResumoDia() e exportarFechamentoPDF() por este arquivo completo.
 
 // ---------- ESTADO LOCAL DO TURNO ----------
-let _caixaState = {
-  aberto: false,
-  operador: "",
-  turno: "",
-  horaAbertura: null,
-  fundoInicial: 0,
-  obs: ""
-};
 
 let _caixaAberto = null; // guarda o caixa atual vindo do banco
 
@@ -6764,7 +6758,6 @@ async function exportarFechamentoPDF() {
       <div class="footer">
         Gerado pelo FluxON · ${new Date().toLocaleString("pt-BR")}
       </div>
-      <script>window.onload = function(){ window.print(); }<\/script>
     </body></html>
   `;
 
