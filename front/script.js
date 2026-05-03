@@ -6581,7 +6581,6 @@ async function _showFechamentoCaixa() {
 
       </div>
       <div class="modal-actions" style="justify-content:space-between; flex-wrap:wrap; gap:8px;">
-        <button class="ghost-button" onclick="exportarFechamentoPDF()">📄 Exportar PDF</button>
         <button class="ghost-button" onclick="_confirmarFechamento()" style="border-color:rgba(239,68,68,0.5); color:rgba(239,68,68,1);">Confirmar Fechamento</button>
       </div>
     </div>
