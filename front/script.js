@@ -136,8 +136,6 @@ let features = {
 };
 
 let crmClients = [];
-let metricsData = null;
-let chartInstance = null;
 let insightsChartInstance = null; // 🔥 NOVO
 const insightsState = { activeMetric: 'revenue', timelineData: null }; // 🔥 NOVO
 
@@ -203,7 +201,11 @@ function closeBackdrop(el) {
 }
 
 function buildHeaders() {
-  return { "Content-Type": "application/json" };
+  const token = localStorage.getItem("fluxon_token");
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { "Authorization": `Bearer ${token}` } : {})
+  };
 }
 
 function getRestaurantId() {
@@ -2695,6 +2697,7 @@ function openCreateModal(e, mesa) {
 
 function closeCreateModal() {
   window._editandoPedido = false;
+  editingOrderId = null;
   closeBackdrop(createModal);
   if (newCustomer) newCustomer.value = "";
   if (newPhone) newPhone.value = "";
@@ -3187,6 +3190,7 @@ function initGoogleLogin() {
 }
 
 function logout() {
+  window._jaNavegou = false;
   localStorage.clear();
   location.reload();
 }
