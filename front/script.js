@@ -4061,6 +4061,7 @@ setInterval(() => {
   });
 }, 60000);
 
+showMesas();
 fetchOrders();
 
 // Polling de segurança — fallback se WebSocket cair
