@@ -2092,46 +2092,96 @@ app.post("/api/v1/cardapio/:restaurant_id/validar-itens", async (req, res) => {
     return sendError(res, 400, "itens deve ser um array não vazio");
   }
 
-  const resultados = await Promise.all(itens.map(async (item) => {
-    const nomeNorm = String(item.nome || "")
+  const { data: cardapio, error } = await supabase
+    .from("cardapio")
+    .select("id, nome, preco, opcoes")
+    .eq("restaurant_id", restaurant_id)
+    .eq("ativo", true);
+
+  if (error) return sendError(res, 500, "Erro ao buscar cardápio");
+
+  function normalizarNome(nome) {
+    return String(nome || "")
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
       .trim();
+  }
 
-    // Pega as primeiras 3 palavras para busca mais maleável
-    const palavras = nomeNorm.split(" ").slice(0, 3).join(" ");
+  function buscarItem(nomeQuery) {
+    const q = normalizarNome(nomeQuery);
+    return cardapio.find(item =>
+      normalizarNome(item.nome).includes(q) ||
+      q.includes(normalizarNome(item.nome))
+    );
+  }
 
-    const { data, error } = await supabase
-      .from("cardapio")
-      .select("id, nome, preco, opcoes")
-      .eq("restaurant_id", restaurant_id)
-      .eq("ativo", true)
-      .ilike("nome", `%${palavras}%`)
-      .limit(1)
-      .single();
+  function getPrecoVariacao(item, nomeVariacao) {
+    if (!Array.isArray(item.opcoes) || item.opcoes.length === 0) {
+      return parseFloat(item.preco || 0);
+    }
+    const varNorm = normalizarNome(nomeVariacao);
+    const variacao = item.opcoes.find(op =>
+      normalizarNome(op.nome).includes(varNorm) ||
+      varNorm.includes(normalizarNome(op.nome))
+    );
+    return variacao ? parseFloat(variacao.preco || 0) : parseFloat(item.preco || 0);
+  }
 
-    if (error || !data) {
+  const resultados = itens.map(item => {
+    const nomeCompleto = String(item.nome || "");
+
+    // Detecta pizza dois sabores: "Pizza X Grande — Sabor1 + Sabor2"
+    const matchDoisSabores = nomeCompleto.match(/^(.+?)\s*[—\-]\s*(.+?)\s*\+\s*(.+)$/);
+
+    if (matchDoisSabores) {
+      const nomeBase = matchDoisSabores[1].trim(); // ex: "Pizza dois sabores Grande"
+      const sabor1 = matchDoisSabores[2].trim();   // ex: "Pizza Margherita"
+      const sabor2 = matchDoisSabores[3].trim();   // ex: "Pizza Baiana"
+
+      // Detecta variação no nome base (ex: "Grande", "Media")
+      const variacaoMatch = nomeBase.match(/(grande|media|pequena|p\b|m\b|g\b)/i);
+      const variacao = variacaoMatch ? variacaoMatch[1] : "";
+
+      const item1 = buscarItem(sabor1);
+      const item2 = buscarItem(sabor2);
+
+      const preco1 = item1 ? getPrecoVariacao(item1, variacao) : 0;
+      const preco2 = item2 ? getPrecoVariacao(item2, variacao) : 0;
+      const precoCorreto = Math.max(preco1, preco2);
+      const precoCliente = parseFloat(item.preco || 0);
+
       return {
-        nome_cliente: item.nome,
+        nome_cliente: nomeCompleto,
+        encontrado: !!(item1 || item2),
+        preco_correto: precoCorreto,
+        preco_cliente: precoCliente,
+        ok: Math.abs(precoCorreto - precoCliente) < 0.01
+      };
+    }
+
+    // Item simples
+    const encontrado = buscarItem(nomeCompleto);
+    if (!encontrado) {
+      return {
+        nome_cliente: nomeCompleto,
         encontrado: false,
         ok: false
       };
     }
 
-    const precoCorreto = parseFloat(data.preco || 0);
+    const precoCorreto = parseFloat(encontrado.preco || 0);
     const precoCliente = parseFloat(item.preco || 0);
-    const ok = Math.abs(precoCorreto - precoCliente) < 0.01;
 
     return {
-      nome_cliente: item.nome,
-      nome_cardapio: data.nome,
+      nome_cliente: nomeCompleto,
+      nome_cardapio: encontrado.nome,
+      encontrado: true,
       preco_correto: precoCorreto,
       preco_cliente: precoCliente,
-      encontrado: true,
-      ok
+      ok: Math.abs(precoCorreto - precoCliente) < 0.01
     };
-  }));
+  });
 
   return res.json({ resultados });
 });
