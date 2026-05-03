@@ -2083,6 +2083,59 @@ const qNorm = q.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerC
   return res.json(data || []);
 });
 
+// POST - Valida itens enviados pelo cliente (busca fuzzy por nome)
+app.post("/api/v1/cardapio/:restaurant_id/validar-itens", async (req, res) => {
+  const { restaurant_id } = req.params;
+  const { itens } = req.body;
+
+  if (!Array.isArray(itens) || itens.length === 0) {
+    return sendError(res, 400, "itens deve ser um array não vazio");
+  }
+
+  const resultados = await Promise.all(itens.map(async (item) => {
+    const nomeNorm = String(item.nome || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+
+    // Pega as primeiras 3 palavras para busca mais maleável
+    const palavras = nomeNorm.split(" ").slice(0, 3).join(" ");
+
+    const { data, error } = await supabase
+      .from("cardapio")
+      .select("id, nome, preco, opcoes")
+      .eq("restaurant_id", restaurant_id)
+      .eq("ativo", true)
+      .ilike("nome", `%${palavras}%`)
+      .limit(1)
+      .single();
+
+    if (error || !data) {
+      return {
+        nome_cliente: item.nome,
+        encontrado: false,
+        ok: false
+      };
+    }
+
+    const precoCorreto = parseFloat(data.preco || 0);
+    const precoCliente = parseFloat(item.preco || 0);
+    const ok = Math.abs(precoCorreto - precoCliente) < 0.01;
+
+    return {
+      nome_cliente: item.nome,
+      nome_cardapio: data.nome,
+      preco_correto: precoCorreto,
+      preco_cliente: precoCliente,
+      encontrado: true,
+      ok
+    };
+  }));
+
+  return res.json({ resultados });
+});
+
 // PATCH - Salva ordem das categorias
 app.patch("/api/v1/cardapio/:restaurant_id/ordem-categorias", async (req, res) => {
   const { restaurant_id } = req.params;
