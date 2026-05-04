@@ -2108,7 +2108,7 @@ app.post("/api/v1/cardapio/:restaurant_id/validar-itens", async (req, res) => {
       .trim();
   }
 
-  function buscarItem(nomeQuery) {
+  function buscarItemPorNome(nomeQuery) {
     const q = normalizarNome(nomeQuery);
     return cardapio.find(item =>
       normalizarNome(item.nome).includes(q) ||
@@ -2116,52 +2116,71 @@ app.post("/api/v1/cardapio/:restaurant_id/validar-itens", async (req, res) => {
     );
   }
 
-  function getPrecoVariacao(item, nomeVariacao) {
+  function getPrecoComFiltro(item, filtro) {
     if (!Array.isArray(item.opcoes) || item.opcoes.length === 0) {
       return parseFloat(item.preco || 0);
     }
-    const varNorm = normalizarNome(nomeVariacao);
+    if (!filtro) return parseFloat(item.preco || 0);
+    const filtroNorm = normalizarNome(filtro);
     const variacao = item.opcoes.find(op =>
-      normalizarNome(op.nome).includes(varNorm) ||
-      varNorm.includes(normalizarNome(op.nome))
+      normalizarNome(op.nome).includes(filtroNorm) ||
+      filtroNorm.includes(normalizarNome(op.nome))
     );
     return variacao ? parseFloat(variacao.preco || 0) : parseFloat(item.preco || 0);
   }
 
   const resultados = itens.map(item => {
     const nomeCompleto = String(item.nome || "");
+    const precoCliente = parseFloat(item.preco || 0);
 
-    // Detecta pizza dois sabores: "Pizza X Grande — Sabor1 + Sabor2"
-    const matchDoisSabores = nomeCompleto.match(/^(.+?)\s*[—\-]\s*(.+?)\s*\+\s*(.+)$/);
+    // Detecta padrão "Algo — Sabor1 + Sabor2"
+    const matchDoisSabores = nomeCompleto.match(/^(.+?)\s*[—\-]+\s*(.+?)\s*\+\s*(.+)$/);
 
     if (matchDoisSabores) {
       const nomeBase = matchDoisSabores[1].trim(); // ex: "Pizza dois sabores Grande"
       const sabor1 = matchDoisSabores[2].trim();   // ex: "Pizza Margherita"
       const sabor2 = matchDoisSabores[3].trim();   // ex: "Pizza Baiana"
 
-      // Detecta variação no nome base (ex: "Grande", "Media")
-      const variacaoMatch = nomeBase.match(/(grande|media|pequena|p\b|m\b|g\b)/i);
-      const variacao = variacaoMatch ? variacaoMatch[1] : "";
+      // Detecta o tamanho/variação no nome base
+      const variacaoMatch = nomeBase.match(/(grande|media|medio|pequena|pequeno|p\b|m\b|g\b)/i);
+      const filtro = variacaoMatch ? variacaoMatch[1] : "";
 
-      const item1 = buscarItem(sabor1);
-      const item2 = buscarItem(sabor2);
+      const item1 = buscarItemPorNome(sabor1);
+      const item2 = buscarItemPorNome(sabor2);
 
-      const preco1 = item1 ? getPrecoVariacao(item1, variacao) : 0;
-      const preco2 = item2 ? getPrecoVariacao(item2, variacao) : 0;
+      const preco1 = item1 ? getPrecoComFiltro(item1, filtro) : 0;
+      const preco2 = item2 ? getPrecoComFiltro(item2, filtro) : 0;
       const precoCorreto = Math.max(preco1, preco2);
-      const precoCliente = parseFloat(item.preco || 0);
 
       return {
         nome_cliente: nomeCompleto,
         encontrado: !!(item1 || item2),
+        sabores: [
+          { nome: sabor1, encontrado: !!item1, preco: preco1 },
+          { nome: sabor2, encontrado: !!item2, preco: preco2 }
+        ],
         preco_correto: precoCorreto,
         preco_cliente: precoCliente,
         ok: Math.abs(precoCorreto - precoCliente) < 0.01
       };
     }
 
-    // Item simples
-    const encontrado = buscarItem(nomeCompleto);
+    // Item simples — detecta se tem variação no nome ex: "Pizza Margherita Grande"
+    const tamanhos = ["grande", "media", "medio", "pequena", "pequeno"];
+    let filtro = "";
+    let nomeBusca = nomeCompleto;
+
+    for (const t of tamanhos) {
+      const regex = new RegExp(`\\b${t}\\b`, "i");
+      if (regex.test(nomeCompleto)) {
+        filtro = t;
+        nomeBusca = nomeCompleto.replace(regex, "").trim();
+        break;
+      }
+    }
+
+    const encontrado = buscarItemPorNome(nomeBusca) || buscarItemPorNome(nomeCompleto);
+
     if (!encontrado) {
       return {
         nome_cliente: nomeCompleto,
@@ -2170,8 +2189,9 @@ app.post("/api/v1/cardapio/:restaurant_id/validar-itens", async (req, res) => {
       };
     }
 
-    const precoCorreto = parseFloat(encontrado.preco || 0);
-    const precoCliente = parseFloat(item.preco || 0);
+    const precoCorreto = filtro
+      ? getPrecoComFiltro(encontrado, filtro)
+      : parseFloat(encontrado.preco || 0);
 
     return {
       nome_cliente: nomeCompleto,
