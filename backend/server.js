@@ -64,7 +64,10 @@ const io = new Server(httpServer, {
 async function setupRedisAdapter() {
   try {
     await Promise.all([pubClient.connect(), subClient.connect()]);
-    io.adapter(createAdapter(pubClient, subClient));
+    io.adapter(createAdapter(pubClient, subClient, {
+  heartbeatInterval: 30000,
+  heartbeatTimeout: 60000
+}));
     console.log("✅ Socket.io Redis adapter conectado!");
   } catch (err) {
     console.error("❌ Redis adapter falhou:", err.message);
