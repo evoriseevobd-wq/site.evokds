@@ -2937,7 +2937,7 @@ const printWorker = new Worker("impressao", async (job) => {
 }, { 
   connection: redisConnection,
   concurrency: 3,
-  stalledInterval: 300000,
+  stalledInterval: 21600000,
   lockDuration: 300000
 });
 
