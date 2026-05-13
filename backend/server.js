@@ -12,6 +12,7 @@ import { Server } from "socket.io";
 import { Queue, Worker } from "bullmq";
 import { createAdapter } from "@socket.io/redis-adapter";
 import Redis from "ioredis";
+import ws from "ws"; 
 
 dotenv.config();
 
@@ -85,7 +86,12 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  {
+    realtime: {
+      transport: ws,
+    },
+  }
 );
 
 (async () => {
