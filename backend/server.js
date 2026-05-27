@@ -4041,7 +4041,7 @@ app.post("/api/v1/caixa/:restaurant_id/webhook-fechamento", async (req, res) => 
 
 app.post("/internal/processar-webhooks", async (req, res) => {
   try {
-    const duasHorasAtras = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const duasHorasAtras = new Date(Date.now() - 1 * 60 * 1000).toISOString();
     const umDiaAtras = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     const { data: pedidos } = await supabase
