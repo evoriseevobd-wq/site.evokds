@@ -5122,9 +5122,18 @@ async function salvarOrdem(list) {
   }
 }
 
-function openItemModal(item = null) {
-  const existing = document.getElementById("item-modal");
+async function openItemModal(item = null) {
+ const existing = document.getElementById("item-modal");
   if (existing) existing.remove();
+
+  const rid = getRestaurantId();
+  let categoriasDb = [];
+  try {
+    const respCats = await fetch(`${API_BASE}/api/v1/cardapio/${rid}/categorias`);
+    categoriasDb = await respCats.json();
+  } catch (e) {
+    categoriasDb = [];
+  }
 
   const modal = document.createElement("div");
   modal.id = "item-modal";
@@ -5152,8 +5161,8 @@ function openItemModal(item = null) {
   <select id="item-categoria"
     style="width:100%; margin-top:6px; padding:10px 14px; border-radius:10px; border:1px solid rgba(91,28,28,0.85); background:rgba(46,8,8,0.45); color:rgba(252,228,228,1); font-size:14px; outline:none; appearance:none;">
     <option value="">Selecione uma categoria...</option>
-    ${[...new Set(cardapioItems.map(i => i.categoria).filter(Boolean))].sort().map(cat =>
-      `<option value="${escapeHtml(cat)}" ${item?.categoria === cat ? 'selected' : ''}>${escapeHtml(cat)}</option>`
+    ${categoriasDb.map(cat =>
+      `<option value="${escapeHtml(cat.nome)}" ${item?.categoria === cat.nome ? 'selected' : ''}>${escapeHtml(cat.nome)}</option>`
     ).join('')}
   </select>
 </label>
