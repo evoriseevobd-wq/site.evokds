@@ -5753,17 +5753,29 @@ async function renomearCategoria(id, nomeAntigo) {
   const novo = novoNome.trim();
 
   try {
+    // Renomeia a categoria na tabela categorias
     const resp = await fetch(`${API_BASE}/api/v1/categorias/${id}`, {
       method: "PATCH",
       headers: buildHeaders(),
       body: JSON.stringify({ nome: novo })
     });
     if (!resp.ok) { alert("Erro ao renomear categoria."); return; }
+
+    // Atualiza todos os itens do cardápio que usavam o nome antigo
+    const itensDaCategoria = cardapioItems.filter(i => i.categoria === nomeAntigo);
+    await Promise.all(itensDaCategoria.map(item =>
+      fetch(`${API_BASE}/api/v1/cardapio/${item.id}`, {
+        method: "PATCH",
+        headers: buildHeaders(),
+        body: JSON.stringify({ categoria: novo })
+      })
+    ));
   } catch (e) {
     alert("Erro ao renomear categoria: " + e.message);
     return;
   }
 
+  await fetchCardapio();
   openCategoriasModal();
 }
 
