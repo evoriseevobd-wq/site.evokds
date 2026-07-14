@@ -2057,19 +2057,61 @@ const ib = ordemCategorias.findIndex(c => (c.nome || c) === b.categoria);
 });
 
 // GET - Lista só as categorias (sem produtos)
+// GET - Lista categorias do restaurante
 app.get("/api/v1/cardapio/:restaurant_id/categorias", async (req, res) => {
   const { restaurant_id } = req.params;
 
   const { data, error } = await supabase
-    .from("cardapio")
-    .select("categoria")
+    .from("categorias")
+    .select("*")
     .eq("restaurant_id", restaurant_id)
-    .eq("ativo", true);
+    .order("nome");
 
   if (error) return sendError(res, 500, "Erro ao buscar categorias");
+  return res.json(data || []);
+});
 
-  const categorias = [...new Set(data.map(i => i.categoria))].sort();
-  return res.json(categorias);
+// POST - Cria categoria
+app.post("/api/v1/cardapio/:restaurant_id/categorias", async (req, res) => {
+  const { restaurant_id } = req.params;
+  const { nome } = req.body;
+
+  if (!nome || !nome.trim()) return sendError(res, 400, "nome é obrigatório");
+
+  const { data, error } = await supabase
+    .from("categorias")
+    .insert([{ restaurant_id, nome: nome.trim() }])
+    .select()
+    .single();
+
+  if (error) return sendError(res, 500, "Erro ao criar categoria");
+  return res.status(201).json(data);
+});
+
+// PATCH - Renomeia categoria
+app.patch("/api/v1/categorias/:id", async (req, res) => {
+  const { id } = req.params;
+  const { nome } = req.body;
+
+  if (!nome || !nome.trim()) return sendError(res, 400, "nome é obrigatório");
+
+  const { data, error } = await supabase
+    .from("categorias")
+    .update({ nome: nome.trim() })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) return sendError(res, 500, "Erro ao renomear categoria");
+  return res.json(data);
+});
+
+// DELETE - Remove categoria
+app.delete("/api/v1/categorias/:id", async (req, res) => {
+  const { id } = req.params;
+  const { error } = await supabase.from("categorias").delete().eq("id", id);
+  if (error) return sendError(res, 500, "Erro ao excluir categoria");
+  return res.json({ success: true });
 });
 
 // GET - Busca itens por nome (autocomplete)
