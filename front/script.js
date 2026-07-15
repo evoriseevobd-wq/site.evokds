@@ -5712,6 +5712,10 @@ async function openCategoriasModal() {
                   <span style="color:rgba(252,228,228,0.9); font-weight:700; font-size:14px;">${escapeHtml(cat.nome)}</span>
                 </div>
                 <div style="display:flex; gap:8px; flex-shrink:0;">
+                  <label style="padding:6px 10px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:transparent; color:rgba(252,228,228,0.7); cursor:pointer; font-size:11px; position:relative;">
+                    📷
+                    <input type="file" accept="image/*" style="position:absolute; inset:0; opacity:0; cursor:pointer;" onchange="uploadFotoCategoria('${cat.id}', this)" />
+                  </label>
                   <button onclick="renomearCategoria('${cat.id}', '${escapeHtml(cat.nome)}')" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(91,28,28,0.85); background:transparent; color:rgba(252,228,228,0.7); cursor:pointer; font-size:11px;">Renomear</button>
                   <button onclick="deletarCategoria('${cat.id}', '${escapeHtml(cat.nome)}')" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(239,68,68,0.5); background:transparent; color:rgba(239,68,68,0.8); cursor:pointer; font-size:11px;">Excluir</button>
                 </div>
@@ -5809,7 +5813,7 @@ async function deletarCategoria(id, nome) {
   });
 }
 
-async function uploadFotoCategoria(nomeCategoria, input) {
+async function uploadFotoCategoria(id, input) {
   if (!input.files[0]) return;
   const croppedBlob = await openCropModal(input.files[0]);
   if (!croppedBlob) return;
@@ -5821,26 +5825,18 @@ async function uploadFotoCategoria(nomeCategoria, input) {
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || 'Erro no upload');
 
-    // Atualiza a ordem com a nova foto
-    const rid = getRestaurantId();
-    const novaOrdem = categoriasOrdem.map(c => {
-      const nome = c.nome || c;
-      if (nome === nomeCategoria) return { nome, foto_url: data.url };
-      return typeof c === 'string' ? { nome: c, foto_url: null } : c;
-    });
-
-    await fetch(`${API_BASE}/api/v1/cardapio/${rid}/ordem-categorias`, {
+    await fetch(`${API_BASE}/api/v1/categorias/${id}`, {
       method: "PATCH",
       headers: buildHeaders(),
-      body: JSON.stringify({ ordem: novaOrdem })
+      body: JSON.stringify({ foto_url: data.url })
     });
 
-    categoriasOrdem = novaOrdem;
     openCategoriasModal();
   } catch(e) {
     alert('Erro ao enviar foto: ' + e.message);
   }
 }
+
 
 function toggleDominioConfig() {
   const pop = document.getElementById("dominio-popover");
