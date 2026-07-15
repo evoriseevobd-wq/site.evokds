@@ -5706,11 +5706,10 @@ async function openCategoriasModal() {
             : categoriasDb.map(cat => `
              <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:rgba(46,8,8,0.45); border:1px solid rgba(91,28,28,0.85); border-radius:10px; gap:12px;">
                 <div style="display:flex; align-items:center; gap:10px; flex:1;">
-                  <label style="position:relative; width:40px; height:40px; border-radius:50%; cursor:pointer; flex-shrink:0; display:block;">
+                <label style="position:relative; width:40px; height:40px; border-radius:50%; cursor:pointer; flex-shrink:0; display:block;">
                     ${cat.foto_url
                       ? `<img src="${cat.foto_url}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; display:block;" />`
-                      : `<div style="width:40px; height:40px; border-radius:50%; background:rgba(91,28,28,0.5); display:flex; align-items:center; justify-content:center; font-size:18px;">📂</div>`}
-                    <div style="position:absolute; inset:0; border-radius:50%; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; font-size:14px; opacity:0.85;">📷</div>
+                      : `<div style="width:40px; height:40px; border-radius:50%; background:rgba(91,28,28,0.5); display:flex; align-items:center; justify-content:center; font-size:18px;">📷</div>`}
                     <input type="file" accept="image/*" style="position:absolute; inset:0; opacity:0; cursor:pointer; border-radius:50%;" onchange="uploadFotoCategoria('${cat.id}', this)" />
                   </label>
                   <span style="color:rgba(252,228,228,0.9); font-weight:700; font-size:14px;">${escapeHtml(cat.nome)}</span>
