@@ -2074,13 +2074,13 @@ app.get("/api/v1/cardapio/:restaurant_id/categorias", async (req, res) => {
 // POST - Cria categoria
 app.post("/api/v1/cardapio/:restaurant_id/categorias", async (req, res) => {
   const { restaurant_id } = req.params;
-  const { nome } = req.body;
+  const { nome, foto_url } = req.body;
 
   if (!nome || !nome.trim()) return sendError(res, 400, "nome é obrigatório");
 
   const { data, error } = await supabase
     .from("categorias")
-    .insert([{ restaurant_id, nome: nome.trim() }])
+    .insert([{ restaurant_id, nome: nome.trim(), foto_url: foto_url || null }])
     .select()
     .single();
 
@@ -2088,21 +2088,25 @@ app.post("/api/v1/cardapio/:restaurant_id/categorias", async (req, res) => {
   return res.status(201).json(data);
 });
 
-// PATCH - Renomeia categoria
+// PATCH - Renomeia/atualiza categoria (nome e/ou foto)
 app.patch("/api/v1/categorias/:id", async (req, res) => {
   const { id } = req.params;
-  const { nome } = req.body;
+  const { nome, foto_url } = req.body;
 
-  if (!nome || !nome.trim()) return sendError(res, 400, "nome é obrigatório");
+  const updateData = {};
+  if (nome && nome.trim()) updateData.nome = nome.trim();
+  if (foto_url !== undefined) updateData.foto_url = foto_url;
+
+  if (Object.keys(updateData).length === 0) return sendError(res, 400, "nada para atualizar");
 
   const { data, error } = await supabase
     .from("categorias")
-    .update({ nome: nome.trim() })
+    .update(updateData)
     .eq("id", id)
     .select()
     .single();
 
-  if (error) return sendError(res, 500, "Erro ao renomear categoria");
+  if (error) return sendError(res, 500, "Erro ao atualizar categoria");
   return res.json(data);
 });
 
